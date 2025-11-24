@@ -378,6 +378,12 @@ def _get_merge_region(series: pd.Series, merge_groups) -> str | None:
     return merge_region[0] if merge_region else None
 
 
+def _get_name_by_largest_area(group_df):
+    """Return name from the region with largest area in the group"""
+    max_area_idx = group_df["area_km2"].idxmax()
+    return group_df.loc[max_area_idx, "name"]
+
+
 def merge_regions(
     regions_gdf: gpd.GeoDataFrame, merge_groups: list
 ) -> gpd.GeoDataFrame:
@@ -400,16 +406,25 @@ def merge_regions(
         _get_merge_region, merge_groups=merge_groups, axis=1
     )
 
+    name_mapping = result_gdf.groupby("merged_region_id").apply(
+        _get_name_by_largest_area
+    )
+
     result_gdf_agg = result_gdf.dissolve(
-        ["name", "merged_region_id"],
+        ["merged_region_id"],
         aggfunc={
             "area_km2": "sum",
             "numeric_id": lambda x: ", ".join(str(i) for i in filter(None, x)),
         },
     ).reset_index()
-    result_gdf_agg["country"] = result_gdf_agg["name"]
-    result_gdf_agg["name"] = (
-        result_gdf_agg["name"] + " " + result_gdf_agg["merged_region_id"].astype(str)
+    result_gdf_agg["country"] = result_gdf_agg["merged_region_id"].map(name_mapping)
+    result_gdf_agg["name"] = result_gdf_agg.apply(
+        lambda row: (
+            f"{row['country']} {row['merged_region_id']}"
+            if row["country"] == "GB"
+            else row["country"]
+        ),
+        axis=1,
     )
     result_gdf_agg["TO_region"] = (
         pd.DataFrame(merge_groups)
@@ -458,6 +473,14 @@ def append_country_shapes(
     # assign country column
     country_shapes_gdf["country"] = country_shapes_gdf["name"]
 
+    # assign numeric_id for country
+    country_shapes_gdf["numeric_id"] = country_shapes_gdf["country"]
+
+    # assign approximate area_km2
+    country_shapes_gdf["area_km2"] = country_shapes_gdf["geometry"].apply(
+        lambda geom: calculate_area_km2(geom, country_shapes_gdf.crs)
+    )
+
     # Filter out GB country shape
     country_shapes_gdf = country_shapes_gdf[country_shapes_gdf["name"] != "GB"]
 
@@ -481,9 +504,7 @@ if __name__ == "__main__":
     if "snakemake" not in globals():
         from scripts._helpers import mock_snakemake
 
-        snakemake = mock_snakemake(
-            "manual_region_merger", configfiles="config/config.GB_main.yaml"
-        )
+        snakemake = mock_snakemake("manual_region_merger")
     configure_logging(snakemake)
     set_scenario_config(snakemake)
 
@@ -493,15 +514,16 @@ if __name__ == "__main__":
     # Perform splitting operations first
     regions_gdf = cut_regions_before_merge(regions_gdf, snakemake.params.splits)
 
+    # Append country shapes
+    appended_regions = append_country_shapes(
+        regions_gdf, snakemake.input.country_shapes
+    )
+
     # Perform merging operations
-    merged_regions = merge_regions(regions_gdf, snakemake.params.merge_groups)
+    merged_regions = merge_regions(appended_regions, snakemake.params.merge_groups)
     logger.info(
         f"Merging completed. Total regions after merging: {len(merged_regions)}"
     )
 
-    # Append country shapes
-    merged_regions = append_country_shapes(
-        merged_regions, snakemake.input.country_shapes
-    )
     # Save results
     save_regions(merged_regions, snakemake.output.merged_shapes)
