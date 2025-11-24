@@ -597,25 +597,6 @@ rule create_chp_p_min_pu_profile:
         "../scripts/gb_model/create_chp_p_min_pu_profile.py"
 
 
-rule scale_boundary_capabilities:
-    message:
-        "Get scaling factors for boundary capabilities to align with the ETYS"
-    input:
-        network=resources("networks/base_s_clustered.nc"),
-        boundaries="data/gb-model/downloaded/gb-etys-boundaries.zip",
-        etys_caps=resources("gb-model/etys_boundary_capabilities.csv"),
-    params:
-        etys_boundaries_to_lines=config["region_operations"]["etys_boundaries"],
-        prune_lines=config["region_operations"]["prune_lines"],
-    output:
-        csv=resources("gb-model/line_s_max_pu.csv"),
-        html=resources("gb-model/line_s_nom_compare.html"),
-    log:
-        logs("scale_boundary_capabilities.log"),
-    script:
-        "../scripts/gb_model/scale_boundary_capabilities.py"
-
-
 rule distribute_eur_demands:
     message:
         "Distribute total European neighbour annual demands into base electricity, heating, and transport"
@@ -690,7 +671,6 @@ rule compose_network:
         electricity=config["electricity"],
         clustering=config["clustering"],
         renewable=config["renewable"],
-        lines=config["lines"],
         enable_chp=config["chp"]["enable"],
         ev_profile_config=config["ev"]["ev_demand_profile_transformation"],
     input:
@@ -710,7 +690,6 @@ rule compose_network:
         ev_demand_annual=resources("gb-model/fes_transport_demand.csv"),
         ev_storage_capacity=resources("gb-model/regional_fes_ev_storage.csv"),
         ev_dsm_profile=resources("dsm_profile_s_clustered.csv"),
-        line_s_max_pu=resources("gb-model/line_s_max_pu.csv"),
         intermediate_data=[
             resources("gb-model/transmission_availability.csv"),
             expand(
@@ -757,3 +736,20 @@ rule compose_networks:
             run=config["run"]["name"],
             year=list(np.arange(year_range[0], year_range[1])),
         ),
+
+
+rule constrain_lines_to_boundary_capabilities:
+    message:
+        "Constrain line flows according to ETYS boundary capabilities"
+    input:
+        network=resources("networks/composed_clustered_{year}.nc"),
+        etys_caps=resources("gb-model/etys_boundary_capabilities.csv"),
+    params:
+        etys_boundaries_to_lines=config["region_operations"]["etys_boundaries"],
+        prune_lines=config["region_operations"]["prune_lines"],
+    output:
+        network=resources("networks/constrained_network_{year}.csv"),
+    log:
+        logs("constrain_lines_to_boundary_capabilities_{year}.log"),
+    script:
+        "../scripts/gb_model/constrain_lines_to_boundary_capabilities.py"
