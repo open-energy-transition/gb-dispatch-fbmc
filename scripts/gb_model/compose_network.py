@@ -869,8 +869,6 @@ def compose_network(
         Path to hydro capacities CSV file
     chp_p_min_pu_path : str
         Path to CHP minimum operation profile CSV file
-    line_s_max_pu_path : str
-        Path to line s_max_pu profile CSV file
     renewable_profiles : dict
         Mapping of carrier names to profile file paths
     heat_demand_path : str
