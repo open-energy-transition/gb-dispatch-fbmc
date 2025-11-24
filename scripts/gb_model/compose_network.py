@@ -336,6 +336,7 @@ def add_EV_load(
     ev_demand_shape_path: str,
     ev_demand_annual_path: str,
     ev_demand_peak_path: str,
+    eur_demand_path: str,
     ev_params: dict[str, float],
     year: int,
 ):
@@ -352,6 +353,8 @@ def add_EV_load(
         CSV path for peak EV demand
     ev_demand_shape_path : str
         CSV path for EV demand shape
+    eur_demand_path : str
+        CSV path for European annual EV demand
     ev_params: dict[str, float]
         Dictionary containing EV profile adjustment parameters such as:
             relative_peak_tolerance: float
@@ -366,10 +369,26 @@ def add_EV_load(
         Year used in the modelling
     """
     # Compute EV demand profile using demand shape, annual EV demand and peak EV demand
+
+    ev_demand_shape = pd.read_csv(ev_demand_shape_path, index_col=[0], parse_dates=True)
+    ev_demand_annual = pd.read_csv(ev_demand_annual_path, index_col=["bus", "year"])
+    ev_demand_peak = pd.read_csv(ev_demand_peak_path, index_col=["bus", "year"])
+    eur_demand = pd.read_csv(eur_demand_path, index_col=["load_type", "bus", "year"])
+    eur_demand_annual = eur_demand.xs("fes_transport")
+    eur_demand_peak = (
+        (ev_demand_peak.p_nom / ev_demand_annual.p_set)
+        .groupby("year")
+        .mean()
+        .mul(eur_demand_annual.p_set)
+        .to_frame("p_nom")
+    )
+
+    ev_demand_annual_all = pd.concat([ev_demand_annual, eur_demand_annual])
+    ev_demand_peak_all = pd.concat([ev_demand_peak, eur_demand_peak])
     ev_demand_profile = _estimate_ev_demand_profile(
-        ev_demand_shape_path,
-        ev_demand_annual_path,
-        ev_demand_peak_path,
+        ev_demand_shape,
+        ev_demand_annual_all,
+        ev_demand_peak_all,
         year=year,
         ev_params=ev_params,
     )
@@ -438,61 +457,66 @@ def add_EV_DSR_V2G(
 
     """
     # Load EV storage data
-    ev_storage_capacity = pd.read_csv(
-        ev_storage_capacity_path, index_col=["bus", "year"]
+    dfs = {
+        "ev_storage_capacity": pd.read_csv(
+            ev_storage_capacity_path, index_col=["bus", "year"]
+        ),
+        "ev_dsr": pd.read_csv(ev_smart_charging_path, index_col=["bus", "year"]),
+        "ev_v2g": pd.read_csv(ev_v2g_path, index_col=["bus", "year"]),
+    }
+    # Add the EV store to pypsa Network
+    ev_dsm_profile = pd.read_csv(ev_dsm_profile_path, index_col=0, parse_dates=True)
+
+    annual_load = (
+        n.loads_t.p_set.filter(regex=" EV")
+        .sum()
+        .rename(index=lambda x: x.replace(" EV", ""))
+        .rename_axis(index="bus")
     )
-    ev_storage_capacity = ev_storage_capacity.xs(year, level="year")
+    for name, df in dfs.items():
+        df_ = df.xs(year, level="year").squeeze() / annual_load
+        dfs[name] = df_.fillna(df_.mean()).mul(annual_load).dropna()
 
     # Add EV storage buses
     n.add(
         "Bus",
-        ev_storage_capacity.index,
+        dfs["ev_storage_capacity"].index,
         suffix=" EV store",
         carrier="EV store",
-        x=n.buses.loc[ev_storage_capacity.index].x,
-        y=n.buses.loc[ev_storage_capacity.index].y,
-        country=n.buses.loc[ev_storage_capacity.index].country,
+        x=n.buses.loc[dfs["ev_storage_capacity"].index].x,
+        y=n.buses.loc[dfs["ev_storage_capacity"].index].y,
+        country=n.buses.loc[dfs["ev_storage_capacity"].index].country,
     )
 
-    # Add the EV store to pypsa Network
-    ev_dsm_profile = pd.read_csv(ev_dsm_profile_path, index_col=0, parse_dates=True)
     n.add(
         "Store",
-        ev_storage_capacity.index,
+        dfs["ev_storage_capacity"].index,
         suffix=" EV store",
-        bus=ev_storage_capacity.index + " EV store",
-        e_nom=ev_storage_capacity["MWh"],
+        bus=dfs["ev_storage_capacity"].index + " EV store",
+        e_nom=dfs["ev_storage_capacity"],
         e_cyclic=True,
         carrier="EV store",
-        e_min_pu=ev_dsm_profile.loc[n.snapshots, ev_storage_capacity.index],
+        e_min_pu=ev_dsm_profile.loc[:, dfs["ev_storage_capacity"].index],
     )
-
-    # Load EV dsr and V2G data
-    ev_dsr = pd.read_csv(ev_smart_charging_path, index_col=["bus", "year"])
-    ev_v2g = pd.read_csv(ev_v2g_path, index_col=["bus", "year"])
-
-    # Filter data for the given year
-    ev_dsr = ev_dsr.xs(year, level="year")
-    ev_v2g = ev_v2g.xs(year, level="year")
 
     # Add the EV DSR to the PyPSA network
     n.add(
         "Link",
-        ev_dsr.index,
+        dfs["ev_dsr"].index,
         suffix=" EV DSR",
-        bus0=ev_dsr.index + " EV store",
-        bus1=ev_dsr.index + " EV",
-        p_nom=ev_dsr["p_nom"].abs(),
+        bus0=dfs["ev_dsr"].index + " EV store",
+        bus1=dfs["ev_dsr"].index + " EV",
+        p_nom=dfs["ev_dsr"].abs(),
         efficiency=1.0,
         carrier="EV DSR",
     )
     n.add(
         "Link",
-        ev_dsr.index,
+        dfs["ev_dsr"].index,
         suffix=" EV DSR reverse",
-        bus0=ev_dsr.index + " EV",
-        bus1=ev_dsr.index + " EV store",
-        p_nom=ev_dsr["p_nom"].abs(),
+        bus0=dfs["ev_dsr"].index + " EV",
+        bus1=dfs["ev_dsr"].index + " EV store",
+        p_nom=dfs["ev_dsr"].abs(),
         efficiency=1.0,
         carrier="EV DSR reverse",
     )
@@ -500,11 +524,11 @@ def add_EV_DSR_V2G(
     # Add EV V2G to the PyPSA network
     n.add(
         "Link",
-        ev_v2g.index,
+        dfs["ev_v2g"].index,
         suffix=" EV V2G",
-        bus0=ev_v2g.index + " EV store",
-        bus1=ev_v2g.index,
-        p_nom=ev_v2g["p_nom"].abs(),
+        bus0=dfs["ev_v2g"].index + " EV store",
+        bus1=dfs["ev_v2g"].index,
+        p_nom=dfs["ev_v2g"].abs(),
         efficiency=1.0,
         carrier="EV V2G",
     )
@@ -613,9 +637,9 @@ def _transform_ev_profile_with_shape_adjustment(
 
 
 def _estimate_ev_demand_profile(
-    ev_demand_shape_path: str,
-    ev_demand_annual_path: str,
-    ev_demand_peak_path: str,
+    ev_demand_shape: pd.DataFrame,
+    ev_demand_annual: pd.DataFrame,
+    ev_demand_peak: pd.DataFrame,
     year: int,
     ev_params: dict[str, float],
 ) -> pd.DataFrame:
@@ -641,9 +665,6 @@ def _estimate_ev_demand_profile(
         Estimated EV demand profile
     """
     # Load the files
-    ev_demand_shape = pd.read_csv(ev_demand_shape_path, index_col=[0], parse_dates=True)
-    ev_demand_annual = pd.read_csv(ev_demand_annual_path, index_col=["bus", "year"])
-    ev_demand_peak = pd.read_csv(ev_demand_peak_path, index_col=["bus", "year"])
 
     # Select data for given year
     ev_demand_annual = ev_demand_annual.xs(year, level="year")
@@ -970,6 +991,7 @@ def compose_network(
         ev_data["ev_demand_shape"],
         ev_data["ev_demand_annual"],
         ev_data["ev_demand_peak"],
+        eur_demand,
         ev_params,
         year,
     )
