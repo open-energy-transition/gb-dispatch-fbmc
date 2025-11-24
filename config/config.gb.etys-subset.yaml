@@ -85,7 +85,7 @@ region_operations:
   - id: B3b
     merge: [15, 16, 17, 18, 19, 20, 21, 22, 23, 49, 50]
     TO: SHETL
-  - id: B4-B2
+  - id: B4-B2-B3b
     merge: [14]
     TO: SHETL
   - id: B2-B1a
@@ -98,7 +98,21 @@ region_operations:
     merge: [26, 27, 58]
     TO: SHETL
 
-  # TODO: add this to Ireland
-  - id: NI
-    merge: [46, 47, 48]
-    TO: N-IRL
+  - id: IE
+    merge: [46, 47, 48, IE]
+    TO: IE
+  - id: BE
+    merge: [BE]
+    TO: BE
+  - id: NL
+    merge: [NL]
+    TO: NL
+  - id: FR
+    merge: [FR]
+    TO: FR
+  - id: DK
+    merge: [DK]
+    TO: DK
+  - id: "NO"
+    merge: ["NO"]
+    TO: "NO"

@@ -277,7 +277,7 @@ region_operations:
 
   - id: IE
     merge: [79, 80, 81, 82, IE]
-    TO: N-IRL
+    TO: IE
   - id: BE
     merge: [BE]
     TO: BE
