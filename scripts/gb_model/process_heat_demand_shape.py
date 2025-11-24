@@ -44,9 +44,8 @@ def process_demand_timeseries(
 
     system = ["space", "water"]
     nodes = cop_profile.index.get_level_values(1).unique()
-    demand_profile = pd.DataFrame(index=demand.index, columns=nodes)
+    load_profile = pd.DataFrame(index=demand.index, columns=nodes, data=0)
 
-    demand_profile[sector] = np.zeros(len(demand.index))
     for sys in system:
         if sector == "commercial":
             sector_key = "services"
@@ -65,8 +64,10 @@ def process_demand_timeseries(
 
         load.replace([np.inf, -np.inf], 0, inplace=True)
 
-        # Normalize the load profile
-        load_normalized = load / load.sum()
+        load_profile += load
+
+    # Normalize the load profile
+    load_normalized = load_profile / load_profile.sum()
 
     return load_normalized
 
