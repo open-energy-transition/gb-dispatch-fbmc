@@ -49,7 +49,7 @@ def process_fes_heatmix(
 
     # Read the FES data
     fes_data = pd.read_csv(fes_data_heatmix_path, index_col=[0, 1, 2])
-    
+
     # Filter the data
     mask = fes_data.index.get_level_values(2).str.contains(scenario, case=False)
     fes_data_filtered = (
