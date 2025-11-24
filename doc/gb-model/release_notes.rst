@@ -12,6 +12,7 @@ Release Notes
 Upcoming Release
 ================
 
+* Merge Shetland (region 30) and Northern Ireland (region 31) to other regions (#117).
 * Add demands to pypsa Network (#102, #70).
 * Limit GB model to ``clustered`` clusters.
 * Add EV to pypsa Network (#114)
