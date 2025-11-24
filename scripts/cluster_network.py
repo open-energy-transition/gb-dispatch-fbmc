@@ -599,6 +599,28 @@ def update_bus_coordinates(
     n.buses["y"] = busmap_df["y"]
 
 
+def _update_bus_country(
+    n: pypsa.Network,
+    custom_busmap: pd.Series,
+) -> pypsa.Network:
+    """
+    Updates the country of the buses in the original network based on the custom busmap
+    to avoid inconsistencies.
+
+    Parameters
+    ----------
+        - n (pypsa.Network) : The original network.
+        - custom_busmap (pd.Series) : The custom busmap with country information.
+
+    Returns
+    -------
+        n (pypsa.Network) : The network with updated country information.
+    """
+    logger.info("Updating country of buses based on custom busmap.")
+    country = custom_busmap.str[:2]
+    n.buses["country"] = country
+
+
 if __name__ == "__main__":
     if "snakemake" not in globals():
         from scripts._helpers import mock_snakemake
@@ -651,6 +673,7 @@ if __name__ == "__main__":
             logger.info(
                 f"Imported custom shapes from {snakemake.input.custom_busshapes}"
             )
+            _update_bus_country(n, custom_busmap)
 
             busmap = custom_busmap
         elif mode == "custom_busmap":
