@@ -331,9 +331,11 @@ def add_load(
         _add_timeseries_data_to_network(n.loads_t, load.add_suffix(suffix), "p_set")
 
 
-def add_EVs(
+def add_EV_load(
     n: pypsa.Network,
-    ev_data: dict[str, str],
+    ev_demand_shape_path: str,
+    ev_demand_annual_path: str,
+    ev_demand_peak_path: str,
     ev_params: dict[str, float],
     year: int,
 ):
@@ -344,20 +346,12 @@ def add_EVs(
     ----------
     n : pypsa.Network
         Network to finalize
-    ev_data: dict[str, str]
-        Dictionary containing paths to EV data files:
-            ev_demand_annual:
-                CSV path for annual EV demand
-            ev_demand_peak:
-                CSV path for peak EV demand
-            ev_demand_shape:
-                CSV path for EV demand shape
-            ev_storage_capacity:
-                CSV path for EV storage capacity
-            ev_smart_charging:
-                CSV path for EV smart charging (DSR) data
-            ev_v2g:
-                CSV path for EV V2G data
+    ev_demand_annual_path : str
+        CSV path for annual EV demand
+    ev_demand_peak_path : str
+        CSV path for peak EV demand
+    ev_demand_shape_path : str
+        CSV path for EV demand shape
     ev_params: dict[str, float]
         Dictionary containing EV profile adjustment parameters such as:
             relative_peak_tolerance: float
@@ -373,9 +367,9 @@ def add_EVs(
     """
     # Compute EV demand profile using demand shape, annual EV demand and peak EV demand
     ev_demand_profile = _estimate_ev_demand_profile(
-        ev_data["ev_demand_shape"],
-        ev_data["ev_demand_annual"],
-        ev_data["ev_demand_peak"],
+        ev_demand_shape_path,
+        ev_demand_annual_path,
+        ev_demand_peak_path,
         year=year,
         ev_params=ev_params,
     )
@@ -415,9 +409,37 @@ def add_EVs(
         carrier="EV unmanaged charging",
     )
 
+
+def add_EV_DSR_V2G(
+    n: pypsa.Network,
+    ev_storage_capacity_path: str,
+    ev_dsm_profile_path: str,
+    ev_smart_charging_path: str,
+    ev_v2g_path: str,
+    year: int,
+):
+    """
+    Add EV DSR and V2G components to PyPSA network
+
+    Parameters
+    ----------
+    n : pypsa.Network
+        Network to finalize
+    ev_storage_capacity_path: str
+        CSV path for EV storage capacity
+    ev_dsm_profile_path: str
+        CSV path for EV DSM profile
+    ev_smart_charging_path: str
+        CSV path for EV smart charging (DSR) data
+    ev_v2g_path: str
+        CSV path for EV V2G data
+    year: int
+        Year used in the modelling
+
+    """
     # Load EV storage data
     ev_storage_capacity = pd.read_csv(
-        ev_data["ev_storage_capacity"], index_col=["bus", "year"]
+        ev_storage_capacity_path, index_col=["bus", "year"]
     )
     ev_storage_capacity = ev_storage_capacity.xs(year, level="year")
 
@@ -433,9 +455,7 @@ def add_EVs(
     )
 
     # Add the EV store to pypsa Network
-    ev_dsm_profile = pd.read_csv(
-        ev_data["ev_dsm_profile"], index_col=0, parse_dates=True
-    )
+    ev_dsm_profile = pd.read_csv(ev_dsm_profile_path, index_col=0, parse_dates=True)
     n.add(
         "Store",
         ev_storage_capacity.index,
@@ -448,8 +468,8 @@ def add_EVs(
     )
 
     # Load EV dsr and V2G data
-    ev_dsr = pd.read_csv(ev_data["ev_smart_charging"], index_col=["bus", "year"])
-    ev_v2g = pd.read_csv(ev_data["ev_v2g"], index_col=["bus", "year"])
+    ev_dsr = pd.read_csv(ev_smart_charging_path, index_col=["bus", "year"])
+    ev_v2g = pd.read_csv(ev_v2g_path, index_col=["bus", "year"])
 
     # Filter data for the given year
     ev_dsr = ev_dsr.xs(year, level="year")
@@ -945,7 +965,22 @@ def compose_network(
 
     add_load(network, demands, eur_demand, year)
 
-    add_EVs(network, ev_data, ev_params, year)
+    add_EV_load(
+        network,
+        ev_data["ev_demand_shape"],
+        ev_data["ev_demand_annual"],
+        ev_data["ev_demand_peak"],
+        ev_params,
+        year,
+    )
+    add_EV_DSR_V2G(
+        network,
+        ev_data["ev_storage_capacity"],
+        ev_data["ev_dsm_profile"],
+        ev_data["ev_smart_charging"],
+        ev_data["ev_v2g"],
+        year,
+    )
 
     finalise_composed_network(network, context)
 
