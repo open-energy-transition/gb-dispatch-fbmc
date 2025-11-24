@@ -543,7 +543,7 @@ rule process_heat_demand_shape:
     params:
         year=lambda wildcards: wildcards.year,
     input:
-        load=resources("hourly_heat_demand_total_base_s_clustered.nc"),
+        demand=resources("hourly_heat_demand_total_base_s_clustered.nc"),
         cop_profile=resources("cop_base_s_clustered_{year}.csv"),
         heating_mix=resources("gb-model/fes/heating_mix_{year}.csv"),
     output:

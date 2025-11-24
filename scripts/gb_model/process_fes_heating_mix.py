@@ -49,7 +49,7 @@ def process_fes_heatmix(
 
     # Read the FES data
     fes_data = pd.read_csv(fes_data_heatmix_path, index_col=[0, 1, 2])
-
+    
     # Filter the data
     mask = fes_data.index.get_level_values(2).str.contains(scenario, case=False)
     fes_data_filtered = (
@@ -82,11 +82,9 @@ if __name__ == "__main__":
     configure_logging(snakemake)
     set_scenario_config(snakemake)
 
-    electrified_heating_technologies = (
-        snakemake.params.electrified_heating_technologies,
-    )
+    electrified_heating_technologies = snakemake.params.electrified_heating_technologies
     heating_mix = pd.DataFrame(
-        index=electrified_heating_technologies[0], columns=["residential", "commercial"]
+        index=electrified_heating_technologies, columns=["residential", "commercial"]
     )
 
     residential_share = process_fes_heatmix(
