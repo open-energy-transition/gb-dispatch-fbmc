@@ -36,14 +36,14 @@ def process_demand_timeseries(
         pd.DataFrame : electrified heat demand profile for the sector
     """
 
-    cop_profile = pd.read_csv(cop_profile_path, index_col=[0, 1], parse_dates=["time"])
-    heating_mix = pd.read_csv(heating_mix_path, index_col=0)
+    cop_profile = pd.read_csv(cop_profile_path, index_col=["time","name"], parse_dates=["time"])
+    heating_mix = pd.read_csv(heating_mix_path, index_col="Technology")
 
     # Read the heat demand .nc file
     demand = xr.open_dataset(demand_path).to_dataframe().squeeze(axis=1).unstack("node")
 
     system = ["space", "water"]
-    nodes = cop_profile.index.get_level_values(1).unique()
+    nodes = cop_profile.index.get_level_values("name").unique()
     load_profile = pd.DataFrame(index=demand.index, columns=nodes, data=0)
 
     for sys in system:

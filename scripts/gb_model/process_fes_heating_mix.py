@@ -48,10 +48,10 @@ def process_fes_heatmix(
     """
 
     # Read the FES data
-    fes_data = pd.read_csv(fes_data_heatmix_path, index_col=[0, 1, 2])
+    fes_data = pd.read_csv(fes_data_heatmix_path, index_col=["Type", "2020", "Scenario"])
 
     # Filter the data
-    mask = fes_data.index.get_level_values(2).str.contains(scenario, case=False)
+    mask = fes_data.index.get_level_values("Scenario").str.contains(scenario, case=False)
     fes_data_filtered = (
         fes_data.loc[mask]
         .loc[electrified_heating_technologies]
@@ -105,6 +105,7 @@ if __name__ == "__main__":
 
     heating_mix["residential"] = residential_share.tolist()
     heating_mix["commercial"] = commercial_share.tolist()
+    heating_mix.index.name = "Technology"
     # Save the heating technology mix for residential and commercial sectors
     heating_mix.to_csv(snakemake.output.csv)
     logger.info(f"Heating technology mix saved to {snakemake.output.csv}")

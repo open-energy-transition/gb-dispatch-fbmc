@@ -550,15 +550,17 @@ fes-sheet-config:
       skiprows: 3
       index_col: [0, 1]
       header: 0
+      header_name: "Scenario"
       rename:
-        index: ["Type", 2020]
+        index: ["Type", "2020"]
     CV.55:
       usecols: "K:P"
       skiprows: 3
       index_col: [0, 1]
       header: 0
+      header_name: "Scenario"
       rename:
-        index: ["Type", 2020]
+        index: ["Type", "2020"]
   2023:
     WS1:
       usecols: "A:D,H:AM" # Ignore columns: "Baseline (2022)", "Share of GSP" (empty), "DNO License Area"
