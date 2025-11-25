@@ -677,7 +677,7 @@ rule synthesise_eur_flexibility_data:
     log:
         logs("synthesise_eur_flexibility_data_{dataset}.log"),
     script:
-        "../../scripts/gb_model/synthesise_eur_flexibility_data.py"
+        "../scripts/gb_model/synthesise_eur_flexibility_data.py"
 
 
 rule scaled_demand_profile:

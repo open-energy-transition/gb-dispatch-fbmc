@@ -388,18 +388,6 @@ def add_EV_load(n: pypsa.Network, ev_demand_path: str):
 def _load_regional_data(path: str, year: int) -> pd.DataFrame:
     """
     Load regional data from CSV file and filter by year.
-
-    Parameters
-    ----------
-    path : str
-        Path to regional data CSV file
-    year : int
-        Year to filter data
-
-    Returns
-    -------
-    pd.DataFrame
-        Filtered regional data
     """
     df = pd.read_csv(path, index_col=["bus", "year"])
     df_year = df.xs(year, level="year")
@@ -452,13 +440,12 @@ def add_EV_DSR_V2G(
         y=n.buses.loc[ev_storage_capacity_df.index].y,
         country=n.buses.loc[ev_storage_capacity_df.index].country,
     )
-
     n.add(
         "Store",
         ev_storage_capacity_df.index,
         suffix=" EV store",
         bus=ev_storage_capacity_df.index + " EV store",
-        e_nom=ev_storage_capacity_df,
+        e_nom=ev_storage_capacity_df.MWh,
         e_cyclic=True,
         carrier="EV store",
         e_min_pu=ev_dsm_profile.loc[:, ev_storage_capacity_df.index],
@@ -471,7 +458,7 @@ def add_EV_DSR_V2G(
         suffix=" EV DSR",
         bus0=ev_dsr_df.index + " EV store",
         bus1=ev_dsr_df.index + " EV",
-        p_nom=ev_dsr_df.abs(),
+        p_nom=ev_dsr_df.p_nom.abs(),
         efficiency=1.0,
         carrier="EV DSR",
     )
@@ -481,7 +468,7 @@ def add_EV_DSR_V2G(
         suffix=" EV DSR reverse",
         bus0=ev_dsr_df.index + " EV",
         bus1=ev_dsr_df.index + " EV store",
-        p_nom=ev_dsr_df.abs(),
+        p_nom=ev_dsr_df.p_nom.abs(),
         efficiency=1.0,
         carrier="EV DSR reverse",
     )
@@ -493,7 +480,7 @@ def add_EV_DSR_V2G(
         suffix=" EV V2G",
         bus0=ev_v2g_df.index + " EV store",
         bus1=ev_v2g_df.index,
-        p_nom=ev_v2g_df.abs(),
+        p_nom=ev_v2g_df.p_nom.abs(),
         efficiency=1.0,
         carrier="EV V2G",
     )
@@ -813,8 +800,8 @@ if __name__ == "__main__":
         costs_config=snakemake.params.costs_config,
         electricity_config=snakemake.params.electricity,
         renewable_config=snakemake.params.renewable,
-        demands=_input_list_to_dict(snakemake.inputs.demands),
-        ev_data=_input_list_to_dict(snakemake.inputs.ev_data),
+        demands=_input_list_to_dict(snakemake.input.demands),
+        ev_data=_input_list_to_dict(snakemake.input.ev_data),
         enable_chp=snakemake.params.enable_chp,
         year=int(snakemake.wildcards.year),
     )
