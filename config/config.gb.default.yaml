@@ -279,6 +279,10 @@ region_operations:
     merge: [79, 80, 81, 82]
     TO: N-IRL
 
+  # List for merging regions into neighbouring countries
+  add_group_to_neighbour:
+    IE: ["GB 30"]
+
 # Note: Set ENTSO_E_API_KEY in your .env file or environment variables
 # Register at https://transparency.entsoe.eu/ to get API key
 entsoe_unavailability:
