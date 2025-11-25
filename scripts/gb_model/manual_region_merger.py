@@ -477,7 +477,7 @@ def append_country_shapes(
 
     logger.info(
         f"Appended and regrouped: {len(regions_gdf)} GB regions + {len(country_shapes_gdf)} "
-        f"country shapes → {len(regions_regrouped)} final country-level regions after dissolving"
+        f"country shapes -> {len(regions_regrouped)} final country-level regions after dissolving"
     )
 
     return regions_regrouped
