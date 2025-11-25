@@ -78,6 +78,7 @@ rule manual_region_merger:
     params:
         splits=config["region_operations"]["splits"],
         merge_groups=config["region_operations"]["merge_groups"],
+        add_group_to_neighbour=config["region_operations"]["add_group_to_neighbour"],
     log:
         logs("manual_region_merger.log"),
     resources:
@@ -744,7 +745,6 @@ rule compose_network:
         electricity=config["electricity"],
         clustering=config["clustering"],
         renewable=config["renewable"],
-        lines=config["lines"],
         enable_chp=config["chp"]["enable"],
         ev_profile_config=config["ev"]["ev_demand_profile_transformation"],
     input:
@@ -822,7 +822,7 @@ rule solve_constrained:
         prune_lines=config["region_operations"]["prune_lines"],
     input:
         network=resources("networks/composed_{clusters}_{year}.nc"),
-        etys_caps=resources("gb-model/etys_capacities.csv"),
+        etys_caps=resources("gb-model/etys_boundary_capabilities.csv"),
     output:
         network=RESULTS + "networks/composed_{clusters}_{year}_constrained.nc",
         config=RESULTS + "configs/config.composed_{clusters}_{year}_constrained.yaml",
@@ -845,3 +845,20 @@ rule solve_constrained:
         shadow_config
     script:
         "../scripts/solve_network.py"
+
+
+rule constrain_lines_to_boundary_capabilities:
+    message:
+        "Constrain line flows according to ETYS boundary capabilities"
+    input:
+        network=resources("networks/composed_clustered_{year}.nc"),
+        etys_caps=resources("gb-model/etys_boundary_capabilities.csv"),
+    params:
+        etys_boundaries_to_lines=config["region_operations"]["etys_boundaries"],
+        prune_lines=config["region_operations"]["prune_lines"],
+    output:
+        network=resources("networks/constrained_network_{year}.csv"),
+    log:
+        logs("constrain_lines_to_boundary_capabilities_{year}.log"),
+    script:
+        "../scripts/gb_model/constrain_lines_to_boundary_capabilities.py"
