@@ -11,6 +11,7 @@ based on provided region IDs and split specifications.
 """
 
 import logging
+from pathlib import Path
 
 import geopandas as gpd
 import pandas as pd
@@ -432,7 +433,9 @@ def merge_regions(
 
 
 def append_country_shapes(
-    regions_gdf: gpd.GeoDataFrame, country_shapes_file: str
+    regions_gdf: gpd.GeoDataFrame,
+    country_shapes_file: str,
+    add_group_to_neighbour: dict,
 ) -> gpd.GeoDataFrame:
     """
     Append country shapes other than GB to the regions GeoDataFrame
@@ -463,11 +466,21 @@ def append_country_shapes(
 
     # Concatenate the GeoDataFrames
     result_gdf = pd.concat([regions_gdf, country_shapes_gdf], ignore_index=True)
+
+    # Merge regions based on configuration
+    for neighbour, groups in add_group_to_neighbour.items():
+        result_gdf.loc[result_gdf.name.isin(groups), ["name", "country"]] = neighbour
+        logger.info(
+            f"Assigning regions {groups} to neighbour country shape: {neighbour}"
+        )
+    regions_regrouped = result_gdf.dissolve("name").reset_index("name")
+
     logger.info(
-        f"Appended country shapes: {len(regions_gdf)} regions + {len(country_shapes_gdf)} country shapes = {len(result_gdf)} total"
+        f"Appended and regrouped: {len(regions_gdf)} GB regions + {len(country_shapes_gdf)} "
+        f"country shapes -> {len(regions_regrouped)} final country-level regions after dissolving"
     )
 
-    return result_gdf
+    return regions_regrouped
 
 
 def save_regions(regions_gdf: gpd.GeoDataFrame, output_file: str) -> None:
@@ -481,9 +494,7 @@ if __name__ == "__main__":
     if "snakemake" not in globals():
         from scripts._helpers import mock_snakemake
 
-        snakemake = mock_snakemake(
-            "manual_region_merger", configfiles="config/config.GB_main.yaml"
-        )
+        snakemake = mock_snakemake(Path(__file__).stem)
     configure_logging(snakemake)
     set_scenario_config(snakemake)
 
@@ -501,7 +512,10 @@ if __name__ == "__main__":
 
     # Append country shapes
     merged_regions = append_country_shapes(
-        merged_regions, snakemake.input.country_shapes
+        merged_regions,
+        snakemake.input.country_shapes,
+        snakemake.params.add_group_to_neighbour,
     )
+
     # Save results
     save_regions(merged_regions, snakemake.output.merged_shapes)
