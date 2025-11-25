@@ -600,9 +600,7 @@ def update_bus_coordinates(
 
 
 def _update_bus_country(
-    n: pypsa.Network,
-    custom_busmap: pd.Series,
-    bus_to_country: dict
+    n: pypsa.Network, custom_busmap: pd.Series, bus_to_country: dict
 ) -> pypsa.Network:
     """
     Updates the country of the buses in the original network based on the custom busmap
@@ -613,7 +611,7 @@ def _update_bus_country(
         - n (pypsa.Network) : The original network.
         - custom_busmap (pd.Series) : The custom busmap with country information.
         - bus_to_country (dict): mapping of busname to country.
-         
+
 
     Returns
     -------
