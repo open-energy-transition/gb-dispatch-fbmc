@@ -77,6 +77,7 @@ rule manual_region_merger:
     params:
         splits=config["region_operations"]["splits"],
         merge_groups=config["region_operations"]["merge_groups"],
+        add_group_to_neighbour=config["region_operations"]["add_group_to_neighbour"],
     log:
         logs("manual_region_merger.log"),
     resources:

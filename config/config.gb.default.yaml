@@ -272,16 +272,16 @@ region_operations:
     merge: [22, 23, 24, 26, 27, 28, 29, 30, 25, 83, 84]
     TO: SHETL
   - id: 29
-    merge: [34, 35, 36]
-    TO: SHETL
-  - id: 30
-    merge: [92]
+    merge: [34, 35, 36, 92]
     TO: SHETL
 
-  # TODO: add this to Ireland
-  - id: 31
+  - id: 30
     merge: [79, 80, 81, 82]
     TO: N-IRL
+
+  # List for merging regions into neighbouring countries
+  add_group_to_neighbour:
+    IE: ["GB 30"]
 
 # Note: Set ENTSO_E_API_KEY in your .env file or environment variables
 # Register at https://transparency.entsoe.eu/ to get API key
