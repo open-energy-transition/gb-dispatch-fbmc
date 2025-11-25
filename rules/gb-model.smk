@@ -745,7 +745,6 @@ rule compose_network:
         electricity=config["electricity"],
         clustering=config["clustering"],
         renewable=config["renewable"],
-        lines=config["lines"],
         enable_chp=config["chp"]["enable"],
         ev_profile_config=config["ev"]["ev_demand_profile_transformation"],
     input:
@@ -809,3 +808,20 @@ rule compose_networks:
             run=config["run"]["name"],
             year=list(np.arange(year_range[0], year_range[1])),
         ),
+
+
+rule constrain_lines_to_boundary_capabilities:
+    message:
+        "Constrain line flows according to ETYS boundary capabilities"
+    input:
+        network=resources("networks/composed_clustered_{year}.nc"),
+        etys_caps=resources("gb-model/etys_boundary_capabilities.csv"),
+    params:
+        etys_boundaries_to_lines=config["region_operations"]["etys_boundaries"],
+        prune_lines=config["region_operations"]["prune_lines"],
+    output:
+        network=resources("networks/constrained_network_{year}.csv"),
+    log:
+        logs("constrain_lines_to_boundary_capabilities_{year}.log"),
+    script:
+        "../scripts/gb_model/constrain_lines_to_boundary_capabilities.py"

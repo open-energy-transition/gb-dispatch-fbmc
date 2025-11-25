@@ -845,7 +845,6 @@ def compose_network(
     electricity_config: dict[str, Any],
     clustering_config: dict[str, Any],
     renewable_config: dict[str, Any],
-    lines_config: dict[str, Any],
     demands: dict[str, list[str]],
     eur_demand: str,
     year: int,
@@ -868,6 +867,8 @@ def compose_network(
         Path to powerplants CSV file
     hydro_capacities_path : str or None
         Path to hydro capacities CSV file
+    chp_p_min_pu_path : str
+        Path to CHP minimum operation profile CSV file
     renewable_profiles : dict
         Mapping of carrier names to profile file paths
     heat_demand_path : str
@@ -882,8 +883,6 @@ def compose_network(
         Clustering configuration dictionary
     renewable_config : dict
         Renewable configuration dictionary
-    lines_config : dict
-        Lines configuration dictionary
     demand: list[str]
         List of paths to the demand data for each demand type
     clustered_demand_profile: list[str]
@@ -1007,7 +1006,6 @@ if __name__ == "__main__":
         electricity_config=snakemake.params.electricity,
         clustering_config=snakemake.params.clustering,
         renewable_config=snakemake.params.renewable,
-        lines_config=snakemake.params.lines,
         demands=demands,
         year=int(snakemake.wildcards.year),
         enable_chp=snakemake.params.enable_chp,
