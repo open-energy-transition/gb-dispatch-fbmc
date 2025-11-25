@@ -12,6 +12,7 @@ Release Notes
 Upcoming Release
 ================
 
+* Fixed missing European neighbour data in EV datasets (#123).
 * Add demands to pypsa Network (#102, #70, #120).
 * Limit GB model to ``clustered`` clusters.
 * Add EV to pypsa Network (#114)

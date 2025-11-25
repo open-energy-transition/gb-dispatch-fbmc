@@ -63,9 +63,12 @@ GB `grid-supply point (GSP) coordinates <https://api.neso.energy/dataset/963525d
 This is used to assign lat, lon to powerplants extracted from the FES workbook
 
 -----------------------
-FES EU Supply data
+FES European data
 -----------------------
-The `FES EU supply data <https://api.neso.energy/dataset/bd83ce0b-7b1e-4ff2-89e8-12d524c34d99/resource/6563801b-6da4-46e7-b147-3d81c0237779/download/fes2023_es2_v001.csv>`_ is used to retrieve powerplant data of neighbouring countries to GB.
+The `FES European dataset <https://api.neso.energy/dataset/bd83ce0b-7b1e-4ff2-89e8-12d524c34d99/resource/6563801b-6da4-46e7-b147-3d81c0237779/download/fes2023_es2_v001.csv>`_ is used to retrieve powerplant and demand data of other countries in Europe.
+
+Note that the split of demand data into types and all other FES datasets (e.g., load flexibility potential) are not available for these countries.
+Accordingly, we create synthetic European datasets using the relative magnitude of total annual demand in a European country compared to GB annual demand.
 
 ---------------
 Interconnectors
