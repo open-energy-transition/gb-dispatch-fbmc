@@ -818,8 +818,11 @@ rule solve_constrained:
             "sector", "co2_sequestration_potential", default=200
         ),
         custom_extra_functionality=input_custom_extra_functionality,
+        etys_boundaries_to_lines=config["region_operations"]["etys_boundaries"],
+        prune_lines=config["region_operations"]["prune_lines"],
     input:
         network=resources("networks/composed_{clusters}_{year}.nc"),
+        etys_caps=resources("gb-model/etys_capacities.csv"),
     output:
         network=RESULTS + "networks/composed_{clusters}_{year}_constrained.nc",
         config=RESULTS + "configs/config.composed_{clusters}_{year}_constrained.yaml",
