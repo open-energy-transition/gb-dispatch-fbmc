@@ -98,10 +98,13 @@ region_operations:
     merge: [26, 27, 58]
     TO: SHETL
 
-  # TODO: add this to Ireland
   - id: NI
     merge: [46, 47, 48]
     TO: N-IRL
+
+  # List for merging regions into neighbouring countries
+  add_group_to_neighbour:
+    IE: ["GB NI"]
 
   etys_boundaries:
     B3b:
