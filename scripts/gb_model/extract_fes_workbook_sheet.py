@@ -42,6 +42,7 @@ def extract_fes_worksheet(
     renamers = sheet_config.pop("rename", {})
     new_idx = sheet_config.pop("add_index", {})
     header = sheet_config.get("header", None)
+    header_name = sheet_config.pop("header_name", None)
     if isinstance(header, list):
         # We cannot use both "usecols" and "header" as list in pd.read_excel,
         # so set header to 0 here and dealt with later
@@ -53,6 +54,9 @@ def extract_fes_worksheet(
             fes_data = fes_data.T.set_index(fes_data.index[0], append=True).T
 
     fes_data = fes_data.rename_axis(**renamers)
+
+    if fes_data.columns.name is None and header_name is not None:
+        fes_data.columns.name = header_name
 
     if header is not None:
         fes_data = fes_data.stack(header)
