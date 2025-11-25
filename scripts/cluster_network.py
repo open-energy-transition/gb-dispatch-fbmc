@@ -675,7 +675,8 @@ if __name__ == "__main__":
                 f"Imported custom shapes from {snakemake.input.custom_busshapes}"
             )
             if mode == "gb_shapes":
-                _update_bus_country(n, custom_busmap)
+                bus_to_country = custom_shapes.set_index("name").country.to_dict()
+                _update_bus_country(n, custom_busmap, bus_to_country)
 
             busmap = custom_busmap
         elif mode == "custom_busmap":
