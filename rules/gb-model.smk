@@ -737,3 +737,37 @@ rule compose_networks:
             run=config["run"]["name"],
             year=list(np.arange(year_range[0], year_range[1])),
         ),
+
+
+rule solve_constrained:
+    params:
+        solving=config_provider("solving"),
+        foresight=config_provider("foresight"),
+        co2_sequestration_potential=config_provider(
+            "sector", "co2_sequestration_potential", default=200
+        ),
+        custom_extra_functionality=input_custom_extra_functionality,
+    input:
+        network=resources("networks/composed_{clusters}_{year}.nc"),
+    output:
+        network=RESULTS + "networks/composed_{clusters}_{year}_constrained.nc",
+        config=RESULTS + "configs/config.composed_{clusters}_{year}_constrained.yaml",
+    log:
+        solver=normpath(
+            RESULTS
+            + "logs/solve_network/composed_{clusters}_{year}_constrained_solver.log"
+        ),
+        memory=RESULTS
+        + "logs/solve_network/composed_{clusters}_{year}_constrained_memory.log",
+        python=RESULTS
+        + "logs/solve_network/composed_{clusters}_{year}_constrained_python.log",
+    benchmark:
+        (RESULTS + "benchmarks/solve_network/composed_{clusters}_{year}_constrained")
+    threads: solver_threads
+    resources:
+        mem_mb=config_provider("solving", "mem_mb"),
+        runtime=config_provider("solving", "runtime", default="6h"),
+    shadow:
+        shadow_config
+    script:
+        "../scripts/solve_network.py"

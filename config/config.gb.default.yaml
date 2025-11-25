@@ -127,7 +127,13 @@ costs:
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#solving
 solving:
   options:
+    clip_p_max_pu: 1.e-2
     load_shedding: false
+    curtailment_mode: false
+    noisy_costs: true
+    skip_iterations: true
+    rolling_horizon: false
+    custom_extra_functionality: "../scripts/gb_model/custom_constraints.py"
   solver:
     name: gurobi
     options: gurobi-default
