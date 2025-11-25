@@ -49,22 +49,19 @@ def process_fes_heatmix(
 
     # Read the FES data
     fes_data = pd.read_csv(
-        fes_data_heatmix_path, index_col=["Type", "2020", "Scenario"]
+        fes_data_heatmix_path, index_col=["type", "2020", "scenario_2050"]
     )
-
-    # Filter the data
-    mask = fes_data.index.get_level_values("Scenario").str.contains(
+    mask = fes_data.index.get_level_values("scenario_2050").str.contains(
         scenario, case=False
     )
+    # Filter the data
     fes_data_filtered = (
         fes_data.loc[mask]
+        .rename(columns={"data": "2050"})
+        .reset_index("2020")
+        .reset_index("scenario_2050", drop=True)
         .loc[electrified_heating_technologies]
-        .reset_index()
-        .assign(
-            data=lambda df: df["data"].astype(float),
-            data_2020=lambda df: df["2020"].astype(float),
-            **{"2050": lambda df: df["data"], "2020": lambda df: df["data_2020"]},
-        )
+        .astype(float)
     )
 
     # Compute the share for the required year by interpolating the shares between 2020 and 2050
