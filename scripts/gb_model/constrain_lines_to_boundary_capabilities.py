@@ -17,7 +17,7 @@ from scripts._helpers import configure_logging, set_scenario_config
 logger = logging.getLogger(__name__)
 
 
-def _get_lines(lines: pd.DataFrame, bus1: str | int, bus0: str | int) -> pd.Series:
+def _get_lines(lines: pd.DataFrame, bus0: str | int, bus1: str | int) -> pd.Series:
     """
     Get a boolean mask of lines connecting bus0 and bus1.
     This accounts for cases where bus0 and bus1 may be swapped.
