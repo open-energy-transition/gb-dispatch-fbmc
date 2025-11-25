@@ -673,7 +673,8 @@ if __name__ == "__main__":
             logger.info(
                 f"Imported custom shapes from {snakemake.input.custom_busshapes}"
             )
-            _update_bus_country(n, custom_busmap)
+            if mode == "gb_shapes":
+                _update_bus_country(n, custom_busmap)
 
             busmap = custom_busmap
         elif mode == "custom_busmap":
