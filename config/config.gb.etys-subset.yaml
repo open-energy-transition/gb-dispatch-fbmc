@@ -98,21 +98,6 @@ region_operations:
     merge: [26, 27, 58]
     TO: SHETL
 
-  - id: IE
-    merge: [46, 47, 48, IE]
-    TO: IE
-  - id: BE
-    merge: [BE]
-    TO: BE
-  - id: NL
-    merge: [NL]
-    TO: NL
-  - id: FR
-    merge: [FR]
-    TO: FR
-  - id: DK
-    merge: [DK]
-    TO: DK
-  - id: "NO"
-    merge: ["NO"]
-    TO: "NO"
+  - id: NI
+    merge: [46, 47, 48]
+    TO: N-IRL
