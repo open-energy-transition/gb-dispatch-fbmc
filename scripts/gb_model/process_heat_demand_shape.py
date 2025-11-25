@@ -36,7 +36,9 @@ def process_demand_timeseries(
         pd.DataFrame : electrified heat demand profile for the sector
     """
 
-    cop_profile = pd.read_csv(cop_profile_path, index_col=["time","name"], parse_dates=["time"])
+    cop_profile = pd.read_csv(
+        cop_profile_path, index_col=["time", "name"], parse_dates=["time"]
+    )
     heating_mix = pd.read_csv(heating_mix_path, index_col="Technology")
 
     # Read the heat demand .nc file

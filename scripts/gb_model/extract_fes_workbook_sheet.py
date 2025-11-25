@@ -42,7 +42,7 @@ def extract_fes_worksheet(
     renamers = sheet_config.pop("rename", {})
     new_idx = sheet_config.pop("add_index", {})
     header = sheet_config.get("header", None)
-    header_name=sheet_config.pop("header_name", None)
+    header_name = sheet_config.pop("header_name", None)
     if isinstance(header, list):
         # We cannot use both "usecols" and "header" as list in pd.read_excel,
         # so set header to 0 here and dealt with later
