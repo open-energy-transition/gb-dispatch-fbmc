@@ -76,12 +76,8 @@ def set_boundary_constraints(
         # Get Line-s for boundary lines
         line_s_boundary = line_s.sel(snapshot=snapshots, Line=boundary_lines)
 
-        # Multiply Line-s by s_max_pu of each line to get actual flow limits
-        s_max_pu = n.lines.loc[boundary_lines, "s_max_pu"]
-        line_s_boundary_scaled = line_s_boundary * s_max_pu
-
         # Sum across lines to get total flow at the boundary
-        lhs = line_s_boundary_scaled.sum("Line")
+        lhs = line_s_boundary.sum("Line")
 
         # Add bidirectional constraint: total flow ≤ boundary capability
         n.model.add_constraints(
