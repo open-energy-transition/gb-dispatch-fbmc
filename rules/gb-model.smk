@@ -764,6 +764,7 @@ rule compose_network:
         ev_demand_annual=resources("gb-model/fes_transport_demand.csv"),
         ev_storage_capacity=resources("gb-model/regional_fes_ev_storage.csv"),
         ev_dsm_profile=resources("dsm_profile_s_clustered.csv"),
+        interconnectors_p_nom=resources("gb-model/interconnectors_p_nom.csv"),
         intermediate_data=[
             resources("gb-model/transmission_availability.csv"),
             expand(
@@ -774,7 +775,6 @@ rule compose_network:
                 business_type=config["entsoe_unavailability"]["business_types"],
             ),
             resources("gb-model/merged_shapes.geojson"),
-            resources("gb-model/interconnectors_p_nom.csv"),
             resources("gb-model/GB_generator_monthly_unavailability.csv"),
             resources("gb-model/fes_hydrogen_demand.csv"),
             resources("gb-model/fes_grid_electrolysis_capacities.csv"),

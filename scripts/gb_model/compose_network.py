@@ -683,6 +683,60 @@ def finalise_composed_network(
     return n
 
 
+def attach_dc_interconnectors(
+    n: pypsa.Network, interconnectors_path: str, year: int
+) -> None:
+    """
+    Attach DC interconnector links to the network with fixed capacities.
+
+    Removes existing DC links between GB and neighboring countries, then adds
+    new links based on the interconnectors CSV file for the specified year.
+
+    Args:
+        n (pypsa.Network): The PyPSA network
+        interconnectors_path (str): Path to interconnectors CSV file
+        year (int): Year for which to load interconnector capacities
+    """
+    # Load interconnector data
+    interconnectors = pd.read_csv(
+        interconnectors_path,
+        dtype={"bus0": str, "bus1": str},
+        index_col=["project", "year"],
+    )
+    interconnectors_this_year = interconnectors.xs(year, level="year")
+
+    if interconnectors_this_year.empty:
+        logger.warning(f"No interconnector data found for year {year}")
+        return
+
+    # Find DC links connecting GB to neighbors (bidirectional)
+    existing_dc_links = n.links[
+        (n.links.carrier == "DC")
+        & (
+            (n.links.bus0.str.startswith("GB") & ~n.links.bus1.str.startswith("GB"))
+            | (n.links.bus1.str.startswith("GB") & ~n.links.bus0.str.startswith("GB"))
+        )
+    ]
+
+    # Remove existing DC interconnectors
+    if not existing_dc_links.empty:
+        removed_links = existing_dc_links.index.tolist()
+        n.remove("Link", removed_links)
+        logger.info(
+            f"Removed {len(removed_links)} existing DC interconnector links: {removed_links}"
+        )
+    else:
+        logger.info("No existing DC interconnector links found to remove")
+
+    # Add the links
+    n.add("Link", interconnectors_this_year.index, **interconnectors_this_year)
+
+    logger.info(
+        f"Added {len(interconnectors_this_year)} DC interconnector links with total capacity "
+        f"{interconnectors_this_year['p_nom'].sum():.1f} MW for year {year}"
+    )
+
+
 def attach_chp_constraints(n: pypsa.Network, p_min_pu: pd.DataFrame) -> None:
     """
     Attach CHP operating constraints to the network.
@@ -839,6 +893,7 @@ def compose_network(
     powerplants_path: str,
     hydro_capacities_path: str | None,
     chp_p_min_pu_path: str,
+    interconnectors_path: str,
     renewable_profiles: dict[str, str],
     countries: list[str],
     costs_config: dict[str, Any],
@@ -869,6 +924,8 @@ def compose_network(
         Path to hydro capacities CSV file
     chp_p_min_pu_path : str
         Path to CHP minimum operation profile CSV file
+    interconnectors_path : str
+        Path to interconnectors CSV file with DC link capacities
     renewable_profiles : dict
         Mapping of carrier names to profile file paths
     heat_demand_path : str
@@ -946,6 +1003,9 @@ def compose_network(
 
     add_EVs(network, ev_data, ev_params, year)
 
+    # Add DC interconnectors with fixed capacities
+    attach_dc_interconnectors(network, interconnectors_path, year)
+
     finalise_composed_network(network, context)
 
     network.export_to_netcdf(output_path)
@@ -1000,6 +1060,7 @@ if __name__ == "__main__":
         hydro_capacities_path=snakemake.input.hydro_capacities,
         renewable_profiles=renewable_profiles,
         chp_p_min_pu_path=snakemake.input.chp_p_min_pu,
+        interconnectors_path=snakemake.input.interconnectors_p_nom,
         eur_demand=snakemake.input.eur_demand,
         countries=snakemake.params.countries,
         costs_config=snakemake.params.costs_config,
