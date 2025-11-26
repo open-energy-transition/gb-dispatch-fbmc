@@ -819,24 +819,20 @@ rule solve_constrained:
         ),
         custom_extra_functionality=input_custom_extra_functionality,
         etys_boundaries_to_lines=config["region_operations"]["etys_boundaries"],
-        prune_lines=config["region_operations"]["prune_lines"],
     input:
-        network=resources("networks/composed_{clusters}_{year}.nc"),
+        network=resources("networks/constrained_clustered_{year}.nc"),
         etys_caps=resources("gb-model/etys_boundary_capabilities.csv"),
     output:
-        network=RESULTS + "networks/composed_{clusters}_{year}_constrained.nc",
-        config=RESULTS + "configs/config.composed_{clusters}_{year}_constrained.yaml",
+        network=RESULTS + "networks/constrained_clustered_{year}.nc",
+        config=RESULTS + "configs/config.constrained_clustered_{year}.yaml",
     log:
         solver=normpath(
-            RESULTS
-            + "logs/solve_network/composed_{clusters}_{year}_constrained_solver.log"
+            RESULTS + "logs/solve_network/constrained_clustered_{year}_solver.log"
         ),
-        memory=RESULTS
-        + "logs/solve_network/composed_{clusters}_{year}_constrained_memory.log",
-        python=RESULTS
-        + "logs/solve_network/composed_{clusters}_{year}_constrained_python.log",
+        memory=RESULTS + "logs/solve_network/constrained_clustered_{year}_memory.log",
+        python=RESULTS + "logs/solve_network/constrained_clustered_{year}_python.log",
     benchmark:
-        (RESULTS + "benchmarks/solve_network/composed_{clusters}_{year}_constrained")
+        (RESULTS + "benchmarks/solve_network/constrained_clustered_{year}")
     threads: solver_threads
     resources:
         mem_mb=config_provider("solving", "mem_mb"),
@@ -847,18 +843,16 @@ rule solve_constrained:
         "../scripts/solve_network.py"
 
 
-rule constrain_lines_to_boundary_capabilities:
+rule prepare_constrained_network:
     message:
-        "Constrain line flows according to ETYS boundary capabilities"
+        "Prepare network for constrained optimization"
     input:
         network=resources("networks/composed_clustered_{year}.nc"),
-        etys_caps=resources("gb-model/etys_boundary_capabilities.csv"),
     params:
-        etys_boundaries_to_lines=config["region_operations"]["etys_boundaries"],
         prune_lines=config["region_operations"]["prune_lines"],
     output:
-        network=resources("networks/constrained_network_{year}.csv"),
+        network=resources("networks/constrained_clustered_{year}.nc"),
     log:
-        logs("constrain_lines_to_boundary_capabilities_{year}.log"),
+        logs("prepare_constrained_network_{year}.log"),
     script:
-        "../scripts/gb_model/constrain_lines_to_boundary_capabilities.py"
+        "../scripts/gb_model/prepare_constrained_network.py"
