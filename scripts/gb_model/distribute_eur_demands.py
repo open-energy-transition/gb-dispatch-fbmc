@@ -73,7 +73,7 @@ if __name__ == "__main__":
 
     df_eur = pd.read_csv(snakemake.input.eur_data).query("Variable == 'Demand (TWh)'")
     demands = {
-        Path(file).stem.removesuffix("_demand"): pd.read_csv(file)
+        Path(file).stem.removesuffix("_demand_annual"): pd.read_csv(file)
         .groupby("year")
         .p_set.sum()
         for file in snakemake.input.demands
