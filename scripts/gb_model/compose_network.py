@@ -694,6 +694,8 @@ def compose_network(
         Path to powerplants CSV file
     hydro_capacities_path : str or None
         Path to hydro capacities CSV file
+    chp_p_min_pu_path : str
+        Path to CHP minimum operation profile CSV file
     renewable_profiles : dict
         Mapping of carrier names to profile file paths
     heat_demand_path : str
@@ -708,8 +710,6 @@ def compose_network(
         Clustering configuration dictionary
     renewable_config : dict
         Renewable configuration dictionary
-    lines_config : dict
-        Lines configuration dictionary
     demands: dict[str, str]
         Dictionary mapping demand types to paths for the demand data
     year: int
