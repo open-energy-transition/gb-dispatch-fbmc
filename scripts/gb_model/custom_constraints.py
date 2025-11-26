@@ -25,7 +25,7 @@ def set_boundary_constraints(
     snakemake: Snakemake,
 ) -> None:
     """
-    Limit total line flows across each boundary to match ETYS capacities.
+    Limit new line flows across each boundary to satisfy ETYS boundary capabilities.
 
     Args:
         n (pypsa.Network): The PyPSA network to add constraints.
