@@ -747,6 +747,7 @@ rule compose_network:
         renewable=config["renewable"],
         enable_chp=config["chp"]["enable"],
         ev_profile_config=config["ev"]["ev_demand_profile_transformation"],
+        prune_lines=config["region_operations"]["prune_lines"],
     input:
         unpack(input_profile_tech),
         unpack(demands),
@@ -848,8 +849,6 @@ rule prepare_constrained_network:
         "Prepare network for constrained optimization"
     input:
         network=resources("networks/composed_clustered_{year}.nc"),
-    params:
-        prune_lines=config["region_operations"]["prune_lines"],
     output:
         network=resources("networks/constrained_clustered_{year}.nc"),
     log:

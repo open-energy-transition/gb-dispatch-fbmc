@@ -63,10 +63,10 @@ def set_boundary_constraints(
         boundary_lines = n.lines[boundary_lines_mask].index
 
         if boundary_lines.empty:
-            logger.warning(
-                f"No lines found for boundary '{boundary}', skipping constraint."
+            raise ValueError(
+                f"No lines found for boundary '{boundary}'. "
+                f"Cannot apply ETYS constraint. Check configuration."
             )
-            continue
 
         logger.info(
             f"Boundary {boundary}: {len(boundary_lines)} lines, "
