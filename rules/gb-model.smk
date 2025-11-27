@@ -774,9 +774,10 @@ rule compose_network:
             resources("gb-model/{demand_type}_demand/{{year}}.csv"),
             demand_type=config["fes"]["gb"]["demand"]["Technology Detail"].keys(),
         ),
-        residential_dsr=resources("gb-model/regional_residential_dsr.csv"),
-        services_dsr=resources("gb-model/regional_services_dsr.csv"),
-        iandc_heat_dsr=resources("gb-model/regional_iandc_heat_dsr.csv"),
+        dsr=expand(
+            resources("gb-model/regional_{sector}_dsr.csv"),
+                sector=["residential","services","iandc_heat"],
+        ),
         ev_data=expand(
             resources("gb-model/regional_ev_{ev_data}_inc_eur.csv"),
             ev_data=["storage", "dsm", "v2g"],

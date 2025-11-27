@@ -496,81 +496,119 @@ def add_EV_DSR_V2G(
         carrier="EV V2G",
     )
 
-
-def add_baseline_dsr(n, residential_dsr_path: str, services_dsr_path: str, iandc_heat_dsr_path: str, year):
-
-    df_residential_dsr = _load_regional_data(residential_dsr_path, year)
-    df_services_dsr = _load_regional_data(services_dsr_path, year)
-    df_iandc_heat_dsr = _load_regional_data(iandc_heat_dsr_path, year)
+def _add_dsr_pypsa_components(
+        n: pypsa.Network, 
+        df: pd.DataFrame, 
+        key: str
+    ):
+    """
+    Add DSR components for a given sector to PyPSA network
+    Parameters
+    ----------
+        n : pypsa.Network
+            Network to finalize
+        df : pd.DataFrame
+            DataFrame containing flexibility p_nom data indexed by bus
+        key : str
+            Sector key (e.g., 'residential', 'services', 'iandc_heat')
+    """
     
-    for key in ["residential", "services","iandc_heat"]:
-        if key == "residential":
-            df_dsr = df_residential_dsr
-        elif key == "services":
-            df_dsr = df_services_dsr
-        else:
-            df_dsr = df_iandc_heat_dsr
-        
-        # Add the DSR carrier to the PyPSA network    
-        n.add(
-            "Carrier",
-            f"{key} DSR",
-            nice_name=f"{key} Demand Side Response",
-        )
-        n.add(
-            "Carrier",
-            f"{key} DSR shift",
-        )
+    # Add the DSR carrier to the PyPSA network    
+    n.add(
+        "Carrier",
+        f"{key} DSR",
+        nice_name=f"{key} Demand Side Response",
+    )
 
-        n.add(
-            "Carrier",
-            f"{key} DSR reverse",
-        )
+    # Add the DSR shift and reverse carriers to the PyPSA network
+    n.add(
+        "Carrier",
+        f"{key} DSR shift",
+    )
 
-        n.add(
-            "Bus",
-            df_dsr.index,
-            suffix=f" {key} DSR bus",
-            carrier=f"{key} DSR",
-            x=n.buses.loc[df_dsr.index].x,
-            y=n.buses.loc[df_dsr.index].y,
-            country=n.buses.loc[df_dsr.index].country,
-        )
-        
-        # Add the EV DSR to the PyPSA network
-        n.add(
-            "Link",
-            df_dsr.index,
-            suffix=f" {key} DSR",
-            bus0=df_dsr.index,
-            bus1=df_dsr.index + f" {key} DSR bus",
-            p_nom=df_dsr.p_nom.abs(),
-            efficiency=1.0,
-            carrier=f"{key} DSR shift"
-        )
+    n.add(
+        "Carrier",
+        f"{key} DSR reverse",
+    )
 
-        n.add(
-            "Link",
-            df_dsr.index,
-            suffix=f" {key} DSR reverse",
-            bus0=df_dsr.index + f" {key} DSR bus",
-            bus1=df_dsr.index,
-            p_nom=df_dsr.p_nom.abs(),
-            efficiency=1.0,
-            carrier=f"{key} DSR reverse",
-        )
 
-        
-        # Add the {key} DSR store to the PyPSA network
-        n.add(
-            "Store",
-            df_dsr.index,
-            suffix=f" {key} DSR store",
-            bus=df_dsr.index + f" {key} DSR bus",
-            e_nom=1000,
-            e_cyclic=True,
-            carrier=f"{key} DSR"      
-        )
+    # Create DSR buses, links and stores
+    # Add the DSR bus to the PyPSA network
+    n.add(
+        "Bus",
+        df.index,
+        suffix=f" {key} DSR bus",
+        carrier=f"{key} DSR",
+        x=n.buses.loc[df.index].x,
+        y=n.buses.loc[df.index].y,
+        country=n.buses.loc[df.index].country,
+    )
+    
+    # Add the DSR link from AC bus to DSR bus to the PyPSA network
+    n.add(
+        "Link",
+        df.index,
+        suffix=f" {key} DSR",
+        bus0=df.index,
+        bus1=df.index + f" {key} DSR bus",
+        p_nom=df.p_nom.abs(),
+        efficiency=1.0,
+        carrier=f"{key} DSR shift"
+    )
+
+    # Add the DSR link from DSR bus to AC bus to the PyPSA network    
+    n.add(
+        "Link",
+        df.index,
+        suffix=f" {key} DSR reverse",
+        bus0=df.index + f" {key} DSR bus",
+        bus1=df.index,
+        p_nom=df.p_nom.abs(),
+        efficiency=1.0,
+        carrier=f"{key} DSR reverse",
+    )
+
+    
+    # Add the DSR store to the PyPSA network
+    n.add(
+        "Store",
+        df.index,
+        suffix=f" {key} DSR store",
+        bus=df.index + f" {key} DSR bus",
+        e_nom=1000,
+        e_cyclic=True,
+        carrier=f"{key} DSR"      
+    )
+
+def add_DSR_baseline_heat(
+        n: pypsa.Network, 
+        year: int, 
+        dsr: dict[str, str],
+    ):
+    """
+    Add DSR components for residential, services and i&c heat sectors to PyPSA network
+    
+    Parameters
+    ----------
+        n : pypsa.Network
+            Network to finalize
+        year: int
+            Year used in the modelling
+        dsr: dict[str, str]
+            Dictionary containing DSR flexibility data for baseline and electrified heat
+    """
+
+    for file, path in dsr.items():
+        if "residential" in file:
+            df_dsr = _load_regional_data(path, year)
+            _add_dsr_pypsa_components(n, df_dsr, "residential")
+        elif "services" in file:
+            df_dsr = _load_regional_data(path, year)
+            _add_dsr_pypsa_components(n, df_dsr, "services")
+        elif "iandc_heat" in file:
+            df_dsr = _load_regional_data(path, year)
+            _add_dsr_pypsa_components(n, df_dsr, "iandc_heat")
+
 
 
 def finalise_composed_network(
@@ -846,13 +884,11 @@ def compose_network(
     electricity_config: dict[str, Any],
     renewable_config: dict[str, Any],
     demands: dict[str, str],
-    enable_chp: bool,
     ev_data: dict[str, str],
     prune_lines: list[dict[str, int]],
+    dsr: dict[str, str],
+    enable_chp: bool,
     year: int,
-    residential_dsr_path: str,
-    services_dsr_path: str,
-    iandc_heat_dsr_path: str,
 ) -> None:
     """
     Main composition function to create GB market model network.
@@ -889,12 +925,14 @@ def compose_network(
         Renewable configuration dictionary
     demands: dict[str, str]
         Dictionary mapping demand types to paths for the demand data
-    enable_chp : bool
-        Whether to enable CHP constraints
     ev_data : dict[str, str]
         Dictionary containing EV flexibility data
     prune_lines : list[dict[str, int]]
         List of lines to prune between specified bus pairs
+    dsr : dict[str, str]
+        Dictionary containing DSR flexibility data for baseline and electrified heat
+    enable_chp : bool
+        Whether to enable CHP constraints
     year: int
         Modelling year
     """
@@ -950,7 +988,7 @@ def compose_network(
 
     _prune_lines(network, prune_lines)
 
-    add_baseline_dsr(network, residential_dsr_path, services_dsr_path, iandc_heat_dsr_path, year)
+    add_DSR_baseline_heat(network, year, dsr)
 
     finalise_composed_network(network, context)
 
@@ -988,10 +1026,8 @@ if __name__ == "__main__":
         renewable_config=snakemake.params.renewable,
         demands=_input_list_to_dict(snakemake.input.demands, parent=True),
         ev_data=_input_list_to_dict(snakemake.input.ev_data),
+        dsr=_input_list_to_dict(snakemake.input.dsr),
         enable_chp=snakemake.params.enable_chp,
         prune_lines=snakemake.params.prune_lines,
         year=int(snakemake.wildcards.year),
-        residential_dsr_path=snakemake.input.residential_dsr,
-        services_dsr_path=snakemake.input.services_dsr,
-        iandc_heat_dsr_path=snakemake.input.iandc_heat_dsr,
     )
