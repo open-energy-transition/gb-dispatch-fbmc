@@ -29,6 +29,7 @@ from scripts.add_electricity import (
     attach_hydro,
     flatten,
 )
+from scripts.gb_model._helpers import get_lines
 
 logger = logging.getLogger(__name__)
 
@@ -672,6 +673,35 @@ def _prepare_costs(
     return costs
 
 
+def _prune_lines(
+    n: pypsa.Network,
+    prune_lines: list[dict[str, int]],
+) -> None:
+    """
+    Prune lines between bus0 and bus1 by setting their s_max_pu to 0.
+
+    Args:
+        n (pypsa.Network): The PyPSA network to modify.
+        prune_lines (list[dict[str, int]]): The lines to prune.
+    """
+    # Prune specified lines
+    for line in prune_lines:
+        mask = get_lines(n.lines, line["bus0"], line["bus1"])
+        if mask.any():
+            # Get lines to remove
+            lines_to_remove = n.lines[mask].index
+
+            # Remove the lines from the network
+            n.remove("Line", lines_to_remove)
+            logger.info(
+                f"Deleted line between bus {line['bus0']} and bus {line['bus1']}"
+            )
+        else:
+            logger.warning(
+                f"No line found to prune between bus {line['bus0']} and bus {line['bus1']}"
+            )
+
+
 def compose_network(
     network_path: str,
     output_path: str,
@@ -687,6 +717,7 @@ def compose_network(
     demands: dict[str, str],
     enable_chp: bool,
     ev_data: dict[str, str],
+    prune_lines: list[dict[str, int]],
     year: int,
 ) -> None:
     """
@@ -722,12 +753,14 @@ def compose_network(
         Renewable configuration dictionary
     demands: dict[str, str]
         Dictionary mapping demand types to paths for the demand data
-    year: int
-        Modelling year
     enable_chp : bool
         Whether to enable CHP constraints
     ev_data : dict[str, str]
         Dictionary containing EV flexibility data
+    prune_lines : list[dict[str, int]]
+        List of lines to prune between specified bus pairs
+    year: int
+        Modelling year
     """
     network = pypsa.Network(network_path)
     max_hours = electricity_config["max_hours"]
@@ -777,6 +810,8 @@ def compose_network(
 
     add_EV_DSR_V2G(network, year, **ev_data)
 
+    _prune_lines(network, prune_lines)
+
     finalise_composed_network(network, context)
 
     network.export_to_netcdf(output_path)
@@ -813,5 +848,6 @@ if __name__ == "__main__":
         demands=_input_list_to_dict(snakemake.input.demands, parent=True),
         ev_data=_input_list_to_dict(snakemake.input.ev_data),
         enable_chp=snakemake.params.enable_chp,
+        prune_lines=snakemake.params.prune_lines,
         year=int(snakemake.wildcards.year),
     )

@@ -95,3 +95,17 @@ def get_regional_distribution(df: pd.Series) -> pd.Series:
     regional_distribution = df.groupby(level="year").transform(lambda x: x / x.sum())
 
     return regional_distribution
+
+
+def get_lines(lines: pd.DataFrame, bus0: str | int, bus1: str | int) -> pd.Series:
+    """
+    Get a boolean mask of lines connecting bus0 and bus1.
+    This accounts for cases where bus0 and bus1 may be swapped.
+    """
+    all_lines = set(lines["bus0"]).union(set(lines["bus1"]))
+    for bus in (bus0, bus1):
+        if f"GB {bus}" not in all_lines:
+            logger.warning(f"Bus 'GB {bus}' not found in network lines")
+    return ((lines["bus0"] == f"GB {bus0}") & (lines["bus1"] == f"GB {bus1}")) | (
+        (lines["bus0"] == f"GB {bus1}") & (lines["bus1"] == f"GB {bus0}")
+    )
