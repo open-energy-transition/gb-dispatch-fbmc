@@ -569,11 +569,17 @@ def _add_dsr_pypsa_components(
         carrier=f"{key} DSR reverse",
     )
 
+    breakpoint()
     # Create DSM profile to set as e_max_pu for DSR store
-    dsr_profile=pd.DataFrame(index=n.snapshots,columns=df.index,data=0.0)
-    mask=(dsr_profile.index.hour >=dsr_hours[0]) & (dsr_profile.index.hour < dsr_hours[1])
-    dsr_profile.loc[mask]=1.0
-    
+    dsr_profile = pd.DataFrame(index=n.snapshots, columns=df.index, data=0.0)
+    mask = (dsr_profile.index.hour >= dsr_hours[0]) & (
+        dsr_profile.index.hour < dsr_hours[1]
+    )
+    dsr_profile.loc[mask] = 1.0
+    EU_columns = [col for col in df.index if "GB" not in col]
+    # Shift European neighbour columns by 1 hour to account for time zone difference
+    dsr_profile.loc[:, EU_columns] = dsr_profile.loc[:, EU_columns].shift(1, fill_value=0.0)
+
     # Calculate DSR duration in hours
     dsm_duration=dsr_hours[1]-dsr_hours[0]
 
