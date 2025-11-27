@@ -30,6 +30,10 @@ from scripts.add_electricity import (
     flatten,
 )
 from scripts.gb_model._helpers import get_lines
+import pytz
+from datetime import datetime
+from pytz import country_timezones
+
 
 logger = logging.getLogger(__name__)
 
@@ -497,6 +501,32 @@ def add_EV_DSR_V2G(
     )
 
 
+def _time_difference_hours(country):
+    """
+    Calculate time difference in hours between GB and specified country
+
+    """
+
+    # Get timezones for GB and the specified country
+    try:
+        tz_gb=pytz.timezone(country_timezones["GB"][0])
+        tz_country=pytz.timezone(country_timezones[country][0])
+    except KeyError:
+        raise ValueError("Invalid ISO country code or timezone not found.")
+
+    # Localize current UTC time into each timezone
+    now_utc = datetime.now(pytz.utc)
+    time_gb=now_utc.astimezone(tz_gb)
+    time_country=now_utc.astimezone(tz_country)
+
+    offset_gb = time_gb.utcoffset().total_seconds() / 3600
+    offset_country = time_country.utcoffset().total_seconds() / 3600
+
+    # Compute difference in hours
+    diff = (offset_country - offset_gb)
+    
+    return int(diff)
+
 def _add_dsr_pypsa_components(
     n: pypsa.Network, df: pd.DataFrame, dsr_hours: list[int], key: str
 ):
@@ -569,19 +599,21 @@ def _add_dsr_pypsa_components(
         carrier=f"{key} DSR reverse",
     )
 
-    breakpoint()
     # Create DSM profile to set as e_max_pu for DSR store
     dsr_profile = pd.DataFrame(index=n.snapshots, columns=df.index, data=0.0)
     mask = (dsr_profile.index.hour >= dsr_hours[0]) & (
         dsr_profile.index.hour < dsr_hours[1]
     )
     dsr_profile.loc[mask] = 1.0
-    EU_columns = [col for col in df.index if "GB" not in col]
-    # Shift European neighbour columns by 1 hour to account for time zone difference
-    dsr_profile.loc[:, EU_columns] = dsr_profile.loc[:, EU_columns].shift(
-        1, fill_value=0.0
-    )
 
+    # Calculate time difference between each neighbouring country and GB
+    time_shift={x:_time_difference_hours(x) for x in n.buses.country.unique().tolist()}
+
+    # Shift European neighbour columns by 'x' hours to account for time zone difference
+    for country, shift_hours in time_shift.items():
+        country_columns=dsr_profile.filter(like=country).columns
+        dsr_profile.loc[:,country_columns] = dsr_profile[country_columns].shift(shift_hours, fill_value=0.0)
+    
     # Calculate DSR duration in hours
     dsm_duration=dsr_hours[1]-dsr_hours[0]
 
