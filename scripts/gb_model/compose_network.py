@@ -574,14 +574,15 @@ def _add_dsr_pypsa_components(
     dsm_profile=pd.DataFrame(index=n.snapshots,columns=df.index,data=0.0)
     mask=(dsm_profile.index.hour >=dsm_hours[0]) & (dsm_profile.index.hour <= dsm_hours[1])
     dsm_profile.loc[mask]=1.0
-
+    
+    dsm_duration=dsm_hours[1]-dsm_hours[0]+1
     # Add the DSR store to the PyPSA network
     n.add(
         "Store",
         df.index,
         suffix=f" {key} DSR store",
         bus=df.index + f" {key} DSR bus",
-        e_nom=1000,
+        e_nom=df.p_nom.abs() * (dsm_duration),
         e_cyclic=True,
         carrier=f"{key} DSR",
         e_max_pu=dsm_profile,   
