@@ -495,6 +495,74 @@ def add_EV_DSR_V2G(
         efficiency=1.0,
         carrier="EV V2G",
     )
+    breakpoint()
+
+def add_baseline_dsr(n, residential_dsr_path: str, services_dsr_path: str, year):
+
+    df_residential_dsr = _load_regional_data(residential_dsr_path, year)
+    df_services_dsr = _load_regional_data(services_dsr_path, year)
+    
+    # Add the residential DSR to the PyPSA network    
+    n.add(
+        "Carrier",
+        "residential DSR",
+        color="#FFA500",
+        nice_name="residential Demand Side Response",
+    )
+    n.add(
+        "Carrier",
+        "residential DSR shift",
+    )
+
+    n.add(
+        "Carrier",
+        "residential DSR reverse",
+    )
+
+    n.add(
+        "Bus",
+        df_residential_dsr.index,
+        suffix=" residential DSR bus",
+        carrier="residential DSR",
+        x=n.buses.loc[df_residential_dsr.index].x,
+        y=n.buses.loc[df_residential_dsr.index].y,
+        country=n.buses.loc[df_residential_dsr.index].country,
+    )
+    
+    # Add the EV DSR to the PyPSA network
+    n.add(
+        "Link",
+        df_residential_dsr.index,
+        suffix=" residential DSR",
+        bus0=df_residential_dsr.index,
+        bus1=df_residential_dsr.index + " residential DSR bus",
+        p_nom=df_residential_dsr.p_nom.abs(),
+        efficiency=1.0,
+        carrier="residential DSR shift"
+    )
+
+    n.add(
+        "Link",
+        df_residential_dsr.index,
+        suffix=" residential DSR reverse",
+        bus0=df_residential_dsr.index + " residential DSR bus",
+        bus1=df_residential_dsr.index,
+        p_nom=df_residential_dsr.p_nom.abs(),
+        efficiency=1.0,
+        carrier="residential DSR reverse",
+    )
+
+    
+    # Add the residential DSR store to the PyPSA network
+    n.add(
+        "Store",
+        df_residential_dsr.index,
+        suffix=" residential DSR store",
+        bus=df_residential_dsr.index + " residential DSR bus",
+        e_nom=1000,
+        e_cyclic=True,
+        carrier="residential DSR"      
+    )
 
 
 def finalise_composed_network(
@@ -774,6 +842,8 @@ def compose_network(
     ev_data: dict[str, str],
     prune_lines: list[dict[str, int]],
     year: int,
+    residential_dsr_path: str,
+    services_dsr_path: str,
 ) -> None:
     """
     Main composition function to create GB market model network.
@@ -871,6 +941,8 @@ def compose_network(
 
     _prune_lines(network, prune_lines)
 
+    add_baseline_dsr(network, residential_dsr_path, services_dsr_path, year)
+
     finalise_composed_network(network, context)
 
     network.export_to_netcdf(output_path)
@@ -910,4 +982,6 @@ if __name__ == "__main__":
         enable_chp=snakemake.params.enable_chp,
         prune_lines=snakemake.params.prune_lines,
         year=int(snakemake.wildcards.year),
+        residential_dsr_path=snakemake.input.residential_dsr,
+        services_dsr_path=snakemake.input.services_dsr,
     )
