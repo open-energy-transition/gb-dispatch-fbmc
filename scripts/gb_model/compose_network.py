@@ -83,19 +83,20 @@ def create_context(
     )
 
 
-def _input_list_to_dict(input_list: list[str]) -> dict[str, str]:
+def _input_list_to_dict(input_list: list[str], parent: bool = False) -> dict[str, str]:
     """
     Convert a list of input file paths to a dictionary mapping types to paths.
 
     Args:
         input_list (list[str]): List of input file paths.
+        parent (bool): Whether to use the parent directory name as the key.
 
     Returns:
         dict[str, str]: Dictionary mapping input types to file paths.
     """
     input_dict = {}
     for input_path in input_list:
-        key = Path(input_path).stem
+        key = (Path(input_path).parent if parent else Path(input_path)).stem
         input_dict[key] = input_path
     return input_dict
 
@@ -325,15 +326,24 @@ def add_load(n: pypsa.Network, demands: dict[str, str]):
     """
     # Iterate through each demand type
     for demand_type, demand_path in demands.items():
+        if not demand_type.endswith("_demand"):
+            raise ValueError(
+                f"Unexpected demand type: {demand_type}. "
+                "All demand types should start with 'demand_'."
+            )
         # Process data for the demand type
-        if demand_type == "demand_ev":
+        if demand_type == "ev_demand":
             add_EV_load(n, demand_path)
         else:
             load = pd.read_csv(demand_path, index_col=[0], parse_dates=True)
             # Add the load to pypsa Network
-            suffix = f" {demand_type.removesuffix('demand_')}"
-            n.add("Load", load.columns + suffix, bus=load.columns)
-            _add_timeseries_data_to_network(n.loads_t, load.add_suffix(suffix), "p_set")
+            suffix = f" {demand_type.removesuffix('_demand')}"
+            n.add(
+                "Load",
+                load.columns + suffix,
+                bus=load.columns,
+                p_set=load.add_suffix(suffix),
+            )
 
 
 def add_EV_load(n: pypsa.Network, ev_demand_path: str):
@@ -369,8 +379,8 @@ def add_EV_load(n: pypsa.Network, ev_demand_path: str):
         suffix=" EV",
         bus=ev_demand.columns + " EV",
         carrier="EV",
+        p_set=ev_demand.add_suffix(" EV"),
     )
-    _add_timeseries_data_to_network(n.loads_t, ev_demand.add_suffix(" EV"), "p_set")
 
     # Add EV unmanaged charging
     n.add(
@@ -800,7 +810,7 @@ if __name__ == "__main__":
         costs_config=snakemake.params.costs_config,
         electricity_config=snakemake.params.electricity,
         renewable_config=snakemake.params.renewable,
-        demands=_input_list_to_dict(snakemake.input.demands),
+        demands=_input_list_to_dict(snakemake.input.demands, parent=True),
         ev_data=_input_list_to_dict(snakemake.input.ev_data),
         enable_chp=snakemake.params.enable_chp,
         year=int(snakemake.wildcards.year),
