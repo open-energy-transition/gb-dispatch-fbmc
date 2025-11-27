@@ -12,6 +12,7 @@ Release Notes
 Upcoming Release
 ================
 
+* Added flexibility to the baseline electricity and electrified i&c heat demand through demand-side management (#133).
 * Fixed missing European neighbour data in EV datasets (#123).
 * Add interconnectors to network.
 * Add boundary capability constraints to GB model (#131).
