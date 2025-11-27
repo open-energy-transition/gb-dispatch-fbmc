@@ -786,9 +786,9 @@ rule compose_network:
         ),
         hydro_capacities=ancient("data/hydro_capacities.csv"),
         chp_p_min_pu=resources("gb-model/chp_p_min_pu.csv"),
+        interconnectors_p_nom=resources("gb-model/interconnectors_p_nom.csv"),
         intermediate_data=[
             resources("gb-model/transmission_availability.csv"),
-            resources("gb-model/interconnectors_p_nom.csv"),
             resources("gb-model/GB_generator_monthly_unavailability.csv"),
             resources("gb-model/fes_hydrogen_demand.csv"),
             resources("gb-model/fes_grid_electrolysis_capacities.csv"),
