@@ -92,7 +92,7 @@ if __name__ == "__main__":
     # Parse input data
     fes_scenario = snakemake.params.scenario
     year_range = snakemake.params.year_range
-    flexibility_type = snakemake.params.flexibility_type
+    flexibility_type = snakemake.wildcards.flexibility_type
     technology_detail = snakemake.params.technology_detail[flexibility_type]
 
     df_flexibility = parse_flexibility_data(

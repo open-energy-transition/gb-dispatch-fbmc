@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 """
-EV unmanaged charging demand data processor.
+EV unmanaged charging demand peak data processor.
 
 This script processes required EV unmanaged charging demand data from the FES workbook.
 """
@@ -87,6 +87,8 @@ if __name__ == "__main__":
         snakemake = mock_snakemake(Path(__file__).stem)
     configure_logging(snakemake)
     set_scenario_config(snakemake)
+    log_suffix = "-" + "_".join(snakemake.wildcards) if snakemake.wildcards else ""
+    logger = logging.getLogger(Path(__file__).stem + log_suffix)
 
     # Load the input paths
     unmanaged_charging_sheet_path = snakemake.input.unmanaged_charging_sheet
@@ -103,7 +105,4 @@ if __name__ == "__main__":
     )
 
     # Write unmanaged charging demand dataframe to csv file
-    df_unmanaged_demand.to_csv(snakemake.output.unmanaged_charging)
-    logger.info(
-        f"EV unmanaged charging demand data saved to {snakemake.output.unmanaged_charging}"
-    )
+    df_unmanaged_demand.to_csv(snakemake.output.csv)

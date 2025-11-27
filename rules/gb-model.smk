@@ -11,8 +11,7 @@ import numpy as np
 
 
 wildcard_constraints:
-    flexibility_type="fes_ev_dsm|fes_ev_v2g|fes_residential_dsr|fes_services_dsr",
-    ev_data_type="storage|unmanaged_charging",
+    flexibility_type="|".join(config["fes"]["gb"]["flexibility"]["Technology Detail"]),
 
 
 # Rule to download and extract ETYS boundary data
@@ -437,7 +436,7 @@ rule create_demand_table:
     input:
         regional_gb_data=resources("gb-model/regional_gb_data.csv"),
     output:
-        demand=resources("gb-model/{demand_type}_demand.csv"),
+        demand=resources("gb-model/{demand_type}_demand_annual.csv"),
     log:
         logs("create_{demand_type}_demand_table.log"),
     script:
@@ -450,7 +449,6 @@ rule create_flexibility_table:
     params:
         scenario=config["fes"]["gb"]["scenario"],
         year_range=config["fes"]["year_range_incl"],
-        flexibility_type=lambda wildcards: wildcards.flexibility_type,
         technology_detail=config["fes"]["gb"]["flexibility"]["Technology Detail"],
     input:
         flexibility_sheet=resources("gb-model/fes/2021/FLX1.csv"),
@@ -527,7 +525,7 @@ rule process_fes_heating_mix:
         fes_residential_heatmix=resources("gb-model/fes/2021/CV.16.csv"),
         fes_commercial_heatmix=resources("gb-model/fes/2021/CV.55.csv"),
     output:
-        csv=resources("gb-model/fes/heating_mix_{year}.csv"),
+        csv=resources("gb-model/fes_heating_mix/{year}.csv"),
     log:
         logs("process_fes_heating_mix_{year}.log"),
     script:
@@ -542,13 +540,13 @@ rule process_heat_demand_shape:
     input:
         demand=resources("hourly_heat_demand_total_base_s_clustered.nc"),
         cop_profile=resources("cop_base_s_clustered_{year}.csv"),
-        heating_mix=resources("gb-model/fes/heating_mix_{year}.csv"),
+        heating_mix=resources("gb-model/fes_heating_mix/{year}.csv"),
     output:
         residential_csv_file=resources(
-            "gb-model/residential_heat_demand_shape_{year}.csv"
+            "gb-model/residential_heat_demand_shape/{year}.csv"
         ),
         #Industry load is not generated in PyPSA-Eur, hence the same profile as services is considered to be applicable for c&i
-        commercial_csv_file=resources("gb-model/iandc_heat_demand_shape_{year}.csv"),
+        commercial_csv_file=resources("gb-model/iandc_heat_demand_shape/{year}.csv"),
     log:
         logs("heat_demand_s_clustered_{year}.log"),
     script:
@@ -558,8 +556,6 @@ rule process_heat_demand_shape:
 rule process_demand_shape:
     message:
         "Process {wildcards.demand_sector} demand profile shape into CSV format"
-    params:
-        demand_sector=lambda wildcards: wildcards.demand_sector,
     input:
         pypsa_eur_demand_timeseries=resources("{demand_sector}_demand_s_clustered.csv"),
     output:
@@ -599,31 +595,14 @@ rule create_ev_storage_table:
         storage_sheet=resources("gb-model/fes/2021/FL.14.csv"),
         flexibility_sheet=resources("gb-model/fes/2021/FLX1.csv"),
     output:
-        storage_table=resources("gb-model/fes_ev_storage.csv"),
+        storage_table=resources("gb-model/ev_storage.csv"),
     log:
         logs("create_ev_storage_table.log"),
     script:
         "../scripts/gb_model/create_ev_storage_table.py"
 
 
-rule process_regional_ev_data:
-    message:
-        "Process regional EV {wildcards.ev_data_type} data into CSV format"
-    input:
-        input_csv=resources("gb-model/fes_ev_{ev_data_type}.csv"),
-        reference_data=lambda wildcards: {
-            "unmanaged_charging": resources("gb-model/fes_transport_demand.csv"),
-            "storage": resources("gb-model/regional_fes_ev_v2g.csv"),
-        }[wildcards.ev_data_type],
-    output:
-        regional_output=resources("gb-model/regional_fes_ev_{ev_data_type}.csv"),
-    log:
-        logs("process_regional_ev_{ev_data_type}.log"),
-    script:
-        "../scripts/gb_model/process_regional_ev_data.py"
-
-
-rule create_ev_unmanaged_charging_table:
+rule create_ev_peak_charging_table:
     message:
         "Process EV unmanaged charging demand from FES workbook into CSV format"
     params:
@@ -632,11 +611,112 @@ rule create_ev_unmanaged_charging_table:
     input:
         unmanaged_charging_sheet=resources("gb-model/fes/2021/FL.11.csv"),
     output:
-        unmanaged_charging=resources("gb-model/fes_ev_unmanaged_charging.csv"),
+        csv=resources("gb-model/ev_peak.csv"),
     log:
-        logs("create_ev_unmanaged_charging_table.log"),
+        logs("create_ev_peak_charging_table.log"),
     script:
-        "../scripts/gb_model/create_ev_unmanaged_charging_table.py"
+        "../scripts/gb_model/create_ev_peak_charging_table.py"
+
+
+rule process_regional_ev_data:
+    message:
+        "Process regional EV {wildcards.ev_data_type} data into CSV format"
+    input:
+        input_csv=resources("gb-model/ev_{ev_data_type}.csv"),
+        reference_data=lambda wildcards: {
+            "peak": resources("gb-model/ev_demand_annual.csv"),
+            "storage": resources("gb-model/regional_ev_v2g.csv"),
+        }[wildcards.ev_data_type],
+    output:
+        regional_output=resources("gb-model/regional_ev_{ev_data_type}.csv"),
+    log:
+        logs("process_regional_ev_{ev_data_type}.log"),
+    wildcard_constraints:
+        ev_data_type="storage|peak",
+    script:
+        "../scripts/gb_model/process_regional_ev_data.py"
+
+
+rule distribute_eur_demands:
+    message:
+        "Distribute total European neighbour annual demands into base electricity, heating, and transport"
+    input:
+        eur_data=resources("gb-model/national_eur_data.csv"),
+        energy_totals=resources("energy_totals.csv"),
+        demands=expand(
+            resources("gb-model/{demand_type}_demand_annual.csv"),
+            demand_type=config["fes"]["gb"]["demand"]["Technology Detail"].keys(),
+        ),
+    params:
+        totals_to_demands=config["fes"]["eur"]["totals_to_demand_groups"],
+        base_year=config["energy"]["energy_totals_year"],
+    output:
+        csv=resources("gb-model/eur_demand_annual.csv"),
+    log:
+        logs("distribute_eur_demands.log"),
+    script:
+        "../scripts/gb_model/distribute_eur_demands.py"
+
+
+def _ref_demand_type(w):
+    return config["fes"]["gb"]["flexibility"]["eur_add_data_reference"][w.dataset]
+
+
+rule synthesise_eur_flexibility_data:
+    message:
+        "Create a regional {wildcards.dataset} dataset including European neighbours based on GB data and relative annual demand"
+    input:
+        gb_demand_annual=lambda wildcards: resources(
+            f"gb-model/{_ref_demand_type(wildcards)}_demand_annual.csv"
+        ),
+        eur_demand_annual=resources("gb-model/eur_demand_annual.csv"),
+        gb_only_dataset=resources("gb-model/regional_{dataset}.csv"),
+    params:
+        demand_type=_ref_demand_type,
+    output:
+        csv=resources("gb-model/regional_{dataset}_inc_eur.csv"),
+    log:
+        logs("synthesise_eur_flexibility_data_{dataset}.log"),
+    script:
+        "../scripts/gb_model/synthesise_eur_flexibility_data.py"
+
+
+rule scaled_demand_profile:
+    message:
+        "Generate {wildcards.demand_type} demand profile for model year {wildcards.year}"
+    input:
+        gb_demand_annual=resources("gb-model/{demand_type}_demand_annual.csv"),
+        eur_demand_annual=resources("gb-model/eur_demand_annual.csv"),
+        demand_shape=resources("gb-model/{demand_type}_demand_shape.csv"),
+    output:
+        csv=resources("gb-model/{demand_type}_demand/{year}.csv"),
+    log:
+        logs("scaled_demand_profile_{demand_type}_{year}.log"),
+    wildcard_constraints:
+        demand_type="baseline_electricity",
+    script:
+        "../scripts/gb_model/scaled_demand_profile.py"
+
+
+use rule scaled_demand_profile as scaled_heat_demand_profile with:
+    input:
+        gb_demand_annual=resources("gb-model/{demand_type}_demand_annual.csv"),
+        eur_demand_annual=resources("gb-model/eur_demand_annual.csv"),
+        demand_shape=resources("gb-model/{demand_type}_demand_shape/{year}.csv"),
+    wildcard_constraints:
+        demand_type="residential_heat|iandc_heat",
+
+
+use rule scaled_demand_profile as scaled_ev_demand_profile with:
+    input:
+        gb_demand_annual=resources("gb-model/{demand_type}_demand_annual.csv"),
+        eur_demand_annual=resources("gb-model/eur_demand_annual.csv"),
+        demand_shape=resources("gb-model/{demand_type}_demand_shape.csv"),
+        gb_demand_peak=resources("gb-model/regional_{demand_type}_peak.csv"),
+    params:
+        scaling_params=config["ev"]["ev_demand_profile_transformation"],
+    wildcard_constraints:
+        demand_type="ev",
 
 
 rule create_chp_p_min_pu_profile:
@@ -655,27 +735,6 @@ rule create_chp_p_min_pu_profile:
         logs("create_chp_p_min_pu_profile.log"),
     script:
         "../scripts/gb_model/create_chp_p_min_pu_profile.py"
-
-
-rule distribute_eur_demands:
-    message:
-        "Distribute total European neighbour annual demands into base electricity, heating, and transport"
-    input:
-        eur_data=resources("gb-model/national_eur_data.csv"),
-        energy_totals=resources("energy_totals.csv"),
-        demands=expand(
-            resources("gb-model/{demand_type}_demand.csv"),
-            demand_type=config["fes"]["gb"]["demand"]["Technology Detail"].keys(),
-        ),
-    params:
-        totals_to_demands=config["fes"]["eur"]["totals_to_demand_groups"],
-        base_year=config["energy"]["energy_totals_year"],
-    output:
-        csv=resources("gb-model/eur_annual_demand.csv"),
-    log:
-        logs("distribute_eur_demands.log"),
-    script:
-        "../scripts/gb_model/distribute_eur_demands.py"
 
 
 rule assign_costs:
@@ -700,44 +759,6 @@ rule assign_costs:
         "../scripts/gb_model/assign_costs.py"
 
 
-def demands(w):
-    """Collate annual demands and their profiles into individual inputs for `compose_network`"""
-
-    def add_year_suffix(path, type, year):
-        if "heat" in type:
-            path = path.replace(".csv", f"_{year}.csv")
-        return path
-
-    return {
-        f"demand_{demand_type}": (
-            [
-                resources(f"gb-model/{demand_type}_demand.csv"),
-                add_year_suffix(
-                    resources(
-                        f"gb-model/{demand_type.replace('fes_', '')}_demand_shape.csv"
-                    ),
-                    demand_type,
-                    w.year,
-                ),
-            ]
-        )
-        for demand_type in config["fes"]["gb"]["demand"]["Technology Detail"]
-        if demand_type != "fes_transport"
-    }
-
-
-def flexibilities(w):
-    """Collate flexibility data into input of `compose_network`"""
-    return {
-        f"regional_{flexibility_type}": resources(
-            f"gb-model/regional_{flexibility_type}.csv"
-        )
-        for flexibility_type in config["fes"]["gb"]["flexibility"][
-            "Technology Detail"
-        ].keys()
-    }
-
-
 rule compose_network:
     params:
         countries=config["countries"],
@@ -746,13 +767,18 @@ rule compose_network:
         clustering=config["clustering"],
         renewable=config["renewable"],
         enable_chp=config["chp"]["enable"],
-        ev_profile_config=config["ev"]["ev_demand_profile_transformation"],
         prune_lines=config["region_operations"]["prune_lines"],
     input:
         unpack(input_profile_tech),
-        unpack(demands),
-        unpack(flexibilities),
-        eur_demand=resources("gb-model/eur_annual_demand.csv"),
+        demands=expand(
+            resources("gb-model/{demand_type}_demand/{{year}}.csv"),
+            demand_type=config["fes"]["gb"]["demand"]["Technology Detail"].keys(),
+        ),
+        ev_data=expand(
+            resources("gb-model/regional_ev_{ev_data}_inc_eur.csv"),
+            ev_data=["storage", "dsm", "v2g"],
+        )
+        + [resources("dsm_profile_s_clustered.csv")],
         network=resources("networks/base_s_clustered.nc"),
         powerplants=resources("gb-model/fes_powerplants_processed.csv"),
         tech_costs=lambda w: resources(
@@ -760,30 +786,15 @@ rule compose_network:
         ),
         hydro_capacities=ancient("data/hydro_capacities.csv"),
         chp_p_min_pu=resources("gb-model/chp_p_min_pu.csv"),
-        ev_demand_shape=resources("gb-model/ev_demand_shape.csv"),
-        ev_demand_peak=resources("gb-model/regional_fes_ev_unmanaged_charging.csv"),
-        ev_demand_annual=resources("gb-model/fes_transport_demand.csv"),
-        ev_storage_capacity=resources("gb-model/regional_fes_ev_storage.csv"),
-        ev_dsm_profile=resources("dsm_profile_s_clustered.csv"),
         interconnectors_p_nom=resources("gb-model/interconnectors_p_nom.csv"),
         intermediate_data=[
             resources("gb-model/transmission_availability.csv"),
-            expand(
-                resources(
-                    "gb-model/{zone}_{business_type}_generator_unavailability.csv"
-                ),
-                zone=config["entsoe_unavailability"]["bidding_zones"],
-                business_type=config["entsoe_unavailability"]["business_types"],
-            ),
-            resources("gb-model/merged_shapes.geojson"),
             resources("gb-model/GB_generator_monthly_unavailability.csv"),
             resources("gb-model/fes_hydrogen_demand.csv"),
             resources("gb-model/fes_grid_electrolysis_capacities.csv"),
             resources("gb-model/fes_hydrogen_supply.csv"),
             resources("gb-model/fes_off_grid_electrolysis_electricity_demand.csv"),
             resources("gb-model/fes_hydrogen_storage.csv"),
-            resources("gb-model/fes-costing/AS.7 (Carbon Cost).csv"),
-            resources("gb-model/fes-costing/AS.1 (Power Gen).csv"),
         ],
     output:
         network=resources("networks/composed_{clusters}_{year}.nc"),
