@@ -777,7 +777,7 @@ rule compose_network:
         ),
         dsr=expand(
             resources("gb-model/regional_{sector}_dsr.csv"),
-                sector=["residential","services","iandc_heat"],
+            sector=["residential", "services", "iandc_heat"],
         ),
         ev_data=expand(
             resources("gb-model/regional_ev_{ev_data}_inc_eur.csv"),

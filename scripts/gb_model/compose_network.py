@@ -496,14 +496,13 @@ def add_EV_DSR_V2G(
         carrier="EV V2G",
     )
 
+
 def _add_dsr_pypsa_components(
-        n: pypsa.Network, 
-        df: pd.DataFrame, 
-        dsr_hours: list[int],
-        key: str
-    ):
+    n: pypsa.Network, df: pd.DataFrame, dsr_hours: list[int], key: str
+):
     """
     Add DSR components for a given sector to PyPSA network
+
     Parameters
     ----------
         n : pypsa.Network
@@ -516,7 +515,7 @@ def _add_dsr_pypsa_components(
             Sector key (e.g., 'residential', 'services', 'iandc_heat')
     """
 
-    # Add the DSR carrier to the PyPSA network    
+    # Add the DSR carrier to the PyPSA network
     n.add(
         "Carrier",
         f"{key} DSR",
@@ -534,7 +533,6 @@ def _add_dsr_pypsa_components(
         f"{key} DSR reverse",
     )
 
-
     # Create DSR buses, links and stores
     # Add the DSR bus to the PyPSA network
     n.add(
@@ -546,7 +544,7 @@ def _add_dsr_pypsa_components(
         y=n.buses.loc[df.index].y,
         country=n.buses.loc[df.index].country,
     )
-    
+
     # Add the DSR link from AC bus to DSR bus to the PyPSA network
     n.add(
         "Link",
@@ -556,10 +554,10 @@ def _add_dsr_pypsa_components(
         bus1=df.index + f" {key} DSR bus",
         p_nom=df.p_nom.abs(),
         efficiency=1.0,
-        carrier=f"{key} DSR shift"
+        carrier=f"{key} DSR shift",
     )
 
-    # Add the DSR link from DSR bus to AC bus to the PyPSA network    
+    # Add the DSR link from DSR bus to AC bus to the PyPSA network
     n.add(
         "Link",
         df.index,
@@ -588,18 +586,19 @@ def _add_dsr_pypsa_components(
         e_nom=df.p_nom.abs() * (dsm_duration),
         e_cyclic=True,
         carrier=f"{key} DSR",
-        e_max_pu=dsr_profile,   
+        e_max_pu=dsr_profile,
     )
 
+
 def add_DSR_baseline_heat(
-        n: pypsa.Network, 
-        year: int, 
-        dsr: dict[str, str],
-        dsr_hours: list[int],
-    ):
+    n: pypsa.Network,
+    year: int,
+    dsr: dict[str, str],
+    dsr_hours: list[int],
+):
     """
     Add DSR components for residential, services and i&c heat sectors to PyPSA network
-    
+
     Parameters
     ----------
         n : pypsa.Network
@@ -622,7 +621,6 @@ def add_DSR_baseline_heat(
         elif "iandc_heat" in file:
             df_dsr = _load_regional_data(path, year)
             _add_dsr_pypsa_components(n, df_dsr, dsr_hours, "iandc_heat")
-
 
 
 def finalise_composed_network(
