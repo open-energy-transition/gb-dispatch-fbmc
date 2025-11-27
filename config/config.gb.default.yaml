@@ -752,7 +752,7 @@ fes-costing-sheet-config:
 
 fes:
   year_range_incl: [2022, 2041] # 20-year period over which we will run the simulation
-  dsm_hours: [17, 20]  # hours during which demand-side management can occur (5pm-8pm)
+  dsr_hours: [17, 20]  # hours during which demand-side management can occur (5pm-8pm)
   default_set: PP
   default_characteristics:
     # Ensure all required columns exist with defaults

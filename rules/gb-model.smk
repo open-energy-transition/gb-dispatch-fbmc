@@ -768,7 +768,7 @@ rule compose_network:
         renewable=config["renewable"],
         enable_chp=config["chp"]["enable"],
         prune_lines=config["region_operations"]["prune_lines"],
-        dsm_hours=config["fes"]["dsm_hours"],
+        dsr_hours=config["fes"]["dsr_hours"],
     input:
         unpack(input_profile_tech),
         demands=expand(
