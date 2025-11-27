@@ -126,7 +126,7 @@ rule process_entsoe_unavailability_data:
         "../scripts/gb_model/process_entsoe_unavailability_data.py"
 
 
-rule generator_monthly_unavailability:
+rule generator_monthly_availability_fraction:
     input:
         planned=resources("gb-model/{zone}_planned_generator_unavailability.csv"),
         forced=resources("gb-model/{zone}_forced_generator_unavailability.csv"),
@@ -138,18 +138,18 @@ rule generator_monthly_unavailability:
         end_date=config["entsoe_unavailability"]["end_date"],
         max_unavailable_days=config["entsoe_unavailability"]["max_unavailable_days"],
     output:
-        csv=resources("gb-model/{zone}_generator_monthly_unavailability.csv"),
+        csv=resources("gb-model/{zone}_generator_monthly_availability_fraction.csv"),
     log:
-        logs("{zone}_generator_monthly_unavailability.log"),
+        logs("{zone}_generator_monthly_availability_fraction.log"),
     script:
-        "../scripts/gb_model/generator_monthly_unavailability.py"
+        "../scripts/gb_model/generator_monthly_availability_fraction.py"
 
 
 rule extract_transmission_availability:
     input:
         pdf_report="data/gb-model/downloaded/transmission-availability-{report_year}.pdf",
     output:
-        csv=resources("gb-model/transmission-availability-{report_year}.csv"),
+        csv=resources("gb-model/transmission-availability-monthly/{report_year}.csv"),
     log:
         logs("extract_transmission_availability_{report_year}.log"),
     script:
@@ -157,19 +157,27 @@ rule extract_transmission_availability:
 
 
 rule process_transmission_availability:
+    message:
+        "Process {wildcards.transmission_zone} transmission availability stats into timeseries availability fractions."
     input:
         unavailability=expand(
-            resources("gb-model/{report}.csv"),
-            report=[
-                i for i in config["urls"] if i.startswith("transmission-availability-")
-            ],
+            resources("gb-model/transmission-availability-monthly/{year}.csv"),
+            year=config["transmission_availability"]["years"],
         ),
     output:
-        csv=resources("gb-model/transmission_availability.csv"),
+        csv=resources("gb-model/{transmission_zone}_transmission_availability.csv"),
     params:
+        zones=lambda wildcards: config["transmission_availability"][
+            wildcards.transmission_zone
+        ]["zones"],
+        sample_hourly=lambda wildcards: config["transmission_availability"][
+            wildcards.transmission_zone
+        ]["sample_hourly"],
         random_seeds=config["transmission_availability"]["random_seeds"],
+    wildcard_constraints:
+        transmission_zone="inter_gb|intra_gb",
     log:
-        logs("process_transmission_availability.log"),
+        logs("process_transmission_availability_{transmission_zone}.log"),
     script:
         "../scripts/gb_model/process_transmission_availability.py"
 
@@ -787,9 +795,15 @@ rule compose_network:
         hydro_capacities=ancient("data/hydro_capacities.csv"),
         chp_p_min_pu=resources("gb-model/chp_p_min_pu.csv"),
         interconnectors_p_nom=resources("gb-model/interconnectors_p_nom.csv"),
+        interconnectors_availability=resources(
+            "gb-model/inter_gb_transmission_availability.csv"
+        ),
+        generator_availability=resources(
+            "gb-model/GB_generator_monthly_unavailability.csv"
+        ),
         intermediate_data=[
-            resources("gb-model/transmission_availability.csv"),
-            resources("gb-model/GB_generator_monthly_unavailability.csv"),
+            # TODO: calculate intra_gb availability per line/boundary before this point (currently only per TO)
+            resources("gb-model/intra_gb_transmission_availability.csv"),
             resources("gb-model/fes_hydrogen_demand.csv"),
             resources("gb-model/fes_grid_electrolysis_capacities.csv"),
             resources("gb-model/fes_hydrogen_supply.csv"),

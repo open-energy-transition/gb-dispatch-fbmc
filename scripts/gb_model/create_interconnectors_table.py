@@ -111,7 +111,9 @@ def projects_to_pypsa_links(
         .rename("p_nom")
         .reset_index()
         # p_min_pu=-1 to allow for bidirectional flow
-        .assign(carrier="DC", underwater_fraction=0.9, underground=True, p_min_pu=-1)
+        .assign(
+            carrier="DC", underwater_fraction=0.9, underground=True, p_min_pu=-1, dc=1.0
+        )
     )
 
     # filter out links to countries not included in the model regions
