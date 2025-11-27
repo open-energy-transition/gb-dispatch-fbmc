@@ -832,11 +832,13 @@ fes:
         ev_v2g: ["v2g impact at peak"]
         residential_dsr: ["residential peak shifting (smart/touts effect)"]
         services_dsr: ["i&c dsr impact at peak (processes)"]
+        iandc_heat_dsr: ["i&c dsr impact at peak (heat)"]
       regional_distribution_reference:
         ev_dsm: ["v2g"]
         ev_v2g: ["v2g"]
         residential_dsr: ["baseline demand"]
         services_dsr: ["i&c flexibility (tout)"]
+        iandc_heat_dsr: ["i&c hp demand"]
       eur_add_data_reference:
         ev_dsm: "ev"
         ev_v2g: "ev"

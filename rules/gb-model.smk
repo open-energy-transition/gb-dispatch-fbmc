@@ -776,6 +776,7 @@ rule compose_network:
         ),
         residential_dsr=resources("gb-model/regional_residential_dsr.csv"),
         services_dsr=resources("gb-model/regional_services_dsr.csv"),
+        iandc_heat_dsr=resources("gb-model/regional_iandc_heat_dsr.csv"),
         ev_data=expand(
             resources("gb-model/regional_ev_{ev_data}_inc_eur.csv"),
             ev_data=["storage", "dsm", "v2g"],

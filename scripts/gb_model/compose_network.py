@@ -497,16 +497,19 @@ def add_EV_DSR_V2G(
     )
 
 
-def add_baseline_dsr(n, residential_dsr_path: str, services_dsr_path: str, year):
+def add_baseline_dsr(n, residential_dsr_path: str, services_dsr_path: str, iandc_heat_dsr_path: str, year):
 
     df_residential_dsr = _load_regional_data(residential_dsr_path, year)
     df_services_dsr = _load_regional_data(services_dsr_path, year)
+    df_iandc_heat_dsr = _load_regional_data(iandc_heat_dsr_path, year)
     
-    for key in ["residential", "services"]:
+    for key in ["residential", "services","iandc_heat"]:
         if key == "residential":
             df_dsr = df_residential_dsr
-        else:
+        elif key == "services":
             df_dsr = df_services_dsr
+        else:
+            df_dsr = df_iandc_heat_dsr
         
         # Add the DSR carrier to the PyPSA network    
         n.add(
@@ -849,6 +852,7 @@ def compose_network(
     year: int,
     residential_dsr_path: str,
     services_dsr_path: str,
+    iandc_heat_dsr_path: str,
 ) -> None:
     """
     Main composition function to create GB market model network.
@@ -946,7 +950,7 @@ def compose_network(
 
     _prune_lines(network, prune_lines)
 
-    add_baseline_dsr(network, residential_dsr_path, services_dsr_path, year)
+    add_baseline_dsr(network, residential_dsr_path, services_dsr_path, iandc_heat_dsr_path, year)
 
     finalise_composed_network(network, context)
 
@@ -989,4 +993,5 @@ if __name__ == "__main__":
         year=int(snakemake.wildcards.year),
         residential_dsr_path=snakemake.input.residential_dsr,
         services_dsr_path=snakemake.input.services_dsr,
+        iandc_heat_dsr_path=snakemake.input.iandc_heat_dsr,
     )
