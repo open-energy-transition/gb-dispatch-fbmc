@@ -140,6 +140,11 @@ def projects_to_pypsa_links(
         .reset_index("project"),
         on="project",
     )
+    assert (
+        df_with_build_year[["build_year", "length", "geometry"]].notnull().all().all()
+    ), (
+        "Some interconnector lines are missing required data (build year, line geometry, length)"
+    )
     return df_with_build_year
 
 
