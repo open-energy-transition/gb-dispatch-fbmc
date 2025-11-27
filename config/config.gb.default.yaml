@@ -846,6 +846,7 @@ fes:
         ev_storage: "ev"
         residential_dsr: "baseline_electricity"
         iandc_dsr: "baseline_electricity"
+        iandc_heat_dsr: "iandc_heat"
 
 
   eur:

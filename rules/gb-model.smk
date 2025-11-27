@@ -776,7 +776,7 @@ rule compose_network:
             demand_type=config["fes"]["gb"]["demand"]["Technology Detail"].keys(),
         ),
         dsr=expand(
-            resources("gb-model/regional_{sector}_dsr.csv"),
+            resources("gb-model/regional_{sector}_dsr_inc_eur.csv"),
             sector=["residential", "iandc", "iandc_heat"],
         ),
         ev_data=expand(
