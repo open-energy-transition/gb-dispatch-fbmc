@@ -512,7 +512,7 @@ def _add_dsr_pypsa_components(
         dsr_hours : list[int]
             Hours during which demand-side management can occur
         key : str
-            Sector key (e.g., 'residential', 'services', 'iandc_heat')
+            Sector key (e.g., 'residential', 'iandc', 'iandc_heat')
     """
 
     # Add the DSR carrier to the PyPSA network
@@ -597,7 +597,7 @@ def add_DSR_baseline_heat(
     dsr_hours: list[int],
 ):
     """
-    Add DSR components for residential, services and i&c heat sectors to PyPSA network
+    Add DSR components for residential, i&c and i&c heat sectors to PyPSA network
 
     Parameters
     ----------
@@ -615,10 +615,10 @@ def add_DSR_baseline_heat(
         if "residential" in file:
             df_dsr = _load_regional_data(path, year)
             _add_dsr_pypsa_components(n, df_dsr, dsr_hours, "residential")
-        elif "services" in file:
+        elif "iandc" in file and "heat" not in file:
             df_dsr = _load_regional_data(path, year)
-            _add_dsr_pypsa_components(n, df_dsr, dsr_hours, "services")
-        elif "iandc_heat" in file:
+            _add_dsr_pypsa_components(n, df_dsr, dsr_hours, "iandc")
+        else:  # iandc_heat
             df_dsr = _load_regional_data(path, year)
             _add_dsr_pypsa_components(n, df_dsr, dsr_hours, "iandc_heat")
 
