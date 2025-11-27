@@ -113,7 +113,13 @@ def projects_to_pypsa_links(
         .assign(carrier="DC", underwater_fraction=0.9, underground=True)
     )
 
-    # filter out links to countries not include in the model regions
+    # filter out links to countries not included in the model regions
+
+    if not_in := set(df_capacity_all_years.bus1).difference(gdf_regions["name"]):
+        logger.info(
+            "The following neighbouring countries are not in the model scope; "
+            f"their interconnectors will be excluded: {not_in}"
+        )
     df_filtered = df_capacity_all_years[
         df_capacity_all_years.bus1.isin(gdf_regions["name"])
     ]
