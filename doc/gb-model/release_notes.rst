@@ -12,6 +12,7 @@ Release Notes
 Upcoming Release
 ================
 
+* Add boundary capability constraints to GB model (#131).
 * Merge Shetland (region 30) and Northern Ireland (region 31) to other regions (#117).
 * Add demands to pypsa Network (#102, #70, #120).
 * Limit GB model to ``clustered`` clusters.
