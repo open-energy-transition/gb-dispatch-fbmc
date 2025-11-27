@@ -499,6 +499,7 @@ def add_EV_DSR_V2G(
 def _add_dsr_pypsa_components(
         n: pypsa.Network, 
         df: pd.DataFrame, 
+        dsm_hours: list[int],
         key: str
     ):
     """
@@ -509,10 +510,12 @@ def _add_dsr_pypsa_components(
             Network to finalize
         df : pd.DataFrame
             DataFrame containing flexibility p_nom data indexed by bus
+        dsm_hours : list[int]
+            Hours during which demand-side management can occur
         key : str
             Sector key (e.g., 'residential', 'services', 'iandc_heat')
     """
-    
+
     # Add the DSR carrier to the PyPSA network    
     n.add(
         "Carrier",
@@ -568,7 +571,10 @@ def _add_dsr_pypsa_components(
         carrier=f"{key} DSR reverse",
     )
 
-    
+    dsm_profile=pd.DataFrame(index=n.snapshots,columns=df.index,data=0.0)
+    mask=(dsm_profile.index.hour >=dsm_hours[0]) & (dsm_profile.index.hour <= dsm_hours[1])
+    dsm_profile.loc[mask]=1.0
+
     # Add the DSR store to the PyPSA network
     n.add(
         "Store",
@@ -577,13 +583,15 @@ def _add_dsr_pypsa_components(
         bus=df.index + f" {key} DSR bus",
         e_nom=1000,
         e_cyclic=True,
-        carrier=f"{key} DSR"      
+        carrier=f"{key} DSR",
+        e_max_pu=dsm_profile,   
     )
 
 def add_DSR_baseline_heat(
         n: pypsa.Network, 
         year: int, 
         dsr: dict[str, str],
+        dsm_hours: list[int],
     ):
     """
     Add DSR components for residential, services and i&c heat sectors to PyPSA network
@@ -596,18 +604,20 @@ def add_DSR_baseline_heat(
             Year used in the modelling
         dsr: dict[str, str]
             Dictionary containing DSR flexibility data for baseline and electrified heat
+        dsm_hours: list[int]
+            Hours during which demand-side management can occur
     """
 
     for file, path in dsr.items():
         if "residential" in file:
             df_dsr = _load_regional_data(path, year)
-            _add_dsr_pypsa_components(n, df_dsr, "residential")
+            _add_dsr_pypsa_components(n, df_dsr, dsm_hours, "residential")
         elif "services" in file:
             df_dsr = _load_regional_data(path, year)
-            _add_dsr_pypsa_components(n, df_dsr, "services")
+            _add_dsr_pypsa_components(n, df_dsr, dsm_hours, "services")
         elif "iandc_heat" in file:
             df_dsr = _load_regional_data(path, year)
-            _add_dsr_pypsa_components(n, df_dsr, "iandc_heat")
+            _add_dsr_pypsa_components(n, df_dsr, dsm_hours, "iandc_heat")
 
 
 
@@ -888,6 +898,7 @@ def compose_network(
     prune_lines: list[dict[str, int]],
     dsr: dict[str, str],
     enable_chp: bool,
+    dsm_hours: list[int],
     year: int,
 ) -> None:
     """
@@ -988,7 +999,7 @@ def compose_network(
 
     _prune_lines(network, prune_lines)
 
-    add_DSR_baseline_heat(network, year, dsr)
+    add_DSR_baseline_heat(network, year, dsr, dsm_hours)
 
     finalise_composed_network(network, context)
 
@@ -1029,5 +1040,6 @@ if __name__ == "__main__":
         dsr=_input_list_to_dict(snakemake.input.dsr),
         enable_chp=snakemake.params.enable_chp,
         prune_lines=snakemake.params.prune_lines,
+        dsm_hours=snakemake.params.dsm_hours,
         year=int(snakemake.wildcards.year),
     )
