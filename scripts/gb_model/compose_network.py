@@ -573,11 +573,11 @@ def _add_dsr_pypsa_components(
 
     # Create DSM profile to set as e_max_pu for DSR store
     dsr_profile=pd.DataFrame(index=n.snapshots,columns=df.index,data=0.0)
-    mask=(dsr_profile.index.hour >=dsr_hours[0]) & (dsr_profile.index.hour <= dsr_hours[1])
+    mask=(dsr_profile.index.hour >=dsr_hours[0]) & (dsr_profile.index.hour < dsr_hours[1])
     dsr_profile.loc[mask]=1.0
     
     # Calculate DSR duration in hours
-    dsm_duration=dsr_hours[1]-dsr_hours[0]+1
+    dsm_duration=dsr_hours[1]-dsr_hours[0]
 
     # Add the DSR store to the PyPSA network
     n.add(
