@@ -110,7 +110,8 @@ def projects_to_pypsa_links(
         df_capacity_all_years.unstack()
         .rename("p_nom")
         .reset_index()
-        .assign(carrier="DC", underwater_fraction=0.9, underground=True)
+        # p_min_pu=-1 to allow for bidirectional flow
+        .assign(carrier="DC", underwater_fraction=0.9, underground=True, p_min_pu=-1)
     )
 
     # filter out links to countries not included in the model regions
