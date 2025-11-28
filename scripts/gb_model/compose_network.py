@@ -366,6 +366,18 @@ def add_EV_load(n: pypsa.Network, ev_demand_path: str):
 
     ev_demand = pd.read_csv(ev_demand_path, index_col=[0], parse_dates=True)
 
+    # Add EV carrier to pypsa Network
+    n.add(
+        "Carrier",
+        "EV",
+    )
+
+    # Add EV unmanaged charging carrier to pypsa Network
+    n.add(
+        "Carrier",
+        "EV unmanaged charging",
+    )
+    
     # Add EV bus
     n.add(
         "Bus",
