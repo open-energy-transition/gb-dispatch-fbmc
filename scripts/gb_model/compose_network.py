@@ -563,7 +563,12 @@ def _get_dsr_profile(
     return dsr_profile
 
 def _add_dsr_pypsa_components(
-    n: pypsa.Network, df: pd.DataFrame, dsr_hours: list[int], key: str, ev_dsr_profile_path: str
+    n: pypsa.Network, 
+    df: pd.DataFrame, 
+    dsr_hours: list[int], 
+    key: str, 
+    ev_dsr_profile: pd.DataFrame,
+    ev_storage_capacity: pd.DataFrame
 ):
     """
     Add DSR components for a given sector to PyPSA network
@@ -577,14 +582,24 @@ def _add_dsr_pypsa_components(
         dsr_hours : list[int]
             Hours during which demand-side management can occur
         key : str
-            Sector key (e.g., 'residential', 'iandc', 'iandc_heat')
+            Sector key (e.g., 'residential', 'iandc', 'iandc_heat', "ev")
+        ev_dsr_profile : pd.DataFrame
+            DataFrame containing EV DSR profile indexed by time and bus
+        ev_storage_capacity : pd.DataFrame
+            DataFrame containing EV storage capacity indexed by time and bus
     """
 
-    # Add the DSR carrier to the PyPSA network
+    if key == "ev":
+        store_carrier = "EV store"
+        bus_suffix = " EV"
+    else:
+        store_carrier = f"{key} DSR"
+        bus_suffix = ""
+
+    # Add the store carrier to the PyPSA network
     n.add(
         "Carrier",
-        f"{key} DSR",
-        nice_name=f"{key} Demand Side Response",
+        store_carrier,
     )
 
     # Add the DSR shift and reverse carriers to the PyPSA network
@@ -598,13 +613,13 @@ def _add_dsr_pypsa_components(
         f"{key} DSR reverse",
     )
 
-    # Create DSR buses, links and stores
-    # Add the DSR bus to the PyPSA network
+    # Create storage buses, links and stores
+    # Add the storage bus to the PyPSA network
     n.add(
         "Bus",
         df.index,
-        suffix=f" {key} DSR bus",
-        carrier=f"{key} DSR",
+        suffix=f" {store_carrier} bus",
+        carrier=store_carrier,
         x=n.buses.loc[df.index].x,
         y=n.buses.loc[df.index].y,
         country=n.buses.loc[df.index].country,
@@ -616,8 +631,8 @@ def _add_dsr_pypsa_components(
         "Link",
         df.index,
         suffix=f" {key} DSR",
-        bus0=df.index,
-        bus1=df.index + f" {key} DSR bus",
+        bus0=df.index + bus_suffix,
+        bus1=df.index + f" {store_carrier} bus",
         p_nom=df.p_nom.abs(),
         efficiency=1.0,
         carrier=f"{key} DSR shift",
@@ -628,8 +643,8 @@ def _add_dsr_pypsa_components(
         "Link",
         df.index,
         suffix=f" {key} DSR reverse",
-        bus0=df.index + f" {key} DSR bus",
-        bus1=df.index,
+        bus0=df.index + f" {store_carrier} bus",
+        bus1=df.index + bus_suffix,
         p_nom=df.p_nom.abs(),
         efficiency=1.0,
         carrier=f"{key} DSR reverse",
@@ -639,21 +654,23 @@ def _add_dsr_pypsa_components(
         # Create DSR profile to set as e_max_pu for DSR store
         dsr_profile = _get_dsr_profile(n, df, dsr_hours, key)
     else:
-        dsr_profile = pd.read_csv(ev_dsm_profile_path, index_col=0, parse_dates=True)
+        dsr_profile = ev_dsr_profile
 
     # Calculate DSR duration in hours
-    dsm_duration=dsr_hours[1]-dsr_hours[0]
-
+    dsr_duration=dsr_hours[1]-dsr_hours[0]
+    
     # Add the DSR store to the PyPSA network
     n.add(
         "Store",
         df.index,
-        suffix=f" {key} DSR store",
-        bus=df.index + f" {key} DSR bus",
-        e_nom=df.p_nom.abs() * (dsm_duration),
+        suffix=f" {store_carrier}",
+        bus=df.index + f" {store_carrier} bus",
+        e_nom=(df.p_nom.abs() * (dsr_duration)) if key != "ev" else (ev_storage_capacity.MWh),
         e_cyclic=True,
-        carrier=f"{key} DSR",
-        e_max_pu=dsr_profile,
+        carrier=store_carrier,
+        e_min_pu=dsr_profile.loc[:,df.index] if key == "ev" else 0.0,
+        e_max_pu=dsr_profile.loc[:,df.index] if key != "ev" else 1.0,
+
     )
 
 
@@ -663,6 +680,7 @@ def add_DSR(
     dsr: dict[str, str],
     dsr_hours: list[int],
     ev_dsr_profile_path: str,
+    ev_storage_capacity_path: str,
 ):
     """
     Add DSR components for residential, i&c and i&c heat sectors to PyPSA network
@@ -677,12 +695,18 @@ def add_DSR(
             Dictionary containing DSR flexibility data for baseline and electrified heat
         dsr_hours: list[int]
             Hours during which demand-side management can occur
+        ev_dsr_profile_path : str
+            Path to EV DSR profile CSV
+        ev_storage_capacity_path : str
+            Path to EV storage capacity CSV 
     """
+    ev_dsr_profile=pd.read_csv(ev_dsr_profile_path, index_col=0, parse_dates=True)
+    ev_storage_capacity=_load_regional_data(ev_storage_capacity_path, year)
 
     for file, path in dsr.items():
         dsr_type = re.match("regional_(.*)_dsr_inc_eur", file).groups()[0]
         df_dsr = _load_regional_data(path, year)
-        _add_dsr_pypsa_components(n, df_dsr, dsr_hours, dsr_type, ev_dsr_profile_path)
+        _add_dsr_pypsa_components(n, df_dsr, dsr_hours, dsr_type, ev_dsr_profile, ev_storage_capacity)
 
 
 def finalise_composed_network(
@@ -1056,11 +1080,10 @@ def compose_network(
         attach_chp_constraints(network, chp_p_min_pu)
 
     add_load(network, demands)
-    breakpoint()
 
     # add_EV_DSR_V2G(network, year, **ev_data)
 
-    add_DSR(network, year, dsr, dsr_hours, ev_data['dsm_profile_s_clustered'])
+    add_DSR(network, year, dsr, dsr_hours, ev_data['dsm_profile_s_clustered'], ev_data['regional_ev_storage_inc_eur'])
 
     attach_dc_interconnectors(network, interconnectors_path, year)
 
