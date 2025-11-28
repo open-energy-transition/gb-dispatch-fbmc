@@ -298,7 +298,7 @@ region_operations:
   add_group_to_neighbour:
     IE: ["GB 30"]
 
-  etys_boundaries:
+  etys_boundaries_lines:
     B3b:
     - bus0: 28
       bus1: 25
@@ -435,6 +435,13 @@ region_operations:
       bus1: 25
     - bus0: 27
       bus1: 25
+  etys_boundaries_links:
+    B6:
+    - bus0: 23
+      bus1: 17
+    B7a:
+    - bus0: 23
+      bus1: 17
   # These are manually selected spurious lines originating from not removing stubs earlier
   prune_lines:
   - bus0: 10
