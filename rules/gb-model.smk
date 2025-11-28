@@ -777,11 +777,11 @@ rule compose_network:
         ),
         dsr=expand(
             resources("gb-model/regional_{sector}_dsr_inc_eur.csv"),
-            sector=["residential", "iandc", "iandc_heat"],
+            sector=["residential", "iandc", "iandc_heat", "ev"],
         ),
         ev_data=expand(
             resources("gb-model/regional_ev_{ev_data}_inc_eur.csv"),
-            ev_data=["storage", "dsm", "v2g"],
+            ev_data=["storage", "dsr", "v2g"],
         )
         + [resources("dsm_profile_s_clustered.csv")],
         network=resources("networks/base_s_clustered.nc"),

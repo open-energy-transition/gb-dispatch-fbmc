@@ -33,7 +33,7 @@ from scripts.gb_model._helpers import get_lines
 import pytz
 from datetime import datetime
 from pytz import country_timezones
-
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -414,7 +414,7 @@ def add_EV_DSR_V2G(
     year: int,
     *,
     regional_ev_storage_inc_eur,
-    regional_ev_dsm_inc_eur,
+    regional_ev_dsr_inc_eur,
     regional_ev_v2g_inc_eur,
     dsm_profile_s_clustered,
 ):
@@ -440,7 +440,7 @@ def add_EV_DSR_V2G(
     # Load EV storage data
 
     ev_storage_capacity_df = _load_regional_data(regional_ev_storage_inc_eur, year)
-    ev_dsr_df = _load_regional_data(regional_ev_dsm_inc_eur, year)
+    ev_dsr_df = _load_regional_data(regional_ev_dsr_inc_eur, year)
     ev_v2g_df = _load_regional_data(regional_ev_v2g_inc_eur, year)
     # Add the EV store to pypsa Network
     ev_dsm_profile = pd.read_csv(dsm_profile_s_clustered, index_col=0, parse_dates=True)
@@ -527,8 +527,43 @@ def _time_difference_hours(country):
     
     return int(diff)
 
-def _add_dsr_pypsa_components(
+
+def _get_dsr_profile(
     n: pypsa.Network, df: pd.DataFrame, dsr_hours: list[int], key: str
+) -> pd.DataFrame:
+    """
+    Create DSR profile to set as e_max_pu for DSR store
+
+    Parameters
+    ----------
+        n : pypsa.Network
+            Network to finalize
+        df : pd.DataFrame
+            DataFrame containing flexibility p_nom data indexed by bus
+        dsr_hours : list[int]
+            Hours during which demand-side management can occur
+        key : str
+            Sector key (e.g., 'residential', 'iandc', 'iandc_heat')
+    """
+
+    dsr_profile = pd.DataFrame(index=n.snapshots, columns=df.index, data=0.0)
+    mask = (dsr_profile.index.hour >= dsr_hours[0]) & (
+        dsr_profile.index.hour < dsr_hours[1]
+    )
+    dsr_profile.loc[mask] = 1.0
+
+    # Calculate time difference between each neighbouring country and GB
+    time_shift={x:_time_difference_hours(x) for x in n.buses.country.unique().tolist()}
+
+    # Shift European neighbour DSR by 'x' hours to account for time zone difference
+    for country, shift_hours in time_shift.items():
+        country_columns=dsr_profile.filter(like=country).columns
+        dsr_profile.loc[:,country_columns] = dsr_profile[country_columns].shift(shift_hours, fill_value=0.0)
+    
+    return dsr_profile
+
+def _add_dsr_pypsa_components(
+    n: pypsa.Network, df: pd.DataFrame, dsr_hours: list[int], key: str, ev_dsr_profile_path: str
 ):
     """
     Add DSR components for a given sector to PyPSA network
@@ -575,6 +610,7 @@ def _add_dsr_pypsa_components(
         country=n.buses.loc[df.index].country,
     )
 
+    
     # Add the DSR link from AC bus to DSR bus to the PyPSA network
     n.add(
         "Link",
@@ -599,21 +635,12 @@ def _add_dsr_pypsa_components(
         carrier=f"{key} DSR reverse",
     )
 
-    # Create DSM profile to set as e_max_pu for DSR store
-    dsr_profile = pd.DataFrame(index=n.snapshots, columns=df.index, data=0.0)
-    mask = (dsr_profile.index.hour >= dsr_hours[0]) & (
-        dsr_profile.index.hour < dsr_hours[1]
-    )
-    dsr_profile.loc[mask] = 1.0
+    if "ev" not in key:
+        # Create DSR profile to set as e_max_pu for DSR store
+        dsr_profile = _get_dsr_profile(n, df, dsr_hours, key)
+    else:
+        dsr_profile = pd.read_csv(ev_dsm_profile_path, index_col=0, parse_dates=True)
 
-    # Calculate time difference between each neighbouring country and GB
-    time_shift={x:_time_difference_hours(x) for x in n.buses.country.unique().tolist()}
-
-    # Shift European neighbour columns by 'x' hours to account for time zone difference
-    for country, shift_hours in time_shift.items():
-        country_columns=dsr_profile.filter(like=country).columns
-        dsr_profile.loc[:,country_columns] = dsr_profile[country_columns].shift(shift_hours, fill_value=0.0)
-    
     # Calculate DSR duration in hours
     dsm_duration=dsr_hours[1]-dsr_hours[0]
 
@@ -630,11 +657,12 @@ def _add_dsr_pypsa_components(
     )
 
 
-def add_DSR_baseline_heat(
+def add_DSR(
     n: pypsa.Network,
     year: int,
     dsr: dict[str, str],
     dsr_hours: list[int],
+    ev_dsr_profile_path: str,
 ):
     """
     Add DSR components for residential, i&c and i&c heat sectors to PyPSA network
@@ -654,7 +682,7 @@ def add_DSR_baseline_heat(
     for file, path in dsr.items():
         dsr_type = re.match("regional_(.*)_dsr_inc_eur", file).groups()[0]
         df_dsr = _load_regional_data(path, year)
-        _add_dsr_pypsa_components(n, df_dsr, dsr_hours, dsr_type)
+        _add_dsr_pypsa_components(n, df_dsr, dsr_hours, dsr_type, ev_dsr_profile_path)
 
 
 def finalise_composed_network(
@@ -1028,14 +1056,15 @@ def compose_network(
         attach_chp_constraints(network, chp_p_min_pu)
 
     add_load(network, demands)
+    breakpoint()
 
-    add_EV_DSR_V2G(network, year, **ev_data)
+    # add_EV_DSR_V2G(network, year, **ev_data)
+
+    add_DSR(network, year, dsr, dsr_hours, ev_data['dsm_profile_s_clustered'])
 
     attach_dc_interconnectors(network, interconnectors_path, year)
 
     _prune_lines(network, prune_lines)
-
-    add_DSR_baseline_heat(network, year, dsr, dsr_hours)
 
     finalise_composed_network(network, context)
 
