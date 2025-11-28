@@ -14,13 +14,17 @@ connection costs) so that downstream rules can import a consistent
 
 import copy
 import logging
+import re
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
 import pypsa
+import pytz
 import xarray as xr
+from pytz import country_timezones
 
 from scripts._helpers import configure_logging, set_scenario_config
 from scripts.add_electricity import (
@@ -30,10 +34,6 @@ from scripts.add_electricity import (
     flatten,
 )
 from scripts.gb_model._helpers import get_lines
-import pytz
-from datetime import datetime
-from pytz import country_timezones
-import re
 
 logger = logging.getLogger(__name__)
 
@@ -469,22 +469,22 @@ def _time_difference_hours(country):
 
     # Get timezones for GB and the specified country
     try:
-        tz_gb=pytz.timezone(country_timezones["GB"][0])
-        tz_country=pytz.timezone(country_timezones[country][0])
+        tz_gb = pytz.timezone(country_timezones["GB"][0])
+        tz_country = pytz.timezone(country_timezones[country][0])
     except KeyError:
         raise ValueError("Invalid ISO country code or timezone not found.")
 
     # Localize current UTC time into each timezone
     now_utc = datetime.now(pytz.utc)
-    time_gb=now_utc.astimezone(tz_gb)
-    time_country=now_utc.astimezone(tz_country)
+    time_gb = now_utc.astimezone(tz_gb)
+    time_country = now_utc.astimezone(tz_country)
 
     offset_gb = time_gb.utcoffset().total_seconds() / 3600
     offset_country = time_country.utcoffset().total_seconds() / 3600
 
     # Compute difference in hours
-    diff = (offset_country - offset_gb)
-    
+    diff = offset_country - offset_gb
+
     return int(diff)
 
 
@@ -513,22 +513,27 @@ def _get_dsr_profile(
     dsr_profile.loc[mask] = 1.0
 
     # Calculate time difference between each neighbouring country and GB
-    time_shift={x:_time_difference_hours(x) for x in n.buses.country.unique().tolist()}
+    time_shift = {
+        x: _time_difference_hours(x) for x in n.buses.country.unique().tolist()
+    }
 
     # Shift European neighbour DSR by 'x' hours to account for time zone difference
     for country, shift_hours in time_shift.items():
-        country_columns=dsr_profile.filter(like=country).columns
-        dsr_profile.loc[:,country_columns] = dsr_profile[country_columns].shift(shift_hours, fill_value=0.0)
-    
+        country_columns = dsr_profile.filter(like=country).columns
+        dsr_profile.loc[:, country_columns] = dsr_profile[country_columns].shift(
+            shift_hours, fill_value=0.0
+        )
+
     return dsr_profile
 
+
 def _add_dsr_pypsa_components(
-    n: pypsa.Network, 
-    df: pd.DataFrame, 
-    dsr_hours: list[int], 
-    key: str, 
+    n: pypsa.Network,
+    df: pd.DataFrame,
+    dsr_hours: list[int],
+    key: str,
     ev_dsr_profile: pd.DataFrame,
-    ev_storage_capacity: pd.DataFrame
+    ev_storage_capacity: pd.DataFrame,
 ):
     """
     Add DSR components for a given sector to PyPSA network
@@ -585,7 +590,6 @@ def _add_dsr_pypsa_components(
         country=n.buses.loc[df.index].country,
     )
 
-    
     # Add the DSR link from AC bus to DSR bus to the PyPSA network
     n.add(
         "Link",
@@ -617,20 +621,21 @@ def _add_dsr_pypsa_components(
         dsr_profile = ev_dsr_profile
 
     # Calculate DSR duration in hours
-    dsr_duration=dsr_hours[1]-dsr_hours[0]
-    
+    dsr_duration = dsr_hours[1] - dsr_hours[0]
+
     # Add the DSR store to the PyPSA network
     n.add(
         "Store",
         df.index,
         suffix=f" {store_carrier}",
         bus=df.index + f" {store_carrier} bus",
-        e_nom=(df.p_nom.abs() * (dsr_duration)) if key != "ev" else (ev_storage_capacity.MWh),
+        e_nom=(df.p_nom.abs() * (dsr_duration))
+        if key != "ev"
+        else (ev_storage_capacity.MWh),
         e_cyclic=True,
         carrier=store_carrier,
-        e_min_pu=dsr_profile.loc[:,df.index] if key == "ev" else 0.0,
-        e_max_pu=dsr_profile.loc[:,df.index] if key != "ev" else 1.0,
-
+        e_min_pu=dsr_profile.loc[:, df.index] if key == "ev" else 0.0,
+        e_max_pu=dsr_profile.loc[:, df.index] if key != "ev" else 1.0,
     )
 
     logger.info(f"Added PyPSA components for {key} sector to perform DSR")
@@ -660,15 +665,17 @@ def add_DSR(
         ev_dsr_profile_path : str
             Path to EV DSR profile CSV
         ev_storage_capacity_path : str
-            Path to EV storage capacity CSV 
+            Path to EV storage capacity CSV
     """
-    ev_dsr_profile=pd.read_csv(ev_dsr_profile_path, index_col=0, parse_dates=True)
-    ev_storage_capacity=_load_regional_data(ev_storage_capacity_path, year)
+    ev_dsr_profile = pd.read_csv(ev_dsr_profile_path, index_col=0, parse_dates=True)
+    ev_storage_capacity = _load_regional_data(ev_storage_capacity_path, year)
 
     for file, path in dsr.items():
         dsr_type = re.match("regional_(.*)_dsr_inc_eur", file).groups()[0]
         df_dsr = _load_regional_data(path, year)
-        _add_dsr_pypsa_components(n, df_dsr, dsr_hours, dsr_type, ev_dsr_profile, ev_storage_capacity)
+        _add_dsr_pypsa_components(
+            n, df_dsr, dsr_hours, dsr_type, ev_dsr_profile, ev_storage_capacity
+        )
 
 
 def finalise_composed_network(
@@ -1043,9 +1050,16 @@ def compose_network(
 
     add_load(network, demands)
 
-    add_DSR(network, year, dsr, dsr_hours, ev_data['dsm_profile_s_clustered'], ev_data['regional_ev_storage_inc_eur'])
+    add_DSR(
+        network,
+        year,
+        dsr,
+        dsr_hours,
+        ev_data["dsm_profile_s_clustered"],
+        ev_data["regional_ev_storage_inc_eur"],
+    )
 
-    add_EV_V2G(network, year, ev_data['regional_ev_v2g_inc_eur'])
+    add_EV_V2G(network, year, ev_data["regional_ev_v2g_inc_eur"])
 
     attach_dc_interconnectors(network, interconnectors_path, year)
 
