@@ -652,15 +652,9 @@ def add_DSR_baseline_heat(
     """
 
     for file, path in dsr.items():
-        if "residential" in file:
-            df_dsr = _load_regional_data(path, year)
-            _add_dsr_pypsa_components(n, df_dsr, dsr_hours, "residential")
-        elif "iandc" in file and "heat" not in file:
-            df_dsr = _load_regional_data(path, year)
-            _add_dsr_pypsa_components(n, df_dsr, dsr_hours, "iandc")
-        else:  # iandc_heat
-            df_dsr = _load_regional_data(path, year)
-            _add_dsr_pypsa_components(n, df_dsr, dsr_hours, "iandc_heat")
+        dsr_type = re.match("regional_(.*)_dsr_inc_eur", file).groups()[0]
+        df_dsr = _load_regional_data(path, year)
+        _add_dsr_pypsa_components(n, df_dsr, dsr_hours, dsr_type)
 
 
 def finalise_composed_network(
