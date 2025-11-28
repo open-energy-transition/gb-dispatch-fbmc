@@ -66,16 +66,20 @@ def set_boundary_constraints(
 
         # Get all DC links crossing the given boundary
         boundary_links_mask = pd.Series(False, index=n.links.index)
-        dc_links = n.links[n.links.carrier == "DC"]
 
         for buses in etys_boundaries_links.get(boundary, []):
-            links_mask = get_lines(dc_links, buses["bus0"], buses["bus1"])
-            if not links_mask.any():
+            links_mask = get_lines(n.links, buses["bus0"], buses["bus1"])
+
+            # Filter only DC links
+            dc_links_mask = n.links.carrier == "DC"
+            combined_mask = links_mask & dc_links_mask
+
+            if not combined_mask.any():
                 logger.warning(
                     f"No DC links found for boundary '{boundary}' between "
                     f"buses '{buses['bus0']}' and '{buses['bus1']}'"
                 )
-            boundary_links_mask = boundary_links_mask | links_mask
+            boundary_links_mask = boundary_links_mask | combined_mask
 
         boundary_links = n.links[boundary_links_mask].index
 
