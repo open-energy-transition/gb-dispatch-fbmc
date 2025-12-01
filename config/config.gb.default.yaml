@@ -548,7 +548,7 @@ dukes-5.11:
     Type:
       Onshore: onwind
       onshore: onwind
-      Offshore: offwind
+      Offshore: offwind-dc
       CCGT: CCGT
       Small Hydro: ror
       Natural Flow: ror
@@ -812,7 +812,7 @@ fes:
         Non-renewable CHP: gas
         Nuclear: nuclear
         OCGTs (non CHP): OCGT
-        Offshore-Wind (off-Grid): offwind
+        Offshore-Wind (off-Grid): offwind-dc
         Renewable Engines (Landfill Gas, Sewage Gas, Biogas): biomass
         Solar Generation: solar
         Waste Incineration (including CHP): waste
@@ -820,7 +820,7 @@ fes:
         Domestic Batteries (G98): battery
         Batteries: battery
         Pumped Hydro: PHS # FIXME: should this be just "hydro?"
-        Offshore Wind: offwind
+        Offshore Wind: offwind-dc
         Onshore Wind <1MW: onwind
         Onshore Wind >=1MW: onwind
 
@@ -870,7 +870,7 @@ fes:
         Biomass: biomass
         Marine: marine
         Nuclear: nuclear
-        Offshore Wind: offwind
+        Offshore Wind: offwind-dc
         Onshore Wind: onwind
         Waste: waste
       SubType:
