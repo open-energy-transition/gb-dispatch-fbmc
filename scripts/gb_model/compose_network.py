@@ -16,15 +16,12 @@ import copy
 import logging
 import re
 from dataclasses import dataclass
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
 import pypsa
-import pytz
 import xarray as xr
-from pytz import country_timezones
 
 from scripts._helpers import configure_logging, set_scenario_config
 from scripts.add_electricity import (
@@ -37,7 +34,6 @@ from scripts.gb_model._helpers import (
     get_lines,
     time_difference_hours,
 )
-import re
 
 logger = logging.getLogger(__name__)
 
@@ -490,7 +486,9 @@ def _get_dsr_profile(
     dsr_profile.loc[mask] = 1.0
 
     # Calculate time difference between each neighbouring country and GB
-    time_shift={x:time_difference_hours(x) for x in n.buses.country.unique().tolist()}
+    time_shift = {
+        x: time_difference_hours(x) for x in n.buses.country.unique().tolist()
+    }
 
     # Shift European neighbour DSR by 'x' hours to account for time zone difference
     for country, shift_hours in time_shift.items():
