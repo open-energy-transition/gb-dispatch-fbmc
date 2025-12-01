@@ -608,11 +608,13 @@ def attach_dc_interconnectors(
         axis=1,
     )
     # Add the links
+    # Replace the default `p_min_pu` (-1, used to enforce bidirectionality) with the negative of `p_max_pu`.
     n.add(
         "Link",
         interconnectors_this_year.index,
-        **interconnectors_this_year,
+        **interconnectors_this_year.drop(columns="p_min_pu"),
         p_max_pu=p_max_pu,
+        p_min_pu=-1 * p_max_pu,
     )
 
     logger.info(

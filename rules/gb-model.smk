@@ -799,7 +799,7 @@ rule compose_network:
             "gb-model/inter_gb_transmission_availability.csv"
         ),
         generator_availability=resources(
-            "gb-model/GB_generator_monthly_unavailability.csv"
+            "gb-model/GB_generator_monthly_availability_fraction.csv"
         ),
         intermediate_data=[
             # TODO: calculate intra_gb availability per line/boundary before this point (currently only per TO)
