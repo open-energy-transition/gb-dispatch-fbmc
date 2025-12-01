@@ -30,10 +30,7 @@ from scripts.add_electricity import (
     attach_hydro,
     flatten,
 )
-from scripts.gb_model._helpers import (
-    get_lines,
-    time_difference_hours,
-)
+from scripts.gb_model._helpers import get_lines, time_difference_hours
 
 logger = logging.getLogger(__name__)
 
