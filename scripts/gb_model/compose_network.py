@@ -451,7 +451,8 @@ def _load_regional_data(path: str, year: int) -> pd.DataFrame:
 def add_EV_V2G(
     n: pypsa.Network,
     year: int,
-    regional_ev_v2g_inc_eur,
+    regional_ev_v2g_inc_eur: str,
+    ev_storage_capacity_path: str,
 ):
     """
     Add EV DSR and V2G components to PyPSA network
@@ -464,10 +465,13 @@ def add_EV_V2G(
         Year used in the modelling
     regional_ev_v2g_inc_eur: str
         CSV path for EV V2G data
+    ev_storage_capacity_path : str
+        Path to EV storage capacity CSV
 
     """
     # Load EV V2G data
     ev_v2g_df = _load_regional_data(regional_ev_v2g_inc_eur, year)
+    ev_storage_capacity=_load_regional_data(ev_storage_capacity_path, year)
 
     # Add EV V2G carrier to the PyPSA network
     n.add(
@@ -475,15 +479,55 @@ def add_EV_V2G(
         "EV V2G",
     )
 
-    # Add EV V2G to the PyPSA network
+    # Add EV G2V carrier to the PyPSA network
+    n.add(
+        "Carrier",
+        "EV G2V",
+    )
+
+    # Add EV V2G bus to the PyPSA network
+    n.add(
+        "Bus",
+        ev_v2g_df.index,
+        suffix=" EV V2G bus",
+        carrier="EV V2G",
+        x=n.buses.loc[ev_v2g_df.index].x,
+        y=n.buses.loc[ev_v2g_df.index].y,
+        country=n.buses.loc[ev_v2g_df.index].country,
+    )
+
+    # Add link from EV bus to V2G bus to the PyPSA network
+    n.add(
+        "Link",
+        ev_v2g_df.index,
+        suffix=" EV G2V",
+        bus0=ev_v2g_df.index + " EV bus",
+        bus1=ev_v2g_df.index + " EV V2G bus",
+        p_nom=ev_v2g_df.p_nom.abs(),
+        efficiency=1.0,
+        carrier="EV G2V",
+    )
+
+    # Add link from V2G bus to AC bus to the PyPSA network
     n.add(
         "Link",
         ev_v2g_df.index,
         suffix=" EV V2G",
-        bus0=ev_v2g_df.index + " EV store bus",
+        bus0=ev_v2g_df.index + " EV V2G bus",
         bus1=ev_v2g_df.index,
         p_nom=ev_v2g_df.p_nom.abs(),
         efficiency=1.0,
+        carrier="EV V2G",
+    )
+
+    # Add the EV V2G store to the PyPSA network
+    n.add(
+        "Store",
+        ev_v2g_df.index,
+        suffix=" EV V2G store",
+        bus=ev_v2g_df.index + " EV V2G bus",
+        e_nom=ev_storage_capacity.MWh,
+        e_cyclic=True,
         carrier="EV V2G",
     )
 
@@ -556,12 +600,8 @@ def _add_dsr_pypsa_components(
             DataFrame containing maximum state of charge as per unit of the store indexed by time and bus
     """
 
-    if key == "ev":
-        store_carrier = "EV store"
-        bus_suffix = " EV"
-    else:
-        store_carrier = f"{key} DSR"
-        bus_suffix = ""
+    store_carrier = f"{key} DSR"
+    bus_suffix = ""
 
     # Add the store carrier to the PyPSA network
     n.add(
@@ -597,7 +637,7 @@ def _add_dsr_pypsa_components(
         "Link",
         df.index,
         suffix=f" {key} DSR",
-        bus0=df.index + bus_suffix,
+        bus0=df.index,
         bus1=df.index + f" {store_carrier} bus",
         p_nom=df.p_nom.abs(),
         efficiency=1.0,
@@ -610,7 +650,7 @@ def _add_dsr_pypsa_components(
         df.index,
         suffix=f" {key} DSR reverse",
         bus0=df.index + f" {store_carrier} bus",
-        bus1=df.index + bus_suffix,
+        bus1=df.index,
         p_nom=df.p_nom.abs(),
         efficiency=1.0,
         carrier=f"{key} DSR reverse",
@@ -1134,7 +1174,7 @@ def compose_network(
         ev_data["regional_ev_storage_inc_eur"],
     )
 
-    add_EV_V2G(network, year, ev_data["regional_ev_v2g_inc_eur"])
+    add_EV_V2G(network, year, ev_data['regional_ev_v2g_inc_eur'], ev_data['regional_ev_storage_inc_eur'])
 
     attach_dc_interconnectors(
         network, interconnectors_path, year, interconnectors_availability_path
