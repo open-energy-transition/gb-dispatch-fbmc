@@ -219,6 +219,9 @@ region_operations:
     B7a:
     - bus0: B6-B5
       bus1: B8-NW3-B7a
+    B0:
+    - bus0: B0
+      bus1: B1a-B0
   # These are manually selected spurious lines originating from not removing stubs earlier
   prune_lines:
   - bus0: B8-NW3-B7a
