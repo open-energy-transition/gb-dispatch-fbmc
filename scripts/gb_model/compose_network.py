@@ -30,10 +30,7 @@ from scripts.add_electricity import (
     attach_hydro,
     flatten,
 )
-from scripts.gb_model._helpers import (
-    get_lines,
-    time_difference_hours,
-)
+from scripts.gb_model._helpers import get_lines, time_difference_hours
 
 logger = logging.getLogger(__name__)
 
@@ -679,7 +676,7 @@ def add_DSR(
             dsr_profile = ev_dsr_profile
             storage_capacity = ev_storage_capacity.MWh
             e_min_pu = dsr_profile.loc[:, df_dsr.index]
-            e_max_pu = 0.0
+            e_max_pu = 1.0
 
         _add_dsr_pypsa_components(
             n, df_dsr, dsr_type, storage_capacity, e_min_pu, e_max_pu
