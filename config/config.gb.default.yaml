@@ -765,6 +765,7 @@ fes-costing-sheet-config:
 
 fes:
   year_range_incl: [2022, 2041] # 20-year period over which we will run the simulation
+  dsr_hours: [17, 20]  # hours during which demand-side management can occur (5pm-8pm)
   default_set: PP
   default_characteristics:
     # Ensure all required columns exist with defaults
@@ -841,21 +842,24 @@ fes:
 
     flexibility:
       Technology Detail:
-        ev_dsm: ["smart charging impact at peak"]
+        ev_dsr: ["smart charging impact at peak"]
         ev_v2g: ["v2g impact at peak"]
         residential_dsr: ["residential peak shifting (smart/touts effect)"]
-        services_dsr: ["i&c dsr impact at peak (processes)"]
+        iandc_dsr: ["i&c dsr impact at peak (processes)"]
+        iandc_heat_dsr: ["i&c dsr impact at peak (heat)"]
       regional_distribution_reference:
-        ev_dsm: ["v2g"]
+        ev_dsr: ["v2g"]
         ev_v2g: ["v2g"]
         residential_dsr: ["baseline demand"]
-        services_dsr: ["i&c flexibility (tout)"]
+        iandc_dsr: ["i&c flexibility (tout)"]
+        iandc_heat_dsr: ["i&c hp demand"]
       eur_add_data_reference:
-        ev_dsm: "ev"
+        ev_dsr: "ev"
         ev_v2g: "ev"
         ev_storage: "ev"
         residential_dsr: "baseline_electricity"
-        services_dsr: "baseline_electricity"
+        iandc_dsr: "baseline_electricity"
+        iandc_heat_dsr: "iandc_heat"
 
 
   eur:

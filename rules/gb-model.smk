@@ -776,15 +776,20 @@ rule compose_network:
         renewable=config["renewable"],
         enable_chp=config["chp"]["enable"],
         prune_lines=config["region_operations"]["prune_lines"],
+        dsr_hours=config["fes"]["dsr_hours"],
     input:
         unpack(input_profile_tech),
         demands=expand(
             resources("gb-model/{demand_type}_demand/{{year}}.csv"),
             demand_type=config["fes"]["gb"]["demand"]["Technology Detail"].keys(),
         ),
+        dsr=expand(
+            resources("gb-model/regional_{sector}_dsr_inc_eur.csv"),
+            sector=["residential", "iandc", "iandc_heat", "ev"],
+        ),
         ev_data=expand(
             resources("gb-model/regional_ev_{ev_data}_inc_eur.csv"),
-            ev_data=["storage", "dsm", "v2g"],
+            ev_data=["storage", "dsr", "v2g"],
         )
         + [resources("dsm_profile_s_clustered.csv")],
         network=resources("networks/base_s_clustered.nc"),
