@@ -497,16 +497,18 @@ def _get_dsr_profile(
             shift_hours, fill_value=0.0
         )
 
+    logger.info(f"Created DSR profile for {key} sector with DSR hours {dsr_hours}")
+
     return dsr_profile
 
 
 def _add_dsr_pypsa_components(
     n: pypsa.Network,
     df: pd.DataFrame,
-    dsr_hours: list[int],
     key: str,
-    ev_dsr_profile: pd.DataFrame,
-    ev_storage_capacity: pd.DataFrame,
+    storage_capacity: pd.DataFrame,
+    e_min_pu: pd.DataFrame,
+    e_max_pu: pd.DataFrame,
 ):
     """
     Add DSR components for a given sector to PyPSA network
@@ -517,14 +519,14 @@ def _add_dsr_pypsa_components(
             Network to finalize
         df : pd.DataFrame
             DataFrame containing flexibility p_nom data indexed by bus
-        dsr_hours : list[int]
-            Hours during which demand-side management can occur
         key : str
             Sector key (e.g., 'residential', 'iandc', 'iandc_heat', "ev")
-        ev_dsr_profile : pd.DataFrame
-            DataFrame containing EV DSR profile indexed by time and bus
-        ev_storage_capacity : pd.DataFrame
-            DataFrame containing EV storage capacity indexed by time and bus
+        storage_capacity : pd.DataFrame
+            DataFrame containing storage capacity of the store in MWh indexed by time and bus
+        e_min_pu : pd.DataFrame
+            DataFrame containing minimum state of charge as per unit of the store indexed by time and bus
+        e_max_pu : pd.DataFrame
+            DataFrame containing maximum state of charge as per unit of the store indexed by time and bus
     """
 
     if key == "ev":
@@ -587,28 +589,17 @@ def _add_dsr_pypsa_components(
         carrier=f"{key} DSR reverse",
     )
 
-    if "ev" not in key:
-        # Create DSR profile to set as e_max_pu for DSR store
-        dsr_profile = _get_dsr_profile(n, df, dsr_hours, key)
-    else:
-        dsr_profile = ev_dsr_profile
-
-    # Calculate DSR duration in hours
-    dsr_duration = dsr_hours[1] - dsr_hours[0]
-
     # Add the DSR store to the PyPSA network
     n.add(
         "Store",
         df.index,
         suffix=f" {store_carrier}",
         bus=df.index + f" {store_carrier} bus",
-        e_nom=(df.p_nom.abs() * (dsr_duration))
-        if key != "ev"
-        else (ev_storage_capacity.MWh),
+        e_nom=storage_capacity,
         e_cyclic=True,
         carrier=store_carrier,
-        e_min_pu=dsr_profile.loc[:, df.index] if key == "ev" else 0.0,
-        e_max_pu=dsr_profile.loc[:, df.index] if key != "ev" else 1.0,
+        e_min_pu=e_min_pu,
+        e_max_pu=e_max_pu,
     )
 
     logger.info(f"Added PyPSA components for {key} sector to perform DSR")
@@ -643,11 +634,28 @@ def add_DSR(
     ev_dsr_profile = pd.read_csv(ev_dsr_profile_path, index_col=0, parse_dates=True)
     ev_storage_capacity = _load_regional_data(ev_storage_capacity_path, year)
 
+    # Calculate DSR duration in hours
+    dsr_duration = dsr_hours[1] - dsr_hours[0]
+
+    # Iterate through each demand key in the DSR dictionary
     for file, path in dsr.items():
         dsr_type = re.match("regional_(.*)_dsr_inc_eur", file).groups()[0]
         df_dsr = _load_regional_data(path, year)
+
+        # Create DSR profile, storage capacity, e_min_pu and e_max_pu based on demand type
+        if dsr_type != "ev":
+            dsr_profile = _get_dsr_profile(n, df_dsr, dsr_hours, dsr_type)
+            storage_capacity = df_dsr.p_nom.abs() * (dsr_duration)
+            e_min_pu = 0.0
+            e_max_pu = dsr_profile.loc[:, df_dsr.index]
+        else:
+            dsr_profile = ev_dsr_profile
+            storage_capacity = ev_storage_capacity.MWh
+            e_min_pu = dsr_profile.loc[:, df_dsr.index]
+            e_max_pu = 0.0
+
         _add_dsr_pypsa_components(
-            n, df_dsr, dsr_hours, dsr_type, ev_dsr_profile, ev_storage_capacity
+            n, df_dsr, dsr_type, storage_capacity, e_min_pu, e_max_pu
         )
 
 
