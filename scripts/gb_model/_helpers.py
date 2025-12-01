@@ -8,6 +8,9 @@ import logging
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+import pytz
+from datetime import datetime
+from pytz import country_timezones
 
 logger = logging.getLogger(__name__)
 
@@ -109,3 +112,30 @@ def get_lines(lines: pd.DataFrame, bus0: str | int, bus1: str | int) -> pd.Serie
     return ((lines["bus0"] == f"GB {bus0}") & (lines["bus1"] == f"GB {bus1}")) | (
         (lines["bus0"] == f"GB {bus1}") & (lines["bus1"] == f"GB {bus0}")
     )
+
+
+def time_difference_hours(country):
+    """
+    Calculate time difference in hours between GB and specified country
+
+    """
+
+    # Get timezones for GB and the specified country
+    try:
+        tz_gb=pytz.timezone(country_timezones["GB"][0])
+        tz_country=pytz.timezone(country_timezones[country][0])
+    except KeyError:
+        raise ValueError("Invalid ISO country code or timezone not found.")
+
+    # Localize current UTC time into each timezone
+    now_utc = datetime.now(pytz.utc)
+    time_gb=now_utc.astimezone(tz_gb)
+    time_country=now_utc.astimezone(tz_country)
+
+    offset_gb = time_gb.utcoffset().total_seconds() / 3600
+    offset_country = time_country.utcoffset().total_seconds() / 3600
+
+    # Compute difference in hours
+    diff = (offset_country - offset_gb)
+    
+    return int(diff)

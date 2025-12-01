@@ -29,10 +29,10 @@ from scripts.add_electricity import (
     attach_hydro,
     flatten,
 )
-from scripts.gb_model._helpers import get_lines
-import pytz
-from datetime import datetime
-from pytz import country_timezones
+from scripts.gb_model._helpers import (
+    get_lines,
+    time_difference_hours,
+)
 import re
 
 logger = logging.getLogger(__name__)
@@ -461,33 +461,6 @@ def add_EV_V2G(
     )
 
 
-def _time_difference_hours(country):
-    """
-    Calculate time difference in hours between GB and specified country
-
-    """
-
-    # Get timezones for GB and the specified country
-    try:
-        tz_gb=pytz.timezone(country_timezones["GB"][0])
-        tz_country=pytz.timezone(country_timezones[country][0])
-    except KeyError:
-        raise ValueError("Invalid ISO country code or timezone not found.")
-
-    # Localize current UTC time into each timezone
-    now_utc = datetime.now(pytz.utc)
-    time_gb=now_utc.astimezone(tz_gb)
-    time_country=now_utc.astimezone(tz_country)
-
-    offset_gb = time_gb.utcoffset().total_seconds() / 3600
-    offset_country = time_country.utcoffset().total_seconds() / 3600
-
-    # Compute difference in hours
-    diff = (offset_country - offset_gb)
-    
-    return int(diff)
-
-
 def _get_dsr_profile(
     n: pypsa.Network, df: pd.DataFrame, dsr_hours: list[int], key: str
 ) -> pd.DataFrame:
@@ -513,7 +486,7 @@ def _get_dsr_profile(
     dsr_profile.loc[mask] = 1.0
 
     # Calculate time difference between each neighbouring country and GB
-    time_shift={x:_time_difference_hours(x) for x in n.buses.country.unique().tolist()}
+    time_shift={x:time_difference_hours(x) for x in n.buses.country.unique().tolist()}
 
     # Shift European neighbour DSR by 'x' hours to account for time zone difference
     for country, shift_hours in time_shift.items():
