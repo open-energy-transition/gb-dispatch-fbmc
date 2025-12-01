@@ -12,6 +12,7 @@ Release Notes
 Upcoming Release
 ================
 
+* Added generator and interconnector availability fraction as `p_max_pu` timeseries parameter in the network.
 * Fixed missing European neighbour data in EV datasets (#123).
 * Add interconnectors to network.
 * Add boundary capability constraints to GB model (#131).
