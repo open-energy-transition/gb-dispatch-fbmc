@@ -41,19 +41,13 @@ def set_boundary_constraints(
     line_s = n.model["Line-s"]
     link_p = n.model["Link-p"]
 
-    for boundary, line_bus_groups in etys_boundaries_lines.items():
-        if boundary not in etys_capacities.index:
-            logger.warning(
-                f"Boundary '{boundary}' not found in ETYS capacities, skipping."
-            )
-            continue
-
+    for boundary in etys_capacities.index:
+        # Get boundary capability
         capacity_mw = etys_capacities.loc[boundary, "capability_mw"]
 
         # Get all lines crossing the given boundary
         boundary_lines_mask = pd.Series(False, index=n.lines.index)
-
-        for buses in line_bus_groups:
+        for buses in etys_boundaries_lines.get(boundary, []):
             lines_mask = get_lines(n.lines, buses["bus0"], buses["bus1"])
             if not lines_mask.any():
                 logger.warning(
@@ -62,7 +56,8 @@ def set_boundary_constraints(
                 )
             boundary_lines_mask = boundary_lines_mask | lines_mask
 
-        boundary_lines = n.lines[boundary_lines_mask].index
+        if boundary_lines_mask.any():
+            boundary_lines = n.lines[boundary_lines_mask].index
 
         # Get all DC links crossing the given boundary
         boundary_links_mask = pd.Series(False, index=n.links.index)
@@ -84,7 +79,7 @@ def set_boundary_constraints(
         boundary_links = n.links[boundary_links_mask].index
 
         if boundary_lines.empty:
-            raise ValueError(
+            logger.warning(
                 f"No lines found for boundary '{boundary}'. "
                 f"Cannot apply ETYS constraint. Check configuration."
             )
