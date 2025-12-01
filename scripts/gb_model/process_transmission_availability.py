@@ -3,13 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 """
-Aggregate monthly transmission unavailability across reports and sample to hourly.
-
-This script reads multiple CSVs extracted from NESO monthly transmission availability PDFs.
-It averages the monthly total unavailability percentages across years for the three GB
-transmission operators and for all interconnectors (aggregated), then samples a
-deterministic hourly 0/1 unavailability series per category for the configured
-snapshots period.
+Aggregate monthly transmission unavailability across reports and spread to hourly.
 """
 
 import logging
@@ -52,7 +46,7 @@ def _monthly_means(df: pd.DataFrame) -> pd.DataFrame:
     inter = inter.reindex(range(1, 13))
 
     # Compose single monthly dataframe
-    monthly = zones.assign(INTERCONNECTORS=inter)
+    monthly = zones.assign(interconnectors=inter)
     return monthly
 
 
@@ -73,26 +67,11 @@ def _sample_hourly(
         return sampled
 
     dfs = {}
-    for col, seed in seeds.items():
+    for col in monthly_pct.columns:
         fraction_unavailable = monthly_pct[col].fillna(0) / 100.0
-        rng = np.random.default_rng(seed)
+        rng = np.random.default_rng(seeds[col])
         dfs[col] = base.groupby("month", group_keys=False).month.apply(__sample)
     return pd.concat(dfs.values(), keys=dfs.keys(), axis=1).rename_axis(index="time")
-
-
-def process_transmission_availability(
-    inputs: list[str], snapshots_cfg: dict, random_seeds: dict[str, int]
-) -> pd.DataFrame:
-    """Process transmission availability inputs to produce hourly availability."""
-    raw = _read_inputs(inputs)
-    monthly_pct = _monthly_means(raw)
-
-    # Log compact monthly means
-    msg = monthly_pct.round(2).to_dict(orient="index")
-    logger.info("Monthly unavailability (%%): %s", msg)
-
-    time_index = get_snapshots(snapshots_cfg, drop_leap_day=False, freq="h")
-    return _sample_hourly(monthly_pct, time_index, random_seeds)
 
 
 if __name__ == "__main__":
@@ -104,9 +83,18 @@ if __name__ == "__main__":
     configure_logging(snakemake)
     set_scenario_config(snakemake)
 
-    hourly_df = process_transmission_availability(
-        snakemake.input.unavailability,
-        snakemake.config["snapshots"],
-        snakemake.params["random_seeds"],
+    raw = _read_inputs(snakemake.input.unavailability)
+    monthly_pct = _monthly_means(raw)[snakemake.params.zones]
+
+    # Log compact monthly means
+    msg = monthly_pct.round(2).to_dict(orient="index")
+    logger.info("Monthly unavailability (%%): %s", msg)
+
+    time_index = get_snapshots(
+        snakemake.config["snapshots"], drop_leap_day=False, freq="h"
     )
-    hourly_df.to_csv(snakemake.output.csv)
+    if snakemake.params.sample_hourly:
+        df = _sample_hourly(monthly_pct, time_index, snakemake.params["random_seeds"])
+    else:
+        df = 1.0 - (monthly_pct / 100.0)
+    df.to_csv(snakemake.output.csv)

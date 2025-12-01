@@ -107,7 +107,7 @@ def _input_list_to_dict(input_list: list[str], parent: bool = False) -> dict[str
 
 
 def _add_timeseries_data_to_network(
-    pypsa_t_dict: dict, data: pd.DataFrame, attribute: str
+    pypsa_t_dict: dict, data: pd.DataFrame, attribute: str, conflicts: str = "overwrite"
 ) -> None:
     """
     Add/update timeseries data to a network attribute.
@@ -120,6 +120,7 @@ def _add_timeseries_data_to_network(
         pypsa_t_dict (dict): PyPSA network timeseries component dictionary (e.g., n.loads_t).
         data (pd.DataFrame): Timeseries data to add.
         attribute (str): Network timeseries attribute to update.
+        conflicts (str, optional): How to handle conflicting columns ('overwrite' or 'mul'). Defaults to 'overwrite'.
     """
     assert pypsa_t_dict[attribute].index.equals(data.index), (
         f"Snapshot indices do not match between network attribute {attribute} and data being added."
@@ -129,11 +130,37 @@ def _add_timeseries_data_to_network(
         attribute,
         len(data.columns),
     )
-    pypsa_t_dict[attribute] = (
+    conflict_cols = pypsa_t_dict[attribute].columns.intersection(data.columns)
+    updated_data = (
         pypsa_t_dict[attribute]
-        .loc[:, ~pypsa_t_dict[attribute].columns.isin(data.columns)]
-        .join(data)
+        .loc[:, ~pypsa_t_dict[attribute].columns.isin(conflict_cols)]
+        .join(data.loc[:, ~data.columns.isin(conflict_cols)])
     )
+    if conflict_cols.any():
+        logger.info(
+            "Conflicting columns found when updating network attribute '%s': %s",
+            attribute,
+            list(conflict_cols),
+        )
+        match conflicts:
+            case "overwrite":
+                updated_data = updated_data.join(data.loc[:, conflict_cols])
+            case "mul":
+                multiplied = (
+                    pypsa_t_dict[attribute]
+                    .loc[:, conflict_cols]
+                    .mul(data.loc[:, conflict_cols], fill_value=1)
+                )
+                updated_data = pd.concat(
+                    [updated_data, multiplied],
+                    axis=1,
+                )
+    if not all(pypsa_t_dict[attribute].columns.isin(updated_data.columns)):
+        logger.warning(
+            "Some columns lost when updating network attribute %s.",
+            attribute,
+        )
+    pypsa_t_dict[attribute] = updated_data
 
 
 def _load_powerplants(
@@ -679,7 +706,10 @@ def finalise_composed_network(
 
 
 def attach_dc_interconnectors(
-    n: pypsa.Network, interconnectors_path: str, year: int
+    n: pypsa.Network,
+    interconnectors_path: str,
+    year: int,
+    interconnectors_availability_path: str,
 ) -> None:
     """
     Attach DC interconnector links to the network with fixed capacities.
@@ -691,6 +721,7 @@ def attach_dc_interconnectors(
         n (pypsa.Network): The PyPSA network
         interconnectors_path (str): Path to interconnectors CSV file
         year (int): Year for which to load interconnector capacities
+        interconnectors_availability_path (str): Path to interconnectors availability CSV file
     """
     # Load interconnector data
     interconnectors = pd.read_csv(
@@ -722,9 +753,23 @@ def attach_dc_interconnectors(
         )
     else:
         logger.info("No existing DC interconnector links found to remove")
-
+    availability_df = pd.read_csv(
+        interconnectors_availability_path, index_col=0
+    ).squeeze()
+    hourly_availability_df = _monthly_to_hourly_profile(availability_df, n.snapshots)
+    p_max_pu = pd.concat(
+        [hourly_availability_df.rename(i) for i in interconnectors_this_year.index],
+        axis=1,
+    )
     # Add the links
-    n.add("Link", interconnectors_this_year.index, **interconnectors_this_year)
+    # Replace the default `p_min_pu` (-1, used to enforce bidirectionality) with the negative of `p_max_pu`.
+    n.add(
+        "Link",
+        interconnectors_this_year.index,
+        **interconnectors_this_year.drop(columns="p_min_pu"),
+        p_max_pu=p_max_pu,
+        p_min_pu=-1 * p_max_pu,
+    )
 
     logger.info(
         f"Added {len(interconnectors_this_year)} DC interconnector links with total capacity "
@@ -881,6 +926,53 @@ def _prepare_costs(
     return costs
 
 
+def _monthly_to_hourly_profile(
+    monthly_profile: pd.Series,
+    hourly_index: pd.DatetimeIndex,
+) -> pd.Series:
+    """
+    Convert a monthly profile to an hourly profile by repeating each month's value for its number of hours.
+
+    Args:
+        hourly_index (pd.DatetimeIndex): DatetimeIndex with hourly timestamps for the entire year.
+        monthly_profile (pd.Series): Series with 12 values representing monthly data.
+
+    Returns:
+        pd.Series: Series with hourly data for the entire year.
+    """
+    hourly_profile = pd.Series(
+        monthly_profile.reindex(hourly_index.month).values, index=hourly_index
+    )
+    return hourly_profile
+
+
+def _add_generator_availability(
+    n: pypsa.Network,
+    generator_availability_path: str,
+) -> None:
+    """
+    Add generator availability profiles to the network.
+
+    Args:
+        n (pypsa.Network): The PyPSA network to modify.
+        generator_availability_path (str): Path to generator availability CSV file.
+    """
+    carrier_availability = pd.read_csv(
+        generator_availability_path, index_col=["carrier", "month"]
+    ).squeeze()
+    gen_availability = (
+        carrier_availability.reset_index()
+        .merge(n.generators.reset_index(), on="carrier")
+        .pivot(index="month", columns="Generator", values="availability_fraction")
+    )
+    p_max_pu = gen_availability.apply(
+        _monthly_to_hourly_profile, hourly_index=n.snapshots
+    )
+    _add_timeseries_data_to_network(
+        n.generators_t, p_max_pu, "p_max_pu", conflicts="mul"
+    )
+
+
 def _prune_lines(
     n: pypsa.Network,
     prune_lines: list[dict[str, int]],
@@ -918,6 +1010,8 @@ def compose_network(
     hydro_capacities_path: str | None,
     chp_p_min_pu_path: str,
     interconnectors_path: str,
+    interconnectors_availability_path: str,
+    generator_availability_path: str,
     renewable_profiles: dict[str, str],
     countries: list[str],
     costs_config: dict[str, Any],
@@ -1034,8 +1128,11 @@ def compose_network(
 
     add_EV_V2G(network, year, ev_data["regional_ev_v2g_inc_eur"])
 
-    attach_dc_interconnectors(network, interconnectors_path, year)
+    attach_dc_interconnectors(
+        network, interconnectors_path, year, interconnectors_availability_path
+    )
 
+    _add_generator_availability(network, generator_availability_path)
     _prune_lines(network, prune_lines)
 
     finalise_composed_network(network, context)
@@ -1068,6 +1165,8 @@ if __name__ == "__main__":
         renewable_profiles=renewable_profiles,
         chp_p_min_pu_path=snakemake.input.chp_p_min_pu,
         interconnectors_path=snakemake.input.interconnectors_p_nom,
+        interconnectors_availability_path=snakemake.input.interconnectors_availability,
+        generator_availability_path=snakemake.input.generator_availability,
         countries=snakemake.params.countries,
         costs_config=snakemake.params.costs_config,
         electricity_config=snakemake.params.electricity,
