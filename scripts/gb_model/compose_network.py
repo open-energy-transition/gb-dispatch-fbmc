@@ -14,6 +14,7 @@ connection costs) so that downstream rules can import a consistent
 
 import copy
 import logging
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -29,7 +30,7 @@ from scripts.add_electricity import (
     attach_hydro,
     flatten,
 )
-from scripts.gb_model._helpers import get_lines
+from scripts.gb_model._helpers import get_lines, time_difference_hours
 
 logger = logging.getLogger(__name__)
 
@@ -389,6 +390,18 @@ def add_EV_load(n: pypsa.Network, ev_demand_path: str):
 
     ev_demand = pd.read_csv(ev_demand_path, index_col=[0], parse_dates=True)
 
+    # Add EV carrier to pypsa Network
+    n.add(
+        "Carrier",
+        "EV",
+    )
+
+    # Add EV unmanaged charging carrier to pypsa Network
+    n.add(
+        "Carrier",
+        "EV unmanaged charging",
+    )
+
     # Add EV bus
     n.add(
         "Bus",
@@ -432,14 +445,10 @@ def _load_regional_data(path: str, year: int) -> pd.DataFrame:
     return df_year
 
 
-def add_EV_DSR_V2G(
+def add_EV_V2G(
     n: pypsa.Network,
     year: int,
-    *,
-    regional_ev_storage_inc_eur,
-    regional_ev_dsm_inc_eur,
     regional_ev_v2g_inc_eur,
-    dsm_profile_s_clustered,
 ):
     """
     Add EV DSR and V2G components to PyPSA network
@@ -450,65 +459,17 @@ def add_EV_DSR_V2G(
         Network to finalize
     year: int
         Year used in the modelling
-    regional_ev_storage_inc_eur: str
-        CSV path for EV storage capacity
-    regional_ev_dsm_inc_eur: str
-        CSV path for EV smart charging (DSR) data
     regional_ev_v2g_inc_eur: str
         CSV path for EV V2G data
-    dsm_profile_s_clustered: str
-        CSV path for EV DSM profile
 
     """
-    # Load EV storage data
-
-    ev_storage_capacity_df = _load_regional_data(regional_ev_storage_inc_eur, year)
-    ev_dsr_df = _load_regional_data(regional_ev_dsm_inc_eur, year)
+    # Load EV V2G data
     ev_v2g_df = _load_regional_data(regional_ev_v2g_inc_eur, year)
-    # Add the EV store to pypsa Network
-    ev_dsm_profile = pd.read_csv(dsm_profile_s_clustered, index_col=0, parse_dates=True)
 
-    # Add EV storage buses
+    # Add EV V2G carrier to the PyPSA network
     n.add(
-        "Bus",
-        ev_storage_capacity_df.index,
-        suffix=" EV store",
-        carrier="EV store",
-        x=n.buses.loc[ev_storage_capacity_df.index].x,
-        y=n.buses.loc[ev_storage_capacity_df.index].y,
-        country=n.buses.loc[ev_storage_capacity_df.index].country,
-    )
-    n.add(
-        "Store",
-        ev_storage_capacity_df.index,
-        suffix=" EV store",
-        bus=ev_storage_capacity_df.index + " EV store",
-        e_nom=ev_storage_capacity_df.MWh,
-        e_cyclic=True,
-        carrier="EV store",
-        e_min_pu=ev_dsm_profile.loc[:, ev_storage_capacity_df.index],
-    )
-
-    # Add the EV DSR to the PyPSA network
-    n.add(
-        "Link",
-        ev_dsr_df.index,
-        suffix=" EV DSR",
-        bus0=ev_dsr_df.index + " EV store",
-        bus1=ev_dsr_df.index + " EV",
-        p_nom=ev_dsr_df.p_nom.abs(),
-        efficiency=1.0,
-        carrier="EV DSR",
-    )
-    n.add(
-        "Link",
-        ev_dsr_df.index,
-        suffix=" EV DSR reverse",
-        bus0=ev_dsr_df.index + " EV",
-        bus1=ev_dsr_df.index + " EV store",
-        p_nom=ev_dsr_df.p_nom.abs(),
-        efficiency=1.0,
-        carrier="EV DSR reverse",
+        "Carrier",
+        "EV V2G",
     )
 
     # Add EV V2G to the PyPSA network
@@ -516,12 +477,210 @@ def add_EV_DSR_V2G(
         "Link",
         ev_v2g_df.index,
         suffix=" EV V2G",
-        bus0=ev_v2g_df.index + " EV store",
+        bus0=ev_v2g_df.index + " EV store bus",
         bus1=ev_v2g_df.index,
         p_nom=ev_v2g_df.p_nom.abs(),
         efficiency=1.0,
         carrier="EV V2G",
     )
+
+
+def _get_dsr_profile(
+    n: pypsa.Network, df: pd.DataFrame, dsr_hours: list[int], key: str
+) -> pd.DataFrame:
+    """
+    Create DSR profile to set as e_max_pu for DSR store
+
+    Parameters
+    ----------
+        n : pypsa.Network
+            Network to finalize
+        df : pd.DataFrame
+            DataFrame containing flexibility p_nom data indexed by bus
+        dsr_hours : list[int]
+            Hours during which demand-side management can occur
+        key : str
+            Sector key (e.g., 'residential', 'iandc', 'iandc_heat')
+    """
+
+    dsr_profile = pd.DataFrame(index=n.snapshots, columns=df.index, data=0.0)
+    mask = (dsr_profile.index.hour >= dsr_hours[0]) & (
+        dsr_profile.index.hour < dsr_hours[1]
+    )
+    dsr_profile.loc[mask] = 1.0
+
+    # Calculate time difference between each neighbouring country and GB
+    time_shift = {
+        x: time_difference_hours(x) for x in n.buses.country.unique().tolist()
+    }
+
+    # Shift European neighbour DSR by 'x' hours to account for time zone difference
+    for country, shift_hours in time_shift.items():
+        country_columns = dsr_profile.filter(like=country).columns
+        dsr_profile.loc[:, country_columns] = dsr_profile[country_columns].shift(
+            shift_hours, fill_value=0.0
+        )
+
+    logger.info(f"Created DSR profile for {key} sector with DSR hours {dsr_hours}")
+
+    return dsr_profile
+
+
+def _add_dsr_pypsa_components(
+    n: pypsa.Network,
+    df: pd.DataFrame,
+    key: str,
+    storage_capacity: pd.DataFrame,
+    e_min_pu: pd.DataFrame,
+    e_max_pu: pd.DataFrame,
+):
+    """
+    Add DSR components for a given sector to PyPSA network
+
+    Parameters
+    ----------
+        n : pypsa.Network
+            Network to finalize
+        df : pd.DataFrame
+            DataFrame containing flexibility p_nom data indexed by bus
+        key : str
+            Sector key (e.g., 'residential', 'iandc', 'iandc_heat', "ev")
+        storage_capacity : pd.DataFrame
+            DataFrame containing storage capacity of the store in MWh indexed by time and bus
+        e_min_pu : pd.DataFrame
+            DataFrame containing minimum state of charge as per unit of the store indexed by time and bus
+        e_max_pu : pd.DataFrame
+            DataFrame containing maximum state of charge as per unit of the store indexed by time and bus
+    """
+
+    if key == "ev":
+        store_carrier = "EV store"
+        bus_suffix = " EV"
+    else:
+        store_carrier = f"{key} DSR"
+        bus_suffix = ""
+
+    # Add the store carrier to the PyPSA network
+    n.add(
+        "Carrier",
+        store_carrier,
+    )
+
+    # Add the DSR shift and reverse carriers to the PyPSA network
+    n.add(
+        "Carrier",
+        f"{key} DSR shift",
+    )
+
+    n.add(
+        "Carrier",
+        f"{key} DSR reverse",
+    )
+
+    # Create storage buses, links and stores
+    # Add the storage bus to the PyPSA network
+    n.add(
+        "Bus",
+        df.index,
+        suffix=f" {store_carrier} bus",
+        carrier=store_carrier,
+        x=n.buses.loc[df.index].x,
+        y=n.buses.loc[df.index].y,
+        country=n.buses.loc[df.index].country,
+    )
+
+    # Add the DSR link from AC bus to DSR bus to the PyPSA network
+    n.add(
+        "Link",
+        df.index,
+        suffix=f" {key} DSR",
+        bus0=df.index + bus_suffix,
+        bus1=df.index + f" {store_carrier} bus",
+        p_nom=df.p_nom.abs(),
+        efficiency=1.0,
+        carrier=f"{key} DSR shift",
+    )
+
+    # Add the DSR link from DSR bus to AC bus to the PyPSA network
+    n.add(
+        "Link",
+        df.index,
+        suffix=f" {key} DSR reverse",
+        bus0=df.index + f" {store_carrier} bus",
+        bus1=df.index + bus_suffix,
+        p_nom=df.p_nom.abs(),
+        efficiency=1.0,
+        carrier=f"{key} DSR reverse",
+    )
+
+    # Add the DSR store to the PyPSA network
+    n.add(
+        "Store",
+        df.index,
+        suffix=f" {store_carrier}",
+        bus=df.index + f" {store_carrier} bus",
+        e_nom=storage_capacity,
+        e_cyclic=True,
+        carrier=store_carrier,
+        e_min_pu=e_min_pu,
+        e_max_pu=e_max_pu,
+    )
+
+    logger.info(f"Added PyPSA components for {key} sector to perform DSR")
+
+
+def add_DSR(
+    n: pypsa.Network,
+    year: int,
+    dsr: dict[str, str],
+    dsr_hours: list[int],
+    ev_dsr_profile_path: str,
+    ev_storage_capacity_path: str,
+):
+    """
+    Add DSR components for residential, i&c and i&c heat sectors to PyPSA network
+
+    Parameters
+    ----------
+        n : pypsa.Network
+            Network to finalize
+        year: int
+            Year used in the modelling
+        dsr: dict[str, str]
+            Dictionary containing DSR flexibility data for baseline and electrified heat
+        dsr_hours: list[int]
+            Hours during which demand-side management can occur
+        ev_dsr_profile_path : str
+            Path to EV DSR profile CSV
+        ev_storage_capacity_path : str
+            Path to EV storage capacity CSV
+    """
+    ev_dsr_profile = pd.read_csv(ev_dsr_profile_path, index_col=0, parse_dates=True)
+    ev_storage_capacity = _load_regional_data(ev_storage_capacity_path, year)
+
+    # Calculate DSR duration in hours
+    dsr_duration = dsr_hours[1] - dsr_hours[0]
+
+    # Iterate through each demand key in the DSR dictionary
+    for file, path in dsr.items():
+        dsr_type = re.match("regional_(.*)_dsr_inc_eur", file).groups()[0]
+        df_dsr = _load_regional_data(path, year)
+
+        # Create DSR profile, storage capacity, e_min_pu and e_max_pu based on demand type
+        if dsr_type != "ev":
+            dsr_profile = _get_dsr_profile(n, df_dsr, dsr_hours, dsr_type)
+            storage_capacity = df_dsr.p_nom.abs() * (dsr_duration)
+            e_min_pu = 0.0
+            e_max_pu = dsr_profile.loc[:, df_dsr.index]
+        else:
+            dsr_profile = ev_dsr_profile
+            storage_capacity = ev_storage_capacity.MWh
+            e_min_pu = dsr_profile.loc[:, df_dsr.index]
+            e_max_pu = 1.0
+
+        _add_dsr_pypsa_components(
+            n, df_dsr, dsr_type, storage_capacity, e_min_pu, e_max_pu
+        )
 
 
 def finalise_composed_network(
@@ -864,9 +1023,11 @@ def compose_network(
     electricity_config: dict[str, Any],
     renewable_config: dict[str, Any],
     demands: dict[str, str],
-    enable_chp: bool,
     ev_data: dict[str, str],
     prune_lines: list[dict[str, int]],
+    dsr: dict[str, str],
+    enable_chp: bool,
+    dsr_hours: list[int],
     year: int,
 ) -> None:
     """
@@ -904,12 +1065,14 @@ def compose_network(
         Renewable configuration dictionary
     demands: dict[str, str]
         Dictionary mapping demand types to paths for the demand data
-    enable_chp : bool
-        Whether to enable CHP constraints
     ev_data : dict[str, str]
         Dictionary containing EV flexibility data
     prune_lines : list[dict[str, int]]
         List of lines to prune between specified bus pairs
+    dsr : dict[str, str]
+        Dictionary containing DSR flexibility data for baseline and electrified heat
+    enable_chp : bool
+        Whether to enable CHP constraints
     year: int
         Modelling year
     """
@@ -959,7 +1122,16 @@ def compose_network(
 
     add_load(network, demands)
 
-    add_EV_DSR_V2G(network, year, **ev_data)
+    add_DSR(
+        network,
+        year,
+        dsr,
+        dsr_hours,
+        ev_data["dsm_profile_s_clustered"],
+        ev_data["regional_ev_storage_inc_eur"],
+    )
+
+    add_EV_V2G(network, year, ev_data["regional_ev_v2g_inc_eur"])
 
     attach_dc_interconnectors(
         network, interconnectors_path, year, interconnectors_availability_path
@@ -1006,7 +1178,9 @@ if __name__ == "__main__":
         renewable_config=snakemake.params.renewable,
         demands=_input_list_to_dict(snakemake.input.demands, parent=True),
         ev_data=_input_list_to_dict(snakemake.input.ev_data),
+        dsr=_input_list_to_dict(snakemake.input.dsr),
         enable_chp=snakemake.params.enable_chp,
         prune_lines=snakemake.params.prune_lines,
+        dsr_hours=snakemake.params.dsr_hours,
         year=int(snakemake.wildcards.year),
     )
