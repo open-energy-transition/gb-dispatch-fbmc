@@ -521,11 +521,24 @@ entsoe_unavailability:
     # B24: "Transformer"
 
 transmission_availability:
+  years: [2020, 2021, 2022]
+  intra_gb:
+    zones:
+    - NGET
+    - SPTL
+    - SHETL
+    sample_hourly: true
+
+  inter_gb:
+    zones:
+    - interconnectors
+    sample_hourly: false
+
   random_seeds:
     NGET: 11
     SPTL: 22
     SHETL: 33
-    INTERCONNECTORS: 44
+    interconnectors: 44
 
 dukes-5.11:
   # list of major power producers
