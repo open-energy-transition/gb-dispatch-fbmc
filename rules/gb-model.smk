@@ -777,6 +777,7 @@ rule compose_network:
         enable_chp=config["chp"]["enable"],
         prune_lines=config["region_operations"]["prune_lines"],
         dsr_hours=config["fes"]["dsr_hours"],
+        bev_dsm_restriction_value=config["sector"]["bev_dsm_restriction_value"],
     input:
         unpack(input_profile_tech),
         demands=expand(

@@ -126,6 +126,9 @@ costs:
     waste PP: Waste-WoodPellets-Waste
     waste CHP: Waste-Gas-Waste CHP
 
+sector:
+  bev_dsm_restriction_value: 1.0
+
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#solving
 solving:
   options:
