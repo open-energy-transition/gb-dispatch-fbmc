@@ -30,10 +30,7 @@ from scripts.add_electricity import (
     attach_hydro,
     flatten,
 )
-from scripts.gb_model._helpers import (
-    get_lines,
-    time_difference_hours,
-)
+from scripts.gb_model._helpers import get_lines, time_difference_hours
 
 logger = logging.getLogger(__name__)
 
@@ -471,7 +468,7 @@ def add_EV_V2G(
     """
     # Load EV V2G data
     ev_v2g_df = _load_regional_data(regional_ev_v2g_inc_eur, year)
-    ev_storage_capacity=_load_regional_data(ev_storage_capacity_path, year)
+    ev_storage_capacity = _load_regional_data(ev_storage_capacity_path, year)
 
     # Add EV V2G carrier to the PyPSA network
     n.add(
@@ -714,12 +711,12 @@ def add_DSR(
             e_max_pu = dsr_profile.loc[:, df_dsr.index]
         else:
             dsr_profile = ev_dsr_profile
-            storage_capacity = (df_dsr.p_nom.abs() / bev_dsm_restriction_value) * n.snapshot_weightings['stores'].mean()
+            storage_capacity = (
+                df_dsr.p_nom.abs() / bev_dsm_restriction_value
+            ) * n.snapshot_weightings["stores"].mean()
             e_max_pu = dsr_profile.loc[:, df_dsr.index]
 
-        _add_dsr_pypsa_components(
-            n, df_dsr, dsr_type, storage_capacity, e_max_pu
-        )
+        _add_dsr_pypsa_components(n, df_dsr, dsr_type, storage_capacity, e_max_pu)
 
 
 def finalise_composed_network(
@@ -1173,7 +1170,12 @@ def compose_network(
         bev_dsm_restriction_value,
     )
 
-    add_EV_V2G(network, year, ev_data['regional_ev_v2g_inc_eur'], ev_data['regional_ev_storage_inc_eur'])
+    add_EV_V2G(
+        network,
+        year,
+        ev_data["regional_ev_v2g_inc_eur"],
+        ev_data["regional_ev_storage_inc_eur"],
+    )
 
     attach_dc_interconnectors(
         network, interconnectors_path, year, interconnectors_availability_path
