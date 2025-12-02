@@ -449,7 +449,7 @@ def add_EV_V2G(
     n: pypsa.Network,
     year: int,
     regional_ev_v2g_inc_eur: str,
-    ev_storage_capacity_path: str,
+    ev_v2g_storage_capacity_path: str,
 ):
     """
     Add EV DSR and V2G components to PyPSA network
@@ -462,13 +462,13 @@ def add_EV_V2G(
         Year used in the modelling
     regional_ev_v2g_inc_eur: str
         CSV path for EV V2G data
-    ev_storage_capacity_path : str
+    ev_v2g_storage_capacity_path : str
         Path to EV storage capacity CSV
 
     """
     # Load EV V2G data
     ev_v2g_df = _load_regional_data(regional_ev_v2g_inc_eur, year)
-    ev_storage_capacity = _load_regional_data(ev_storage_capacity_path, year)
+    ev_v2g_storage_capacity = _load_regional_data(ev_v2g_storage_capacity_path, year)
 
     # Add EV V2G carrier to the PyPSA network
     n.add(
@@ -523,7 +523,7 @@ def add_EV_V2G(
         ev_v2g_df.index,
         suffix=" EV V2G store",
         bus=ev_v2g_df.index + " EV V2G bus",
-        e_nom=ev_storage_capacity.MWh,
+        e_nom=ev_v2g_storage_capacity.MWh,
         e_cyclic=True,
         carrier="ev V2G",
     )
@@ -1174,7 +1174,7 @@ def compose_network(
         network,
         year,
         ev_data["regional_ev_v2g_inc_eur"],
-        ev_data["regional_ev_storage_inc_eur"],
+        ev_data["regional_ev_v2g_storage_inc_eur"],
     )
 
     attach_dc_interconnectors(
