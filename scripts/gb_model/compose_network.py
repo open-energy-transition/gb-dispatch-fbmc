@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import pandas as pd
 import pypsa
 import xarray as xr
@@ -900,20 +901,16 @@ def attach_wind_and_solar(
 
             ds = ds.stack(bus_bin=["bus", "bin"])
 
-            supcar = car.split("-", 2)[0]
-            capital_cost = costs.at[supcar, "capital_cost"]
+            capital_cost = costs.at[car, "capital_cost"]
 
             buses = ds.indexes["bus_bin"].get_level_values("bus")
             bus_bins = ds.indexes["bus_bin"].map(flatten)
 
-            p_nom_max = ds["p_nom_max"].to_pandas()
-            p_nom_max.index = p_nom_max.index.map(flatten)
-
             p_max_pu = ds["profile"].to_pandas()
             p_max_pu.columns = p_max_pu.columns.map(flatten)
 
-            if not ppl.query("carrier == @supcar").empty:
-                caps = ppl.query("carrier == @supcar").groupby("bus").p_nom.sum()
+            if not ppl.query("carrier == @car").empty:
+                caps = ppl.query("carrier == @car").groupby("bus").p_nom.sum()
                 caps = caps.reindex(buses).fillna(0)
                 caps = pd.Series(data=caps.values, index=bus_bins)
             else:
@@ -922,18 +919,18 @@ def attach_wind_and_solar(
             n.add(
                 "Generator",
                 bus_bins,
-                suffix=" " + supcar,
+                suffix=" " + car,
                 bus=buses,
-                carrier=supcar,
+                carrier=car,
                 p_nom=caps,
-                p_nom_min=caps,
+                p_nom_min=0,
                 p_nom_extendable=car in extendable_carriers["Generator"],
-                p_nom_max=p_nom_max,
-                marginal_cost=costs.at[supcar, "marginal_cost"],
+                p_nom_max=np.inf,
+                marginal_cost=costs.at[car, "marginal_cost"],
                 capital_cost=capital_cost,
-                efficiency=costs.at[supcar, "efficiency"],
+                efficiency=costs.at[car, "efficiency"],
                 p_max_pu=p_max_pu,
-                lifetime=costs.at[supcar, "lifetime"],
+                lifetime=costs.at[car, "lifetime"],
             )
 
 
