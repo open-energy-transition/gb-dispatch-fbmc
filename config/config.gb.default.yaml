@@ -83,9 +83,51 @@ costs:
   GBP_to_USD: 1.3757 # average in 2021: https://www.exchangerates.org.uk/GBP-USD-spot-exchange-rates-history-2021.html#:~:text=Average%20exchange%20rate%20in%202021,USD%20on%2008%20Dec%202021.
   relevant_cost_columns: ["CO2 intensity", "VOM", "FOM", "investment", "efficiency", "lifetime", "discount rate", "fuel"]
   marginal_cost_columns: ["CO2 intensity", "VOM", "efficiency", "fuel"]
-  carrier_fuel_mapping:
-    CCGT: gas
-    OCGT: gas
+  carrier_gap_filling:
+    "CO2 intensity":
+      CCGT: gas
+      OCGT: gas
+      coal: coal
+      gas: gas
+      oil: oil
+    fuel:
+      CCGT: gas
+      OCGT: gas
+      coal: coal
+      gas: gas
+      oil: oil
+      biomass: biomass
+      waste: biomass
+    default:
+      CCGT PP: CCGT
+      OCGT PP: OCGT
+      CCGT CHP: central gas CHP
+      OCGT CHP: central gas CHP
+      PHS Store: PHS
+      battery Store: battery storage
+      biomass PP: biomass
+      biomass CHP: biomass CHP
+      coal PP: coal
+      coal CHP: central coal CHP
+      gas PP: direct firing gas
+      gas CHP: central gas CHP
+      geothermal PP: geothermal
+      hydrogen turbine PP: central hydrogen CHP
+      hydrogen turbine CHP: central hydrogen CHP
+      hydrogen fuel cell PP: fuel cell
+      nuclear PP: nuclear
+      offwind PP: offwind
+      oil PP: oil
+      oil CHP: oil
+      onwind PP: onwind
+      ror PP: ror
+      solar PP: solar
+      waste PP: biomass
+      waste CHP: waste CHP
+      hydro PP: hydro
+      hydrogen Store: hydrogen storage tank type 1 including compressor
+      electrolysis Other: electrolysis
+
   fes_VOM_carrier_mapping:
     battery Store: Storage-Battery
     biomass PP: Biomass-Biomass
@@ -97,8 +139,9 @@ costs:
     gas CHP: Gas-Gas CHP
     gas PP: Gas-Gas Reciprocating Engines
     hydro PP: Hydro-Hydro
-    hydrogen PP: Low Carbon-Hydrogen
-    hydrogen CHP: Low Carbon-Hydrogen CHP # there is no hydrogen CHP costs in FES
+    hydrogen turbine PP: Low Carbon-Hydrogen
+    hydrogen fuel cell PP: Fuel Cells
+    hydrogen turbine CHP: Gas-Gas CHP # there is no hydrogen CHP costs in FES
     marine PP: Marine-Marine
     OCGT PP: Gas-OCGT
     offwind PP: Offshore Wind-Offshore Wind
@@ -119,8 +162,9 @@ costs:
     coal CHP: Coal-Coal CHP
     gas CHP: Gas-GT CHP
     gas PP: Gas-Gas Reciprocating Engines
-    hydrogen PP: Low Carbon-Hydrogen
-    hydrogen CHP: Low Carbon-Hydrogen CHP # there is no hydrogen CHP fuel costs in FES
+    hydrogen turbine PP: Low Carbon-Hydrogen
+    hydrogen fuel cell PP: Fuel Cells
+    hydrogen turbine CHP: Gas-Gas CHP # there is no hydrogen CHP costs in FES
     OCGT PP: Gas-OCGT
     oil PP: Other Thermal-Fuel Oil
     waste PP: Waste-WoodPellets-Waste
@@ -822,7 +866,8 @@ fes:
         Coal: coal
         Geothermal: geothermal
         Hydro: ror # FIXME: should this be just "hydro?"
-        Hydrogen fuelled generation: hydrogen  # FIXME: something else here?
+        Hydrogen fuelled generation: hydrogen turbine  # FIXME: something else here?
+        Fuel Cells: hydrogen fuel cell
         Marine: marine
         Non-renewable Engines (Diesel) (non CHP): oil
         Non-renewable Engines (Gas) (non CHP): gas
@@ -897,8 +942,8 @@ fes:
         Gas CHP: CCGT
         OCGT: OCGT
         Gas Reciprocating Engines: gas
-        Hydrogen: hydrogen # hydrogen-fueled turbine
-        Hydrogen CHP: hydrogen # hydrogen-fueled turbine
+        Hydrogen: hydrogen turbine # hydrogen-fueled turbine
+        Hydrogen CHP: hydrogen turbine # hydrogen-fueled turbine
         Fuel Oil: oil
         Battery: battery
         Pumped Hydro: PHS

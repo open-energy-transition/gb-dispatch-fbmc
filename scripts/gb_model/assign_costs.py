@@ -266,7 +266,7 @@ def assign_technical_and_costs_defaults(
         8. Create unique index (bus carrier-year-idx)
     """
     # Load powerplant data
-    df = pd.read_csv(ppl_path, index_col=0)
+    df = pd.read_csv(ppl_path)
 
     # Load costs data
     costs = _load_costs(tech_costs_path, costs_config)
@@ -275,17 +275,21 @@ def assign_technical_and_costs_defaults(
     logger.info("Loaded technology costs and FES power and carbon costs data")
 
     # Join cost data
-    df = df.join(costs[costs_config["marginal_cost_columns"]], on="carrier")
+    df = df.join(costs[costs_config["relevant_cost_columns"]], on="carrier")
 
-    # Fill CO2 intensities and fuel costs using carrier_fuel_mapping because fuel names might differ (Eg. CCGT uses gas)
-    df["CO2 intensity"] = df["CO2 intensity"].fillna(
-        df["carrier"]
-        .map(costs_config["carrier_fuel_mapping"])
-        .map(costs["CO2 intensity"])
-    )
-    df["fuel"] = df["fuel"].fillna(
-        df["carrier"].map(costs_config["carrier_fuel_mapping"]).map(costs["fuel"])
-    )
+    for param in costs_config["relevant_cost_columns"]:
+        if param in costs_config["carrier_gap_filling"]:
+            df[param] = df[param].fillna(
+                df["carrier"]
+                .map(costs_config["carrier_gap_filling"][param])
+                .map(costs[param])
+            )
+        else:
+            df[param] = df[param].fillna(
+                (df["carrier"] + " " + df["set"])
+                .map(costs_config["carrier_gap_filling"]["default"])
+                .map(costs[param])
+            )
 
     # Format bus and build_year columns
     df["bus"] = df["bus"].astype(str)
@@ -320,7 +324,7 @@ def assign_technical_and_costs_defaults(
 
     # Create unique index: "bus carrier-year-idx"
     df["idx_counter"] = df.groupby(["bus", "carrier", "year"]).cumcount()
-    df.index = (
+    df["name"] = (
         df["bus"]
         + " "
         + df["carrier"]
@@ -366,4 +370,4 @@ if __name__ == "__main__":
     logger.info("Enriched powerplants with cost and technical parameters")
 
     # Save with index (contains unique generator IDs)
-    df_powerplants.to_csv(snakemake.output.enriched_powerplants, index=True)
+    df_powerplants.to_csv(snakemake.output.enriched_powerplants, index=False)

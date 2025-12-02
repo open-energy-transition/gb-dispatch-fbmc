@@ -347,7 +347,7 @@ rule create_grid_electrolysis_table:
         regional_gb_data=resources("gb-model/regional_gb_data.csv"),
     output:
         grid_electrolysis_capacities=resources(
-            "gb-model/fes_grid_electrolysis_capacities.csv"
+            "gb-model/grid_electrolysis_capacities.csv"
         ),
     log:
         logs("create_grid_electrolysis_table.log"),
@@ -397,11 +397,11 @@ rule create_off_grid_electrolysis_demand:
             for sheet in sheets.values()
         ],
         grid_electrolysis_capacities=resources(
-            "gb-model/fes_grid_electrolysis_capacities.csv"
+            "gb-model/grid_electrolysis_capacities.csv"
         ),
     output:
         electricity_demand=resources(
-            "gb-model/fes_off_grid_electrolysis_electricity_demand.csv"
+            "gb-model/off_grid_electrolysis_electricity_demand.csv"
         ),
     log:
         logs("create_off_grid_electrolysis_demand.log"),
@@ -428,7 +428,7 @@ rule create_hydrogen_storage_table:
             for sheet in sheets.values()
         ],
     output:
-        hydrogen_storage=resources("gb-model/fes_hydrogen_storage.csv"),
+        hydrogen_storage=resources("gb-model/hydrogen_storage.csv"),
     log:
         logs("create_hydrogen_storage_table.log"),
     script:
@@ -645,6 +645,23 @@ rule process_regional_ev_data:
         "../scripts/gb_model/process_regional_ev_data.py"
 
 
+rule process_regional_h2_data:
+    message:
+        "Process regional H2 data into CSV format"
+    input:
+        demand=resources("gb-model/fes_hydrogen_demand.csv"),
+        fixed_supply=resources("gb-model/fes_hydrogen_supply.csv"),
+        storage=resources("gb-model/hydrogen_storage.csv"),
+        regional_distribution=resources("gb-model/grid_electrolysis_capacities.csv"),
+    output:
+        demand=resources("gb-model/regional_h2_annual_demand.csv"),
+        storage=resources("gb-model/regional_h2_storage_capacity.csv"),
+    log:
+        logs("process_regional_h2_data.log"),
+    script:
+        "../scripts/gb_model/process_regional_h2_data.py"
+
+
 rule distribute_eur_demands:
     message:
         "Distribute total European neighbour annual demands into base electricity, heating, and transport"
@@ -747,7 +764,7 @@ rule create_chp_p_min_pu_profile:
 
 rule assign_costs:
     message:
-        "Prepares costs file from technology-data of PyPSA-Eur and FES and assigns to powerplants"
+        "Prepares costs file from technology-data of PyPSA-Eur and FES and assigns to {wildcards.data_file}"
     params:
         default_characteristics=config["fes"]["default_characteristics"],
         costs_config=config["costs"],
@@ -758,11 +775,13 @@ rule assign_costs:
         ),
         fes_power_costs=resources("gb-model/fes-costing/AS.1 (Power Gen).csv"),
         fes_carbon_costs=resources("gb-model/fes-costing/AS.7 (Carbon Cost).csv"),
-        fes_powerplants=resources("gb-model/fes_powerplants.csv"),
+        fes_powerplants=resources("gb-model/{data_file}.csv"),
     output:
-        enriched_powerplants=resources("gb-model/fes_powerplants_processed.csv"),
+        enriched_powerplants=resources("gb-model/{data_file}_processed.csv"),
     log:
-        logs("assign_costs.log"),
+        logs("assign_costs_{data_file}.log"),
+    wildcard_constraints:
+        data_file="fes_powerplants|regional_h2_storage_capacity|grid_electrolysis_capacities",
     script:
         "../scripts/gb_model/assign_costs.py"
 
@@ -806,14 +825,15 @@ rule compose_network:
         generator_availability=resources(
             "gb-model/GB_generator_monthly_availability_fraction.csv"
         ),
+        h2_data=[
+            resources("gb-model/regional_h2_annual_demand.csv"),
+            resources("gb-model/off_grid_electrolysis_electricity_demand.csv"),
+            resources("gb-model/regional_h2_storage_capacity_processed.csv"),
+            resources("gb-model/grid_electrolysis_capacities_processed.csv"),
+        ],
         intermediate_data=[
             # TODO: calculate intra_gb availability per line/boundary before this point (currently only per TO)
             resources("gb-model/intra_gb_transmission_availability.csv"),
-            resources("gb-model/fes_hydrogen_demand.csv"),
-            resources("gb-model/fes_grid_electrolysis_capacities.csv"),
-            resources("gb-model/fes_hydrogen_supply.csv"),
-            resources("gb-model/fes_off_grid_electrolysis_electricity_demand.csv"),
-            resources("gb-model/fes_hydrogen_storage.csv"),
         ],
     output:
         network=resources("networks/composed_{clusters}_{year}.nc"),
