@@ -792,7 +792,10 @@ rule compose_network:
             resources("gb-model/regional_ev_{ev_data}_inc_eur.csv"),
             ev_data=["v2g_storage", "v2g"],
         )
-        + [resources("dsm_profile_s_clustered.csv")],
+        + [
+            resources("dsm_profile_s_clustered.csv"),
+            resources("avail_profile_s_clustered.csv"),
+        ],
         network=resources("networks/base_s_clustered.nc"),
         powerplants=resources("gb-model/fes_powerplants_processed.csv"),
         tech_costs=lambda w: resources(
