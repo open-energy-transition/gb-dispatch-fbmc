@@ -875,9 +875,6 @@ def attach_wind_and_solar(
             buses = ds.indexes["bus_bin"].get_level_values("bus")
             bus_bins = ds.indexes["bus_bin"].map(flatten)
 
-            p_nom_max = ds["p_nom_max"].to_pandas()
-            p_nom_max.index = p_nom_max.index.map(flatten)
-
             p_max_pu = ds["profile"].to_pandas()
             p_max_pu.columns = p_max_pu.columns.map(flatten)
 
@@ -897,7 +894,7 @@ def attach_wind_and_solar(
                 p_nom=caps,
                 p_nom_min=caps,
                 p_nom_extendable=car in extendable_carriers["Generator"],
-                p_nom_max=p_nom_max,
+                p_nom_max=caps,
                 marginal_cost=costs.at[car, "marginal_cost"],
                 capital_cost=capital_cost,
                 efficiency=costs.at[car, "efficiency"],
