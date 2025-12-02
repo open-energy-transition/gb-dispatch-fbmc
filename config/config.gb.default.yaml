@@ -101,7 +101,7 @@ costs:
     hydrogen CHP: Low Carbon-Hydrogen CHP # there is no hydrogen CHP costs in FES
     marine PP: Marine-Marine
     OCGT PP: Gas-OCGT
-    offwind PP: Offshore Wind-Offshore Wind
+    offwind-dc PP: Offshore Wind-Offshore Wind
     oil PP: Other Thermal-Fuel Oil
     onwind PP: Onshore Wind-Onshore Wind
     nuclear PP: Nuclear-Nuclear
@@ -267,7 +267,7 @@ region_operations:
     merge: [18]
     TO: NGET
   - id: 22
-    merge: [14, 77, 78]
+    merge: [14, 78]
     TO: NGET
 
   - id: 23
@@ -297,11 +297,15 @@ region_operations:
     merge: [79, 80, 81, 82]
     TO: N-IRL
 
+  - id: 31
+    merge: [77]
+    TO: NGET
+
   # List for merging regions into neighbouring countries
   add_group_to_neighbour:
     IE: ["GB 30"]
 
-  etys_boundaries:
+  etys_boundaries_lines:
     B3b:
     - bus0: 28
       bus1: 25
@@ -438,6 +442,19 @@ region_operations:
       bus1: 25
     - bus0: 27
       bus1: 25
+    NW1:
+    - bus0: 22
+      bus1: 31
+  etys_boundaries_links:
+    B6:
+    - bus0: 23
+      bus1: 17
+    B7a:
+    - bus0: 23
+      bus1: 17
+    B0:
+    - bus0: 29
+      bus1: 27
   # These are manually selected spurious lines originating from not removing stubs earlier
   prune_lines:
   - bus0: 10
@@ -551,7 +568,7 @@ dukes-5.11:
     Type:
       Onshore: onwind
       onshore: onwind
-      Offshore: offwind
+      Offshore: offwind-dc
       CCGT: CCGT
       Small Hydro: ror
       Natural Flow: ror
@@ -815,7 +832,7 @@ fes:
         Non-renewable CHP: gas
         Nuclear: nuclear
         OCGTs (non CHP): OCGT
-        Offshore-Wind (off-Grid): offwind
+        Offshore-Wind (off-Grid): offwind-dc
         Renewable Engines (Landfill Gas, Sewage Gas, Biogas): biomass
         Solar Generation: solar
         Waste Incineration (including CHP): waste
@@ -823,7 +840,7 @@ fes:
         Domestic Batteries (G98): battery
         Batteries: battery
         Pumped Hydro: PHS # FIXME: should this be just "hydro?"
-        Offshore Wind: offwind
+        Offshore Wind: offwind-dc
         Onshore Wind <1MW: onwind
         Onshore Wind >=1MW: onwind
 
@@ -873,7 +890,7 @@ fes:
         Biomass: biomass
         Marine: marine
         Nuclear: nuclear
-        Offshore Wind: offwind
+        Offshore Wind: offwind-dc
         Onshore Wind: onwind
         Waste: waste
       SubType:
