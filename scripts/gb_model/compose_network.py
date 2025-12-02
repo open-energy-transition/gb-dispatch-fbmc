@@ -19,10 +19,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import pandas as pd
 import pypsa
 import xarray as xr
-import numpy as np
 
 from scripts._helpers import configure_logging, set_scenario_config
 from scripts.add_electricity import (
