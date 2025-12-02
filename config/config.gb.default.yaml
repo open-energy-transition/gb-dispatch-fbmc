@@ -101,7 +101,7 @@ costs:
     hydrogen CHP: Low Carbon-Hydrogen CHP # there is no hydrogen CHP costs in FES
     marine PP: Marine-Marine
     OCGT PP: Gas-OCGT
-    offwind PP: Offshore Wind-Offshore Wind
+    offwind-dc PP: Offshore Wind-Offshore Wind
     oil PP: Other Thermal-Fuel Oil
     onwind PP: Onshore Wind-Onshore Wind
     nuclear PP: Nuclear-Nuclear

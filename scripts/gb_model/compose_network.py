@@ -22,6 +22,7 @@ from typing import Any
 import pandas as pd
 import pypsa
 import xarray as xr
+import numpy as np
 
 from scripts._helpers import configure_logging, set_scenario_config
 from scripts.add_electricity import (
@@ -892,9 +893,9 @@ def attach_wind_and_solar(
                 bus=buses,
                 carrier=car,
                 p_nom=caps,
-                p_nom_min=caps,
+                p_nom_min=0,
                 p_nom_extendable=car in extendable_carriers["Generator"],
-                p_nom_max=caps,
+                p_nom_max=np.inf,
                 marginal_cost=costs.at[car, "marginal_cost"],
                 capital_cost=capital_cost,
                 efficiency=costs.at[car, "efficiency"],
