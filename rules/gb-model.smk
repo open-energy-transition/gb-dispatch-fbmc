@@ -849,7 +849,8 @@ rule solve_constrained:
             "sector", "co2_sequestration_potential", default=200
         ),
         custom_extra_functionality=input_custom_extra_functionality,
-        etys_boundaries_to_lines=config["region_operations"]["etys_boundaries"],
+        etys_boundaries_to_lines=config["region_operations"]["etys_boundaries_lines"],
+        etys_boundaries_to_links=config["region_operations"]["etys_boundaries_links"],
     input:
         network=resources("networks/constrained_clustered_{year}.nc"),
         etys_caps=resources("gb-model/etys_boundary_capabilities.csv"),

@@ -264,7 +264,7 @@ region_operations:
     merge: [18]
     TO: NGET
   - id: 22
-    merge: [14, 77, 78]
+    merge: [14, 78]
     TO: NGET
 
   - id: 23
@@ -294,11 +294,15 @@ region_operations:
     merge: [79, 80, 81, 82]
     TO: N-IRL
 
+  - id: 31
+    merge: [77]
+    TO: NGET
+
   # List for merging regions into neighbouring countries
   add_group_to_neighbour:
     IE: ["GB 30"]
 
-  etys_boundaries:
+  etys_boundaries_lines:
     B3b:
     - bus0: 28
       bus1: 25
@@ -435,6 +439,19 @@ region_operations:
       bus1: 25
     - bus0: 27
       bus1: 25
+    NW1:
+    - bus0: 22
+      bus1: 31
+  etys_boundaries_links:
+    B6:
+    - bus0: 23
+      bus1: 17
+    B7a:
+    - bus0: 23
+      bus1: 17
+    B0:
+    - bus0: 29
+      bus1: 27
   # These are manually selected spurious lines originating from not removing stubs earlier
   prune_lines:
   - bus0: 10
