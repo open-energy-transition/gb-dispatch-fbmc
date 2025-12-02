@@ -677,7 +677,6 @@ def add_DSR(
     dsr: dict[str, str],
     dsr_hours: list[int],
     ev_dsr_profile_path: str,
-    ev_storage_capacity_path: str,
     bev_dsm_restriction_value: float,
 ):
     """
@@ -695,13 +694,10 @@ def add_DSR(
             Hours during which demand-side management can occur
         ev_dsr_profile_path : str
             Path to EV DSR profile CSV
-        ev_storage_capacity_path : str
-            Path to EV storage capacity CSV
         bev_dsm_restriction_value : float
             Restriction value for BEV DSM
     """
     ev_dsr_profile = pd.read_csv(ev_dsr_profile_path, index_col=0, parse_dates=True)
-    ev_storage_capacity = _load_regional_data(ev_storage_capacity_path, year)
 
     # Calculate DSR duration in hours
     dsr_duration = dsr_hours[1] - dsr_hours[0]
@@ -1174,7 +1170,6 @@ def compose_network(
         dsr,
         dsr_hours,
         ev_data["dsm_profile_s_clustered"],
-        ev_data["regional_ev_storage_inc_eur"],
         bev_dsm_restriction_value,
     )
 
