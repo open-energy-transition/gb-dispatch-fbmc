@@ -476,12 +476,6 @@ def add_EV_V2G(
         "ev V2G",
     )
 
-    # Add EV G2V carrier to the PyPSA network
-    n.add(
-        "Carrier",
-        "ev G2V",
-    )
-
     # Add EV V2G bus to the PyPSA network
     n.add(
         "Bus",
@@ -497,12 +491,12 @@ def add_EV_V2G(
     n.add(
         "Link",
         ev_v2g_df.index,
-        suffix=" EV G2V",
+        suffix=" EV V2G feed-in",
         bus0=ev_v2g_df.index + " EV",
         bus1=ev_v2g_df.index + " EV V2G bus",
         p_nom=ev_v2g_df.p_nom.abs(),
         efficiency=1.0,
-        carrier="ev G2V",
+        carrier="ev V2G",
     )
 
     # Add link from V2G bus to AC bus to the PyPSA network

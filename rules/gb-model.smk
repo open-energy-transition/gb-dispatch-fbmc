@@ -790,7 +790,7 @@ rule compose_network:
         ),
         ev_data=expand(
             resources("gb-model/regional_ev_{ev_data}_inc_eur.csv"),
-            ev_data=["v2g_storage", "dsr", "v2g"],
+            ev_data=["v2g_storage", "v2g"],
         )
         + [resources("dsm_profile_s_clustered.csv")],
         network=resources("networks/base_s_clustered.nc"),
