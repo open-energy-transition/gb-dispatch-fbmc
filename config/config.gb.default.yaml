@@ -126,6 +126,9 @@ costs:
     waste PP: Waste-WoodPellets-Waste
     waste CHP: Waste-Gas-Waste CHP
 
+sector:
+  bev_dsm_restriction_value: 1.0
+
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#solving
 solving:
   options:
@@ -873,7 +876,7 @@ fes:
       eur_add_data_reference:
         ev_dsr: "ev"
         ev_v2g: "ev"
-        ev_storage: "ev"
+        ev_v2g_storage: "ev"
         residential_dsr: "baseline_electricity"
         iandc_dsr: "baseline_electricity"
         iandc_heat_dsr: "iandc_heat"
