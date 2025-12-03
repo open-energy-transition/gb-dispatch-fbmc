@@ -970,13 +970,7 @@ def add_H2(
     )
 
     n.add("Carrier", "H2")
-    all_nodes = sorted(
-        set(
-            demand.index.union(electrolysis_caps.bus).union(
-                ppl[ppl.carrier.str.contains("hydrogen")].bus
-            )
-        )
-    )
+    all_nodes = n.buses[n.buses.carrier == "AC"].index
     n.add("Bus", all_nodes, suffix=" H2", carrier="H2", unit="MWh_LHV")
 
     n.add(
