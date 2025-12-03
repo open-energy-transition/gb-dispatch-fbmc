@@ -832,7 +832,7 @@ rule compose_network:
             resources("gb-model/fes_hydrogen_storage.csv"),
         ],
     output:
-        network=resources("networks/composed_{clusters}_{year}.nc"),
+        network=resources("networks/composed_{clusters}/{year}.nc"),
     log:
         logs("compose_network_{clusters}_{year}.log"),
     resources:
@@ -850,11 +850,55 @@ year_range = config["fes"]["year_range_incl"]
 rule compose_networks:
     input:
         expand(
-            resources("networks/composed_clustered_{year}.nc"),
+            resources("networks/composed_clustered/{year}.nc"),
             **config["scenario"],
             run=config["run"]["name"],
             year=list(np.arange(year_range[0], year_range[1])),
         ),
+
+
+rule prepare_unconstrained:
+    message:
+        "Prepare network for unconstrained optimization"
+    input:
+        network=resources("networks/composed_clustered/{year}.nc"),
+    output:
+        network=resources("networks/unconstrained_clustered/{year}.nc"),
+    log:
+        logs("prepare_unconstrained_network/{year}.log"),
+    script:
+        "../scripts/gb_model/prepare_unconstrained_network.py"
+
+
+rule solve_unconstrained:
+    params:
+        solving=config_provider("solving"),
+        foresight=config_provider("foresight"),
+        co2_sequestration_potential=config_provider(
+            "sector", "co2_sequestration_potential", default=200
+        ),
+        custom_extra_functionality=[],
+    input:
+        network=resources("networks/unconstrained_clustered/{year}.nc"),
+    output:
+        network=RESULTS + "networks/unconstrained_clustered/{year}.nc",
+        config=RESULTS + "configs/config.unconstrained_clustered/{year}.yaml",
+    log:
+        solver=normpath(
+            RESULTS + "logs/solve_network/unconstrained_clustered/{year}_solver.log"
+        ),
+        memory=RESULTS + "logs/solve_network/unconstrained_clustered/{year}_memory.log",
+        python=RESULTS + "logs/solve_network/unconstrained_clustered/{year}_python.log",
+    benchmark:
+        (RESULTS + "benchmarks/solve_network/unconstrained_clustered/{year}")
+    threads: solver_threads
+    resources:
+        mem_mb=config_provider("solving", "mem_mb"),
+        runtime=config_provider("solving", "runtime", default="6h"),
+    shadow:
+        shadow_config
+    script:
+        "../scripts/solve_network.py"
 
 
 rule solve_constrained:
