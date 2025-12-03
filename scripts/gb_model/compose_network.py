@@ -704,11 +704,11 @@ def add_DSR(
     for file, path in dsr.items():
         dsr_type = re.match("regional_(.*)_dsr_inc_eur", file).groups()[0]
         df_dsr = _load_regional_data(path, year)
-        
+
         dsr_hours = dsr_hours_dict[f"{dsr_type}_dsr"]
 
         # Calculate DSR duration in hours
-        if dsr_hours[0] < dsr_hours[1]: 
+        if dsr_hours[0] < dsr_hours[1]:
             # e.g., dsr_hours = [17,20] -> indicates 5pm of day 1 to 8 pm of day 1
             dsr_duration = dsr_hours[1] - dsr_hours[0] + 1
         else:
@@ -720,7 +720,9 @@ def add_DSR(
         dsr_profile = _get_dsr_profile(n, df_dsr, dsr_hours, dsr_type)
         storage_capacity = df_dsr.p_nom.abs() * (dsr_duration)
         e_max_pu = dsr_profile.loc[:, df_dsr.index]
-        p_max_pu = 1.0 if dsr_type != 'ev' else ev_availability_profile.loc[:,df_dsr.index]
+        p_max_pu = (
+            1.0 if dsr_type != "ev" else ev_availability_profile.loc[:, df_dsr.index]
+        )
 
         _add_dsr_pypsa_components(
             n, df_dsr, dsr_type, storage_capacity, e_max_pu, p_max_pu

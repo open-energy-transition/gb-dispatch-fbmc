@@ -878,9 +878,9 @@ fes:
         iandc_heat_dsr: "iandc_heat"
       dsr_hours:  # hours during which demand-side management can occur (E.g., 5pm-8pm)
         residential_dsr: [17, 20]
-        iandc_dsr: [17,20]
-        iandc_heat_dsr: [17,20]
-        ev_dsr: [8,6]
+        iandc_dsr: [17, 20]
+        iandc_heat_dsr: [17, 20]
+        ev_dsr: [8, 6]
 
   eur:
     scenario: CT & LW    # "Leading the Way" equivalent in the NESO european supply table
