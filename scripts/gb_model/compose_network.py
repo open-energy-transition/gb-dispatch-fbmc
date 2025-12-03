@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import pandas as pd
 import pypsa
 import xarray as xr
@@ -448,7 +449,9 @@ def _load_regional_data(path: str, year: int) -> pd.DataFrame:
 def add_EV_V2G(
     n: pypsa.Network,
     year: int,
-    regional_ev_v2g_inc_eur,
+    regional_ev_v2g_inc_eur: str,
+    ev_v2g_storage_capacity_path: str,
+    ev_availability_profile: pd.DataFrame,
 ):
     """
     Add EV DSR and V2G components to PyPSA network
@@ -461,27 +464,67 @@ def add_EV_V2G(
         Year used in the modelling
     regional_ev_v2g_inc_eur: str
         CSV path for EV V2G data
-
+    ev_v2g_storage_capacity_path : str
+        Path to EV storage capacity CSV
+    ev_avail_profile : pd.DataFrame
+        DataFrame containing EV availability profile
     """
     # Load EV V2G data
     ev_v2g_df = _load_regional_data(regional_ev_v2g_inc_eur, year)
+    ev_v2g_storage_capacity = _load_regional_data(ev_v2g_storage_capacity_path, year)
 
     # Add EV V2G carrier to the PyPSA network
     n.add(
         "Carrier",
-        "EV V2G",
+        "ev V2G",
     )
 
-    # Add EV V2G to the PyPSA network
+    # Add EV V2G bus to the PyPSA network
+    n.add(
+        "Bus",
+        ev_v2g_df.index,
+        suffix=" EV V2G bus",
+        carrier="ev V2G",
+        x=n.buses.loc[ev_v2g_df.index].x,
+        y=n.buses.loc[ev_v2g_df.index].y,
+        country=n.buses.loc[ev_v2g_df.index].country,
+    )
+
+    # Add link from EV bus to V2G bus to the PyPSA network
+    n.add(
+        "Link",
+        ev_v2g_df.index,
+        suffix=" EV V2G feed-in",
+        bus0=ev_v2g_df.index + " EV",
+        bus1=ev_v2g_df.index + " EV V2G bus",
+        p_nom=ev_v2g_df.p_nom.abs(),
+        p_max_pu=ev_availability_profile.loc[:, ev_v2g_df.index],
+        efficiency=1.0,
+        carrier="ev V2G",
+    )
+
+    # Add link from V2G bus to AC bus to the PyPSA network
     n.add(
         "Link",
         ev_v2g_df.index,
         suffix=" EV V2G",
-        bus0=ev_v2g_df.index + " EV store bus",
+        bus0=ev_v2g_df.index + " EV V2G bus",
         bus1=ev_v2g_df.index,
         p_nom=ev_v2g_df.p_nom.abs(),
+        p_max_pu=ev_availability_profile.loc[:, ev_v2g_df.index],
         efficiency=1.0,
-        carrier="EV V2G",
+        carrier="ev V2G",
+    )
+
+    # Add the EV V2G store to the PyPSA network
+    n.add(
+        "Store",
+        ev_v2g_df.index,
+        suffix=" EV V2G store",
+        bus=ev_v2g_df.index + " EV V2G bus",
+        e_nom=ev_v2g_storage_capacity.MWh,
+        e_cyclic=True,
+        carrier="ev V2G",
     )
 
 
@@ -500,13 +543,18 @@ def _get_dsr_profile(
         dsr_hours : list[int]
             Hours during which demand-side management can occur
         key : str
-            Sector key (e.g., 'residential', 'iandc', 'iandc_heat')
+            Sector key (e.g., 'residential', 'iandc', 'iandc_heat', 'ev')
     """
 
     dsr_profile = pd.DataFrame(index=n.snapshots, columns=df.index, data=0.0)
-    mask = (dsr_profile.index.hour >= dsr_hours[0]) & (
-        dsr_profile.index.hour < dsr_hours[1]
-    )
+    if dsr_hours[0] < dsr_hours[1]:
+        mask = (dsr_profile.index.hour >= dsr_hours[0]) & (
+            dsr_profile.index.hour <= dsr_hours[1]
+        )
+    else:
+        mask = (dsr_profile.index.hour <= dsr_hours[1]) | (
+            dsr_profile.index.hour >= dsr_hours[0]
+        )
     dsr_profile.loc[mask] = 1.0
 
     # Calculate time difference between each neighbouring country and GB
@@ -531,8 +579,8 @@ def _add_dsr_pypsa_components(
     df: pd.DataFrame,
     key: str,
     storage_capacity: pd.DataFrame,
-    e_min_pu: pd.DataFrame,
     e_max_pu: pd.DataFrame,
+    p_max_pu: pd.DataFrame,
 ):
     """
     Add DSR components for a given sector to PyPSA network
@@ -547,17 +595,16 @@ def _add_dsr_pypsa_components(
             Sector key (e.g., 'residential', 'iandc', 'iandc_heat', "ev")
         storage_capacity : pd.DataFrame
             DataFrame containing storage capacity of the store in MWh indexed by time and bus
-        e_min_pu : pd.DataFrame
-            DataFrame containing minimum state of charge as per unit of the store indexed by time and bus
         e_max_pu : pd.DataFrame
             DataFrame containing maximum state of charge as per unit of the store indexed by time and bus
+        p_max_pu : pd.DataFrame
+            DataFrame containing maximum power availability as per unit of the link indexed by time and bus
     """
 
+    store_carrier = f"{key} DSR"
     if key == "ev":
-        store_carrier = "EV store"
         bus_suffix = " EV"
     else:
-        store_carrier = f"{key} DSR"
         bus_suffix = ""
 
     # Add the store carrier to the PyPSA network
@@ -597,6 +644,7 @@ def _add_dsr_pypsa_components(
         bus0=df.index + bus_suffix,
         bus1=df.index + f" {store_carrier} bus",
         p_nom=df.p_nom.abs(),
+        p_max_pu=p_max_pu,
         efficiency=1.0,
         carrier=f"{key} DSR shift",
     )
@@ -609,6 +657,7 @@ def _add_dsr_pypsa_components(
         bus0=df.index + f" {store_carrier} bus",
         bus1=df.index + bus_suffix,
         p_nom=df.p_nom.abs(),
+        p_max_pu=p_max_pu,
         efficiency=1.0,
         carrier=f"{key} DSR reverse",
     )
@@ -622,7 +671,6 @@ def _add_dsr_pypsa_components(
         e_nom=storage_capacity,
         e_cyclic=True,
         carrier=store_carrier,
-        e_min_pu=e_min_pu,
         e_max_pu=e_max_pu,
     )
 
@@ -633,9 +681,8 @@ def add_DSR(
     n: pypsa.Network,
     year: int,
     dsr: dict[str, str],
-    dsr_hours: list[int],
-    ev_dsr_profile_path: str,
-    ev_storage_capacity_path: str,
+    dsr_hours_dict: dict[str, list],
+    ev_availability_profile: pd.DataFrame,
 ):
     """
     Add DSR components for residential, i&c and i&c heat sectors to PyPSA network
@@ -648,38 +695,37 @@ def add_DSR(
             Year used in the modelling
         dsr: dict[str, str]
             Dictionary containing DSR flexibility data for baseline and electrified heat
-        dsr_hours: list[int]
+        dsr_hours_dict: dict[str,list]
             Hours during which demand-side management can occur
-        ev_dsr_profile_path : str
-            Path to EV DSR profile CSV
-        ev_storage_capacity_path : str
-            Path to EV storage capacity CSV
+        ev_availability_profile : pd.DataFrame
+            DataFrame containing EV availability profile indexed by time and bus
     """
-    ev_dsr_profile = pd.read_csv(ev_dsr_profile_path, index_col=0, parse_dates=True)
-    ev_storage_capacity = _load_regional_data(ev_storage_capacity_path, year)
-
-    # Calculate DSR duration in hours
-    dsr_duration = dsr_hours[1] - dsr_hours[0]
-
     # Iterate through each demand key in the DSR dictionary
     for file, path in dsr.items():
         dsr_type = re.match("regional_(.*)_dsr_inc_eur", file).groups()[0]
         df_dsr = _load_regional_data(path, year)
 
-        # Create DSR profile, storage capacity, e_min_pu and e_max_pu based on demand type
-        if dsr_type != "ev":
-            dsr_profile = _get_dsr_profile(n, df_dsr, dsr_hours, dsr_type)
-            storage_capacity = df_dsr.p_nom.abs() * (dsr_duration)
-            e_min_pu = 0.0
-            e_max_pu = dsr_profile.loc[:, df_dsr.index]
+        dsr_hours = dsr_hours_dict[f"{dsr_type}_dsr"]
+
+        # Calculate DSR duration in hours
+        if dsr_hours[0] < dsr_hours[1]:
+            # e.g., dsr_hours = [17,20] -> indicates 5pm of day 1 to 8 pm of day 1
+            dsr_duration = dsr_hours[1] - dsr_hours[0] + 1
         else:
-            dsr_profile = ev_dsr_profile
-            storage_capacity = ev_storage_capacity.MWh
-            e_min_pu = dsr_profile.loc[:, df_dsr.index]
-            e_max_pu = 1.0
+            # e.g., dsr_hours = [8,6] -> indicates 8am of day 1 to 6am of day 2
+            dsr_duration = dsr_hours[1] + (24 - dsr_hours[0]) + 1
+        logger.info(f"DSR duration for {dsr_type} is {dsr_duration} hours per day")
+
+        # Create DSR profile, storage capacity, e_min_pu and e_max_pu based on demand type
+        dsr_profile = _get_dsr_profile(n, df_dsr, dsr_hours, dsr_type)
+        storage_capacity = df_dsr.p_nom.abs() * (dsr_duration)
+        e_max_pu = dsr_profile.loc[:, df_dsr.index]
+        p_max_pu = (
+            1.0 if dsr_type != "ev" else ev_availability_profile.loc[:, df_dsr.index]
+        )
 
         _add_dsr_pypsa_components(
-            n, df_dsr, dsr_type, storage_capacity, e_min_pu, e_max_pu
+            n, df_dsr, dsr_type, storage_capacity, e_max_pu, p_max_pu
         )
 
 
@@ -870,19 +916,16 @@ def attach_wind_and_solar(
 
             ds = ds.stack(bus_bin=["bus", "bin"])
 
-            supcar = car.split("-", 2)[0]
+            capital_cost = costs.at[car, "capital_cost"]
 
             buses = ds.indexes["bus_bin"].get_level_values("bus")
             bus_bins = ds.indexes["bus_bin"].map(flatten)
 
-            p_nom_max = ds["p_nom_max"].to_pandas()
-            p_nom_max.index = p_nom_max.index.map(flatten)
-
             p_max_pu = ds["profile"].to_pandas()
             p_max_pu.columns = p_max_pu.columns.map(flatten)
 
-            if not ppl.query("carrier == @supcar").empty:
-                caps = ppl.query("carrier == @supcar").groupby("bus").p_nom.sum()
+            if not ppl.query("carrier == @car").empty:
+                caps = ppl.query("carrier == @car").groupby("bus").p_nom.sum()
                 caps = caps.reindex(buses).fillna(0)
                 caps = pd.Series(data=caps.values, index=bus_bins)
             else:
@@ -891,18 +934,18 @@ def attach_wind_and_solar(
             n.add(
                 "Generator",
                 bus_bins,
-                suffix=" " + supcar,
+                suffix=" " + car,
                 bus=buses,
-                carrier=supcar,
+                carrier=car,
                 p_nom=caps,
-                p_nom_min=caps,
+                p_nom_min=0,
                 p_nom_extendable=car in extendable_carriers["Generator"],
-                p_nom_max=p_nom_max,
-                marginal_cost=costs.at[supcar, "marginal_cost"],
-                capital_cost=0,
-                efficiency=costs.at[supcar, "efficiency"],
+                p_nom_max=np.inf,
+                marginal_cost=costs.at[car, "marginal_cost"],
+                capital_cost=capital_cost,
+                efficiency=costs.at[car, "efficiency"],
                 p_max_pu=p_max_pu,
-                lifetime=costs.at[supcar, "lifetime"],
+                lifetime=costs.at[car, "lifetime"],
             )
 
 
@@ -1118,7 +1161,7 @@ def compose_network(
     dsr: dict[str, str],
     h2_data: dict[str, Any],
     enable_chp: bool,
-    dsr_hours: list[int],
+    dsr_hours_dict: dict[str, list],
     year: int,
 ) -> None:
     """
@@ -1162,6 +1205,8 @@ def compose_network(
         List of lines to prune between specified bus pairs
     dsr : dict[str, str]
         Dictionary containing DSR flexibility data for baseline and electrified heat
+    dsr_hours_dict: dict[str, list]
+        DSR hours for each demand type
     enable_chp : bool
         Whether to enable CHP constraints
     year: int
@@ -1213,17 +1258,28 @@ def compose_network(
 
     add_load(network, demands)
 
+    ev_availability_profile = pd.read_csv(
+        ev_data["avail_profile_s_clustered"], index_col=0, parse_dates=True
+    )
+
     add_DSR(
         network,
         year,
         dsr,
-        dsr_hours,
-        ev_data["dsm_profile_s_clustered"],
-        ev_data["regional_ev_storage_inc_eur"],
+        dsr_hours_dict,
+        ev_availability_profile,
     )
 
-    add_EV_V2G(network, year, ev_data["regional_ev_v2g_inc_eur"])
+    add_EV_V2G(
+        network,
+        year,
+        ev_data["regional_ev_v2g_inc_eur"],
+        ev_data["regional_ev_v2g_storage_inc_eur"],
+        ev_availability_profile,
+    )
+
     add_H2(network, ppl, year, costs, **h2_data)
+
     attach_dc_interconnectors(
         network, interconnectors_path, year, interconnectors_availability_path
     )
@@ -1273,6 +1329,6 @@ if __name__ == "__main__":
         h2_data=_input_list_to_dict(snakemake.input.h2_data),
         enable_chp=snakemake.params.enable_chp,
         prune_lines=snakemake.params.prune_lines,
-        dsr_hours=snakemake.params.dsr_hours,
+        dsr_hours_dict=snakemake.params.dsr_hours_dict,
         year=int(snakemake.wildcards.year),
     )

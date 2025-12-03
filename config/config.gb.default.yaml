@@ -173,7 +173,7 @@ costs:
     hydrogen turbine CHP: Gas-Gas CHP # there is no hydrogen CHP costs in FES
     marine PP: Marine-Marine
     OCGT PP: Gas-OCGT
-    offwind PP: Offshore Wind-Offshore Wind
+    offwind-dc PP: Offshore Wind-Offshore Wind
     oil PP: Other Thermal-Fuel Oil
     onwind PP: Onshore Wind-Onshore Wind
     nuclear PP: Nuclear-Nuclear
@@ -638,7 +638,7 @@ dukes-5.11:
     Type:
       Onshore: onwind
       onshore: onwind
-      Offshore: offwind
+      Offshore: offwind-dc
       CCGT: CCGT
       Small Hydro: ror
       Natural Flow: ror
@@ -854,8 +854,7 @@ fes-costing-sheet-config:
       columns: year
 
 fes:
-  year_range_incl: [2022, 2041] # 20-year period over which we will run the simulation
-  dsr_hours: [17, 20]  # hours during which demand-side management can occur (5pm-8pm)
+  year_range_incl: [2022, 2041] # 20-year period over which we will run the simulation   
   default_set: PP
   gb:
     scenario: leading the way   # fes workbook
@@ -880,7 +879,7 @@ fes:
         Non-renewable CHP: gas
         Nuclear: nuclear
         OCGTs (non CHP): OCGT
-        Offshore-Wind (off-Grid): offwind
+        Offshore-Wind (off-Grid): offwind-dc
         Renewable Engines (Landfill Gas, Sewage Gas, Biogas): biomass
         Solar Generation: solar
         Waste Incineration (including CHP): waste
@@ -888,7 +887,7 @@ fes:
         Domestic Batteries (G98): battery
         Batteries: battery
         Pumped Hydro: PHS # FIXME: should this be just "hydro?"
-        Offshore Wind: offwind
+        Offshore Wind: offwind-dc
         Onshore Wind <1MW: onwind
         Onshore Wind >=1MW: onwind
 
@@ -924,11 +923,15 @@ fes:
       eur_add_data_reference:
         ev_dsr: "ev"
         ev_v2g: "ev"
-        ev_storage: "ev"
+        ev_v2g_storage: "ev"
         residential_dsr: "baseline_electricity"
         iandc_dsr: "baseline_electricity"
         iandc_heat_dsr: "iandc_heat"
-
+      dsr_hours:  # hours during which demand-side management can occur (E.g., 5pm-8pm)
+        residential_dsr: [17, 20]
+        iandc_dsr: [17, 20]
+        iandc_heat_dsr: [17, 20]
+        ev_dsr: [8, 6]
 
   eur:
     scenario: CT & LW    # "Leading the Way" equivalent in the NESO european supply table
@@ -938,7 +941,7 @@ fes:
         Biomass: biomass
         Marine: marine
         Nuclear: nuclear
-        Offshore Wind: offwind
+        Offshore Wind: offwind-dc
         Onshore Wind: onwind
         Waste: waste
       SubType:
