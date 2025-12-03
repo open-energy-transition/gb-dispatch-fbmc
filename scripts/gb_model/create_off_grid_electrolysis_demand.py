@@ -87,9 +87,7 @@ def parse_electricity_demand(
     df_electricity_demand = df_electricity_demand * 1e3  # GWh to MWh
 
     # Calculate regional distribution of grid-connected electrolysis capacities
-    electrolysis_distribution = get_regional_distribution(
-        grid_electrolysis_capacities.p_nom
-    )
+    electrolysis_distribution = get_regional_distribution(grid_electrolysis_capacities)
 
     # Apply regional distribution to electricity demand data
     df_electricity_demand = df_electricity_demand * electrolysis_distribution

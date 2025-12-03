@@ -44,7 +44,7 @@ def _load_costs(
     costs_config: dict[str, dict],
 ) -> pd.DataFrame:
     """Load technology costs data."""
-    costs = pd.read_csv(tech_costs_path, index_col=[0, 1])
+    costs = pd.read_csv(tech_costs_path, index_col=["technology", "parameter"])
 
     # correct units to MW
     costs.loc[costs.unit.str.contains("/kW"), "value"] *= 1e3
@@ -163,7 +163,6 @@ def _integrate_fes_power_costs(
     df: pd.DataFrame,
     fes_power_costs: pd.DataFrame,
     costs_config: dict[str, dict],
-    default_characteristics: dict[str, dict],
 ) -> pd.DataFrame:
     """
     Integrate FES power costs into the powerplants DataFrame.
@@ -174,7 +173,6 @@ def _integrate_fes_power_costs(
             (Sub Type, year) and columns for each Cost Type (fuel, VOM).
         costs_config (dict): Configuration dict containing:
             - fes_costs_carrier_mapping: Mapping from carrier names to FES Sub Type name.
-        default_characteristics (dict): Default characteristics for filling missing values.
 
     Returns:
         pd.DataFrame: Updated powerplants DataFrame with integrated FES power costs.
@@ -201,9 +199,9 @@ def assign_technical_and_costs_defaults(
     tech_costs_path: str,
     fes_power_costs_path: str,
     fes_carbon_costs_path: str,
-    default_characteristics: dict[str, dict],
     costs_config: dict[str, dict],
     fes_scenario: str,
+    data_file: str,
 ) -> pd.DataFrame:
     """
     Enrich powerplants dataframe with cost and technical parameters.
@@ -213,9 +211,9 @@ def assign_technical_and_costs_defaults(
         tech_costs_path: Path to technology costs CSV file
         fes_power_costs_path: Path to FES power costs CSV file
         fes_carbon_costs_path: Path to FES carbon costs CSV file
-        default_characteristics: Default values for technical and cost parameters
         costs_config: Configuration dict containing mappings and conversion rates
         fes_scenario: FES scenario name (e.g., "leading the way")
+        data_file: Data file identifier
 
     Returns:
         Enriched powerplants DataFrame with efficiency, marginal_cost, VOM, fuel,
@@ -232,7 +230,7 @@ def assign_technical_and_costs_defaults(
         8. Create unique index (bus carrier-year-idx)
     """
     # Load powerplant data
-    df = pd.read_csv(ppl_path)
+    df = pd.read_csv(ppl_path).assign(**costs_config["add_cols"][data_file])
 
     # Load costs data
     costs = _load_costs(tech_costs_path, costs_config)
@@ -265,16 +263,14 @@ def assign_technical_and_costs_defaults(
     df["country"] = df["bus"].str[:2]
 
     # Integrate FES power costs
-    df = _integrate_fes_power_costs(
-        df, fes_power_costs, costs_config, default_characteristics
-    )
+    df = _integrate_fes_power_costs(df, fes_power_costs, costs_config)
     # Fill VOM, fuel costs, efficiency, and CO2 intensity with default characteristics from config where FES data is missing
     for col in costs_config["marginal_cost_columns"]:
         df = _ensure_column_with_default(
             df=df,
             col=col,
-            default=default_characteristics[col]["data"],
-            units=default_characteristics[col]["unit"],
+            default=costs_config["default_characteristics"][col]["data"],
+            units=costs_config["default_characteristics"][col]["unit"],
         )
 
     # Integrate FES carbon costs
@@ -292,8 +288,8 @@ def assign_technical_and_costs_defaults(
         df = _ensure_column_with_default(
             df,
             col,
-            default=default_characteristics[col]["data"],
-            units=default_characteristics[col]["unit"],
+            default=costs_config["default_characteristics"][col]["data"],
+            units=costs_config["default_characteristics"][col]["unit"],
         )
 
     # Create unique index: "bus carrier-year-idx"
@@ -330,7 +326,6 @@ if __name__ == "__main__":
     ppl_path = snakemake.input.fes_powerplants
 
     # Load all the params
-    default_characteristics = snakemake.params.default_characteristics
     costs_config = snakemake.params.costs_config
     fes_scenario = snakemake.params.fes_scenario
 
@@ -340,9 +335,9 @@ if __name__ == "__main__":
         tech_costs_path=tech_costs_path,
         fes_power_costs_path=fes_power_costs_path,
         fes_carbon_costs_path=fes_carbon_costs_path,
-        default_characteristics=default_characteristics,
         costs_config=costs_config,
         fes_scenario=fes_scenario,
+        data_file=snakemake.wildcards.data_file,
     )
     logger.info("Enriched powerplants with cost and technical parameters")
 

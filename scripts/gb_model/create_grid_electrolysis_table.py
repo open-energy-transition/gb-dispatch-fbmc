@@ -100,9 +100,4 @@ if __name__ == "__main__":
     )
 
     # Save the grid-connected electrolysis capacities
-    grid_electrolysis_capacities.assign(set="Other", carrier="electrolysis").to_csv(
-        snakemake.output.grid_electrolysis_capacities
-    )
-    logger.info(
-        f"Grid-connected electrolysis capacities saved to {snakemake.output.grid_electrolysis_capacities}"
-    )
+    grid_electrolysis_capacities.to_csv(snakemake.output.csv)

@@ -953,19 +953,30 @@ def add_H2(
     n: pypsa.Network,
     ppl: pd.DataFrame,
     year: int,
-    costs: pd.DataFrame,
-    regional_h2_annual_demand: str,
-    off_grid_electrolysis_electricity_demand: str,
-    regional_h2_storage_capacity_processed: str,
-    grid_electrolysis_capacities_processed: str,
+    regional_H2_demand_annual_inc_eur: str,
+    regional_off_grid_electrolysis_electricity_demand_inc_eur: str,
+    regional_H2_storage_capacity_inc_eur_inc_tech_data: str,
+    regional_grid_electrolysis_capacities_inc_eur_inc_tech_data: str,
 ) -> None:
-    demand = _load_regional_data(regional_h2_annual_demand, year)
-    demand_fixed = _load_regional_data(off_grid_electrolysis_electricity_demand, year)
-    storage_caps = _load_powerplants(regional_h2_storage_capacity_processed, year)
-    electrolysis_caps = _load_powerplants(grid_electrolysis_capacities_processed, year)
+    demand = _load_regional_data(regional_H2_demand_annual_inc_eur, year)
+    demand_fixed = _load_regional_data(
+        regional_off_grid_electrolysis_electricity_demand_inc_eur, year
+    )
+    storage_caps = _load_powerplants(
+        regional_H2_storage_capacity_inc_eur_inc_tech_data, year
+    )
+    electrolysis_caps = _load_powerplants(
+        regional_grid_electrolysis_capacities_inc_eur_inc_tech_data, year
+    )
 
     n.add("Carrier", "H2")
-    all_nodes = demand.index.union(electrolysis_caps.index)
+    all_nodes = sorted(
+        set(
+            demand.index.union(electrolysis_caps.bus).union(
+                ppl[ppl.carrier.str.contains("hydrogen")].bus
+            )
+        )
+    )
     n.add("Bus", all_nodes, suffix=" H2", carrier="H2", unit="MWh_LHV")
 
     n.add(
@@ -1159,7 +1170,7 @@ def compose_network(
     ev_data: dict[str, str],
     prune_lines: list[dict[str, int]],
     dsr: dict[str, str],
-    h2_data: dict[str, Any],
+    H2_data: dict[str, Any],
     enable_chp: bool,
     dsr_hours_dict: dict[str, list],
     year: int,
@@ -1278,7 +1289,7 @@ def compose_network(
         ev_availability_profile,
     )
 
-    add_H2(network, ppl, year, costs, **h2_data)
+    add_H2(network, ppl, year, **H2_data)
 
     attach_dc_interconnectors(
         network, interconnectors_path, year, interconnectors_availability_path
@@ -1326,7 +1337,7 @@ if __name__ == "__main__":
         demands=_input_list_to_dict(snakemake.input.demands, parent=True),
         ev_data=_input_list_to_dict(snakemake.input.ev_data),
         dsr=_input_list_to_dict(snakemake.input.dsr),
-        h2_data=_input_list_to_dict(snakemake.input.h2_data),
+        H2_data=_input_list_to_dict(snakemake.input.H2_data),
         enable_chp=snakemake.params.enable_chp,
         prune_lines=snakemake.params.prune_lines,
         dsr_hours_dict=snakemake.params.dsr_hours_dict,

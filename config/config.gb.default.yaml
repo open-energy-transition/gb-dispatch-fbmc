@@ -83,6 +83,14 @@ costs:
   GBP_to_USD: 1.3757 # average in 2021: https://www.exchangerates.org.uk/GBP-USD-spot-exchange-rates-history-2021.html#:~:text=Average%20exchange%20rate%20in%202021,USD%20on%2008%20Dec%202021.
   relevant_cost_columns: ["CO2 intensity", "VOM", "FOM", "investment", "efficiency", "lifetime", "discount rate", "fuel"]
   marginal_cost_columns: ["CO2 intensity", "VOM", "efficiency", "fuel"]
+  add_cols:
+    fes_powerplants: {}
+    regional_H2_storage_capacity_inc_eur:
+      set: Store
+      carrier: hydrogen
+    regional_grid_electrolysis_capacities_inc_eur:
+      set: Other
+      carrier: electrolysis
   default_characteristics:
     # Ensure all required columns exist with defaults
     efficiency:
@@ -854,7 +862,7 @@ fes-costing-sheet-config:
       columns: year
 
 fes:
-  year_range_incl: [2022, 2041] # 20-year period over which we will run the simulation   
+  year_range_incl: [2022, 2041] # 20-year period over which we will run the simulation
   default_set: PP
   gb:
     scenario: leading the way   # fes workbook
@@ -920,13 +928,6 @@ fes:
         residential_dsr: ["baseline demand"]
         iandc_dsr: ["i&c flexibility (tout)"]
         iandc_heat_dsr: ["i&c hp demand"]
-      eur_add_data_reference:
-        ev_dsr: "ev"
-        ev_v2g: "ev"
-        ev_v2g_storage: "ev"
-        residential_dsr: "baseline_electricity"
-        iandc_dsr: "baseline_electricity"
-        iandc_heat_dsr: "iandc_heat"
       dsr_hours:  # hours during which demand-side management can occur (E.g., 5pm-8pm)
         residential_dsr: [17, 20]
         iandc_dsr: [17, 20]
@@ -993,6 +994,19 @@ fes:
       baseline_electricity: [electricity residential, electricity services, electricity rail]
       residential_heat: [total residential space, total residential water]
       iandc_heat: [total services space, total services water]
+
+    add_data_reference:
+      # flexibility
+      ev_dsr: "ev"
+      ev_v2g: "ev"
+      ev_v2g_storage: "ev"
+      residential_dsr: "baseline_electricity"
+      iandc_dsr: "baseline_electricity"
+      iandc_heat_dsr: "iandc_heat"
+      H2_demand_annual: "H2"
+      off_grid_electrolysis_electricity_demand: "H2"
+      H2_storage_capacity: "H2"
+      grid_electrolysis_capacities: "H2"
 
   hydrogen:
     demand:
