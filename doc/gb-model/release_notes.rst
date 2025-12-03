@@ -12,6 +12,7 @@ Release Notes
 Upcoming Release
 ================
 
+* Define independent DSR hours for each demand type (#144)
 * Disassociate EV DSR and EV V2G components (#140)
 * Add DC links into boundary constraints (#136)
 * Added flexibility to the baseline electricity and electrified i&c heat demand through demand-side management (#133).

@@ -776,8 +776,7 @@ rule compose_network:
         renewable=config["renewable"],
         enable_chp=config["chp"]["enable"],
         prune_lines=config["region_operations"]["prune_lines"],
-        dsr_hours=config["fes"]["dsr_hours"],
-        bev_dsm_restriction_value=config["sector"]["bev_dsm_restriction_value"],
+        dsr_hours_dict=config["fes"]["gb"]["flexibility"]["dsr_hours"],
     input:
         unpack(input_profile_tech),
         demands=expand(
@@ -792,10 +791,7 @@ rule compose_network:
             resources("gb-model/regional_ev_{ev_data}_inc_eur.csv"),
             ev_data=["v2g_storage", "v2g"],
         )
-        + [
-            resources("dsm_profile_s_clustered.csv"),
-            resources("avail_profile_s_clustered.csv"),
-        ],
+        + [resources("avail_profile_s_clustered.csv")],
         network=resources("networks/base_s_clustered.nc"),
         powerplants=resources("gb-model/fes_powerplants_processed.csv"),
         tech_costs=lambda w: resources(
