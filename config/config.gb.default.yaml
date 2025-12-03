@@ -83,6 +83,35 @@ costs:
   GBP_to_USD: 1.3757 # average in 2021: https://www.exchangerates.org.uk/GBP-USD-spot-exchange-rates-history-2021.html#:~:text=Average%20exchange%20rate%20in%202021,USD%20on%2008%20Dec%202021.
   relevant_cost_columns: ["CO2 intensity", "VOM", "FOM", "investment", "efficiency", "lifetime", "discount rate", "fuel"]
   marginal_cost_columns: ["CO2 intensity", "VOM", "efficiency", "fuel"]
+  default_characteristics:
+    # Ensure all required columns exist with defaults
+    efficiency:
+      data: 1
+      unit: ""
+    lifetime:
+      data: 25.0
+      unit: "years"
+    marginal_cost:
+      data: 0.0
+      unit: "GBP/MWh"
+    FOM:
+      data: 0.0
+      unit: "GBP/MW"
+    VOM:
+      data: 0.0
+      unit: "GBP/MWh"
+    fuel:
+      data: 0.0
+      unit: "GBP/MWh"
+    CO2 intensity:
+      data: 0.0
+      unit: "tCO2/MWh_th"
+    investment:
+      data: 0.0
+      unit: "GBP/MW"
+    discount rate:
+      data: 0.07
+      unit: ""
   carrier_gap_filling:
     "CO2 intensity":
       CCGT: gas
@@ -140,7 +169,7 @@ costs:
     gas PP: Gas-Gas Reciprocating Engines
     hydro PP: Hydro-Hydro
     hydrogen turbine PP: Low Carbon-Hydrogen
-    hydrogen fuel cell PP: Fuel Cells
+    hydrogen fuel cell PP: Storage-Fuel Cells
     hydrogen turbine CHP: Gas-Gas CHP # there is no hydrogen CHP costs in FES
     marine PP: Marine-Marine
     OCGT PP: Gas-OCGT
@@ -163,12 +192,12 @@ costs:
     gas CHP: Gas-GT CHP
     gas PP: Gas-Gas Reciprocating Engines
     hydrogen turbine PP: Low Carbon-Hydrogen
-    hydrogen fuel cell PP: Fuel Cells
+    hydrogen fuel cell PP: Storage-Fuel Cells
     hydrogen turbine CHP: Gas-Gas CHP # there is no hydrogen CHP costs in FES
     OCGT PP: Gas-OCGT
     oil PP: Other Thermal-Fuel Oil
-    waste PP: Waste-WoodPellets-Waste
-    waste CHP: Waste-Gas-Waste CHP
+    waste PP: WoodPellets-Waste
+    waste CHP: Gas-Waste CHP
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#solving
 solving:
@@ -828,29 +857,6 @@ fes:
   year_range_incl: [2022, 2041] # 20-year period over which we will run the simulation
   dsr_hours: [17, 20]  # hours during which demand-side management can occur (5pm-8pm)
   default_set: PP
-  default_characteristics:
-    # Ensure all required columns exist with defaults
-    efficiency:
-      data: 1
-      unit: ""
-    capital_cost:
-      data: 0.0
-      unit: ""
-    lifetime:
-      data: 25.0
-      unit: "years"
-    marginal_cost:
-      data: 0.0
-      unit: ""
-    VOM:
-      data: 0.0
-      unit: ""
-    fuel:
-      data: 0.0
-      unit: ""
-    CO2 intensity:
-      data: 0.0
-      unit: "tCO2/MWh_th"
   gb:
     scenario: leading the way   # fes workbook
     scenario_abbreviations:

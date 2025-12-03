@@ -180,52 +180,18 @@ def _integrate_fes_power_costs(
         pd.DataFrame: Updated powerplants DataFrame with integrated FES power costs.
     """
     # Create a carrier_set column for mapping
-    df["carrier_set"] = df["carrier"] + " " + df["set"]
+    carrier_set = df["carrier"] + " " + df["set"]
 
-    # Map carrier_set to FES costs technology name to merge VOM data
-    df["fes_VOM_techs"] = df["carrier_set"].map(costs_config["fes_VOM_carrier_mapping"])
-
-    # Merge FES VOM data using technology name and year
-    df = df.merge(
-        fes_power_costs[["VOM"]],
-        left_on=["fes_VOM_techs", "year"],
-        right_index=True,
-        how="left",
-        suffixes=("_pypsa", ""),
-    )
-
-    # Map carrier_set to FES costs technology name to merge fuel cost data
-    df["fes_fuel_techs"] = df["carrier_set"].map(
-        costs_config["fes_fuel_carrier_mapping"]
-    )
-
-    # Merge FES fuel cost data using technology name and year
-    df = df.merge(
-        fes_power_costs[["fuel"]],
-        left_on=["fes_fuel_techs", "year"],
-        right_index=True,
-        how="left",
-        suffixes=("_pypsa", ""),
-    )
-
-    # Fill VOM, fuel costs, efficiency, and CO2 intensity with default characteristics from config where FES data is missing
-    for col in ["VOM", "fuel", "efficiency", "CO2 intensity"]:
-        if df[col].isna().any():
-            logger.info(
-                f"Filling {df[col].isna().sum()} missing {col} values with default: {default_characteristics[col]['data']}"
+    for col in ["VOM", "fuel"]:
+        techs = carrier_set.map(costs_config[f"fes_{col}_carrier_mapping"])
+        assert not (
+            missing := set(techs.dropna()).difference(
+                fes_power_costs.index.get_level_values("technology")
             )
-        df[col] = df[col].fillna(default_characteristics[col]["data"])
-
-    # Drop temporary columns
-    df = df.drop(
-        columns=[
-            "carrier_set",
-            "VOM_pypsa",
-            "fuel_pypsa",
-            "fes_VOM_techs",
-            "fes_fuel_techs",
-        ]
-    )
+        ), (
+            f"Some mapped FES technologies for {col} costs are missing in FES power costs data: {missing}"
+        )
+        df[col] = fes_power_costs[[col]].reindex([techs, df.year]).values
 
     return df
 
@@ -302,24 +268,32 @@ def assign_technical_and_costs_defaults(
     df = _integrate_fes_power_costs(
         df, fes_power_costs, costs_config, default_characteristics
     )
+    # Fill VOM, fuel costs, efficiency, and CO2 intensity with default characteristics from config where FES data is missing
+    for col in costs_config["marginal_cost_columns"]:
+        df = _ensure_column_with_default(
+            df=df,
+            col=col,
+            default=default_characteristics[col]["data"],
+            units=default_characteristics[col]["unit"],
+        )
 
     # Integrate FES carbon costs
     df = df.join(fes_carbon_costs, on="year")
 
     # Calculate marginal cost if possible
-    if all(col in df.columns for col in ["VOM", "fuel", "efficiency", "carbon_cost"]):
-        df["marginal_cost"] = (
-            df["VOM"]
-            + df["fuel"] / df["efficiency"]
-            + df["CO2 intensity"] * df["carbon_cost"] / df["efficiency"]
-        )
+    df["marginal_cost"] = (
+        df["VOM"]
+        + df["fuel"] / df["efficiency"]
+        + df["CO2 intensity"] * df["carbon_cost"] / df["efficiency"]
+    )
 
-    # Set capital costs from default_characteristics
-    for col in ["capital_cost", "lifetime"]:
+    # Fill gaps in all remaining columns
+    for col in costs_config["relevant_cost_columns"]:
         df = _ensure_column_with_default(
             df,
             col,
-            default_characteristics[col]["data"],
+            default=default_characteristics[col]["data"],
+            units=default_characteristics[col]["unit"],
         )
 
     # Create unique index: "bus carrier-year-idx"
@@ -334,6 +308,9 @@ def assign_technical_and_costs_defaults(
         + df["idx_counter"].astype(str)
     )
     df = df.drop(columns=["idx_counter", "carbon_cost"])
+
+    # PyPSA-Eur expects 'capital_cost' column name even though source technology data uses 'investment'
+    df = df.rename(columns={"investment": "capital_cost"})
 
     return df
 

@@ -766,7 +766,7 @@ rule assign_costs:
     message:
         "Prepares costs file from technology-data of PyPSA-Eur and FES and assigns to {wildcards.data_file}"
     params:
-        default_characteristics=config["fes"]["default_characteristics"],
+        default_characteristics=config["costs"]["default_characteristics"],
         costs_config=config["costs"],
         fes_scenario=config["fes"]["gb"]["scenario"],
     input:
