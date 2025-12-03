@@ -682,9 +682,7 @@ def add_DSR(
     year: int,
     dsr: dict[str, str],
     dsr_hours_dict: dict[str, list],
-    ev_dsr_profile_path: str,
     ev_availability_profile: pd.DataFrame,
-    bev_dsm_restriction_value: float,
 ):
     """
     Add DSR components for residential, i&c and i&c heat sectors to PyPSA network
@@ -699,15 +697,9 @@ def add_DSR(
             Dictionary containing DSR flexibility data for baseline and electrified heat
         dsr_hours_dict: dict[str,list]
             Hours during which demand-side management can occur
-        ev_dsr_profile_path : str
-            Path to EV DSR profile CSV
         ev_availability_profile : pd.DataFrame
             DataFrame containing EV availability profile indexed by time and bus
-        bev_dsm_restriction_value : float
-            Restriction value for BEV DSM
     """
-    ev_dsr_profile = pd.read_csv(ev_dsr_profile_path, index_col=0, parse_dates=True)
-
     # Iterate through each demand key in the DSR dictionary
     for file, path in dsr.items():
         dsr_type = re.match("regional_(.*)_dsr_inc_eur", file).groups()[0]
@@ -722,22 +714,13 @@ def add_DSR(
         else:
             # e.g., dsr_hours = [8,6] -> indicates 8am of day 1 to 6am of day 2
             dsr_duration = dsr_hours[1] + (24 - dsr_hours[0]) + 1
+        logger.info(f"DSR duration for {dsr_type} is {dsr_duration}")
 
         # Create DSR profile, storage capacity, e_min_pu and e_max_pu based on demand type
-        if dsr_type != "ev":
-            dsr_profile = _get_dsr_profile(n, df_dsr, dsr_hours, dsr_type)
-            storage_capacity = df_dsr.p_nom.abs() * (dsr_duration)
-            e_max_pu = dsr_profile.loc[:, df_dsr.index]
-            p_max_pu = 1.0
-        else:
-            # dsr_profile = ev_dsr_profile
-            dsr_profile = _get_dsr_profile(n, df_dsr, dsr_hours, dsr_type)
-            storage_capacity = df_dsr.p_nom.abs() * (dsr_duration)
-            # storage_capacity = (
-            #     df_dsr.p_nom.abs() / bev_dsm_restriction_value
-            # ) * n.snapshot_weightings["stores"].mean()
-            e_max_pu = dsr_profile.loc[:, df_dsr.index]
-            p_max_pu = ev_availability_profile.loc[:, df_dsr.index]
+        dsr_profile = _get_dsr_profile(n, df_dsr, dsr_hours, dsr_type)
+        storage_capacity = df_dsr.p_nom.abs() * (dsr_duration)
+        e_max_pu = dsr_profile.loc[:, df_dsr.index]
+        p_max_pu = 1.0 if dsr_type != 'ev' else ev_availability_profile.loc[:,df_dsr.index]
 
         _add_dsr_pypsa_components(
             n, df_dsr, dsr_type, storage_capacity, e_max_pu, p_max_pu
@@ -1083,7 +1066,6 @@ def compose_network(
     ev_data: dict[str, str],
     prune_lines: list[dict[str, int]],
     dsr: dict[str, str],
-    bev_dsm_restriction_value: float,
     enable_chp: bool,
     dsr_hours_dict: dict[str, list],
     year: int,
@@ -1131,8 +1113,6 @@ def compose_network(
         Dictionary containing DSR flexibility data for baseline and electrified heat
     dsr_hours_dict: dict[str, list]
         DSR hours for each demand type
-    bev_dsm_restriction_value : float
-        Restriction value for BEV DSM
     enable_chp : bool
         Whether to enable CHP constraints
     year: int
@@ -1193,9 +1173,7 @@ def compose_network(
         year,
         dsr,
         dsr_hours_dict,
-        ev_data["dsm_profile_s_clustered"],
         ev_availability_profile,
-        bev_dsm_restriction_value,
     )
 
     add_EV_V2G(
@@ -1252,7 +1230,6 @@ if __name__ == "__main__":
         demands=_input_list_to_dict(snakemake.input.demands, parent=True),
         ev_data=_input_list_to_dict(snakemake.input.ev_data),
         dsr=_input_list_to_dict(snakemake.input.dsr),
-        bev_dsm_restriction_value=snakemake.params.bev_dsm_restriction_value,
         enable_chp=snakemake.params.enable_chp,
         prune_lines=snakemake.params.prune_lines,
         dsr_hours_dict=snakemake.params.dsr_hours_dict,
