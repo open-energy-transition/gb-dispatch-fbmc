@@ -725,7 +725,9 @@ def add_DSR(
             e_max_pu = dsr_profile.loc[:, df_dsr.index]
             p_max_pu = ev_availability_profile.loc[:, df_dsr.index]
 
-        _add_dsr_pypsa_components(n, df_dsr, dsr_type, storage_capacity, e_max_pu, p_max_pu)
+        _add_dsr_pypsa_components(
+            n, df_dsr, dsr_type, storage_capacity, e_max_pu, p_max_pu
+        )
 
 
 def finalise_composed_network(
