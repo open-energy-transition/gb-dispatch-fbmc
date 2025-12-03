@@ -861,7 +861,7 @@ rule compose_network:
             resources("gb-model/intra_gb_transmission_availability.csv"),
         ],
     output:
-        network=resources("networks/composed_{clusters}/{year}.nc"),
+        network=resources("networks/composed_{clusters}_{year}.nc"),
     log:
         logs("compose_network_{clusters}_{year}.log"),
     resources:
