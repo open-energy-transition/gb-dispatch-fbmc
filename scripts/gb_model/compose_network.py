@@ -714,7 +714,7 @@ def add_DSR(
         else:
             # e.g., dsr_hours = [8,6] -> indicates 8am of day 1 to 6am of day 2
             dsr_duration = dsr_hours[1] + (24 - dsr_hours[0]) + 1
-        logger.info(f"DSR duration for {dsr_type} is {dsr_duration}")
+        logger.info(f"DSR duration for {dsr_type} is {dsr_duration} hours per day")
 
         # Create DSR profile, storage capacity, e_min_pu and e_max_pu based on demand type
         dsr_profile = _get_dsr_profile(n, df_dsr, dsr_hours, dsr_type)
