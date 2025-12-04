@@ -140,7 +140,7 @@ low_carbon_register:
 solving:
   options:
     clip_p_max_pu: 1.e-2
-    load_shedding: false
+    load_shedding: true
     curtailment_mode: false
     noisy_costs: true
     skip_iterations: true
@@ -149,6 +149,7 @@ solving:
   solver:
     name: gurobi
     options: gurobi-default
+    # options: gurobi-default
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#electricity
 electricity:
@@ -1254,3 +1255,17 @@ interconnectors:
     2030: [Cronos, Tarchon]
     2033: [Kulizumboo, SENECA, FAB Link, Gridlink, LirIC]
     2037: [Continental Link]
+
+redispatch:
+  # Source for bid and offers multipliers : https://www.nationalgrid.com/sites/default/files/documents/Long-term%20Market%20and%20Network%20Constraint%20Modelling.pdf
+  bid_multiplier:
+    gas: 0.8
+    coal: 0.7
+    oil: 0.38
+    OCGT: 1.37
+  offer_multiplier:
+    gas: 1.63
+    coal: 1.56
+    oil: 4.16
+    OCGT: 1.31
+  value_of_lost_load: 6000 £/MWh #Cost if load shedding in applied
