@@ -949,6 +949,53 @@ def attach_wind_and_solar(
             )
 
 
+def add_battery_storage(
+    n: pypsa.Network,
+    ppl: pd.DataFrame,
+    battery_e_nom_path: str,
+    year: int,
+) -> None:
+    """
+    Add battery storage to the network.
+
+    Parameters
+    ----------
+    n : pypsa.Network
+        The PyPSA network to attach the battery storage to.
+    battery_e_nom_path : str
+        Path to the battery storage capacity CSV file.
+    ppl : pd.DataFrame
+        DataFrame containing the power plant data.
+    year : int
+        Year for which to load battery storage capacities.
+    """
+    battery_e_nom = pd.read_csv(battery_e_nom_path, index_col="year").xs(
+        year,
+    )
+    ppl_battery = ppl[ppl.carrier == "battery"]
+    all_data_battery = (
+        ppl_battery.reset_index().merge(battery_e_nom, on="bus").set_index("name")
+    )
+    max_hours = all_data_battery.e_nom / all_data_battery.p_nom
+    if all_data_battery.empty:
+        logger.info(f"No battery storage data found for year {year}")
+        return
+
+    n.add("Carrier", "Battery Storage")
+    n.add(
+        "StorageUnit",
+        all_data_battery.index,
+        bus=all_data_battery.bus,
+        p_nom=all_data_battery.p_nom,
+        max_hours=max_hours,
+        e_cyclic=True,
+        carrier="Battery Storage",
+        marginal_cost=all_data_battery.marginal_cost,
+        capital_cost=0,
+        lifetime=all_data_battery.lifetime,
+    )
+
+
 def _prepare_costs(
     ppl: pd.DataFrame,
     year: int,
@@ -1059,6 +1106,7 @@ def compose_network(
     interconnectors_path: str,
     interconnectors_availability_path: str,
     generator_availability_path: str,
+    battery_e_nom_path: str,
     renewable_profiles: dict[str, str],
     countries: list[str],
     costs_config: dict[str, Any],
@@ -1190,6 +1238,7 @@ def compose_network(
         network, interconnectors_path, year, interconnectors_availability_path
     )
 
+    add_battery_storage(network, ppl, battery_e_nom_path, year)
     _add_generator_availability(network, generator_availability_path)
     _prune_lines(network, prune_lines)
 
@@ -1225,6 +1274,7 @@ if __name__ == "__main__":
         interconnectors_path=snakemake.input.interconnectors_p_nom,
         interconnectors_availability_path=snakemake.input.interconnectors_availability,
         generator_availability_path=snakemake.input.generator_availability,
+        battery_e_nom_path=snakemake.input.battery_e_nom,
         countries=snakemake.params.countries,
         costs_config=snakemake.params.costs_config,
         electricity_config=snakemake.params.electricity,

@@ -645,6 +645,23 @@ rule process_regional_ev_data:
         "../scripts/gb_model/process_regional_ev_data.py"
 
 
+rule process_regional_battery_storage_capacity:
+    message:
+        "Process national storage data from FES workbook into CSV format"
+    params:
+        scenario=config["fes"]["gb"]["scenario"],
+        year_range=config["fes"]["year_range_incl"],
+    input:
+        flexibility_sheet=resources("gb-model/fes/2021/FLX1.csv"),
+        regional_data=resources("gb-model/fes_powerplants.csv"),
+    output:
+        csv=resources("gb-model/regional_battery_storage_capacity_inc_eur.csv"),
+    log:
+        logs("process_regional_battery_storage_capacity.log"),
+    script:
+        "../scripts/gb_model/process_regional_battery_storage_capacity.py"
+
+
 rule distribute_eur_demands:
     message:
         "Distribute total European neighbour annual demands into base electricity, heating, and transport"
@@ -805,6 +822,9 @@ rule compose_network:
         ),
         generator_availability=resources(
             "gb-model/GB_generator_monthly_availability_fraction.csv"
+        ),
+        battery_e_nom=resources(
+            "gb-model/regional_battery_storage_capacity_inc_eur.csv"
         ),
         intermediate_data=[
             # TODO: calculate intra_gb availability per line/boundary before this point (currently only per TO)

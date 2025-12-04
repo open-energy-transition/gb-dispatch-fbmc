@@ -858,11 +858,11 @@ fes:
 
     flexibility:
       Technology Detail:
-        ev_dsr: ["smart charging impact at peak"]
-        ev_v2g: ["v2g impact at peak"]
-        residential_dsr: ["residential peak shifting (smart/touts effect)"]
-        iandc_dsr: ["i&c dsr impact at peak (processes)"]
-        iandc_heat_dsr: ["i&c dsr impact at peak (heat)"]
+        ev_dsr: "smart charging impact at peak"
+        ev_v2g: "v2g impact at peak"
+        residential_dsr: "residential peak shifting (smart/touts effect)"
+        iandc_dsr: "i&c dsr impact at peak (processes)"
+        iandc_heat_dsr: "i&c dsr impact at peak (heat)"
       regional_distribution_reference:
         ev_dsr: ["v2g"]
         ev_v2g: ["v2g"]
