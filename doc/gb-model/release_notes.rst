@@ -12,6 +12,7 @@ Release Notes
 Upcoming Release
 ================
 
+* Process low carbon register CfD strike prices for use in redispatch
 * Define independent DSR hours for each demand type (#144)
 * Disassociate EV DSR and EV V2G components (#140)
 * Add DC links into boundary constraints (#136)
