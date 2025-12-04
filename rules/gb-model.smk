@@ -745,6 +745,22 @@ rule create_chp_p_min_pu_profile:
         "../scripts/gb_model/create_chp_p_min_pu_profile.py"
 
 
+rule process_CfD_strike_prices:
+    message:
+        "get strike price for low carbon contracts"
+    params:
+        carrier_mapping=config["low_carbon_register"]["carrier_mapping"],
+        end_year=config["fes"]["year_range_incl"][0],
+    input:
+        register="data/gb-model/downloaded/low-carbon-contracts.csv",
+    output:
+        csv=resources("gb-model/CfD_strike_prices.csv"),
+    log:
+        logs("process_CfD_strike_prices.log"),
+    script:
+        "../scripts/gb_model/process_CfD_strike_prices.py"
+
+
 rule assign_costs:
     message:
         "Prepares costs file from technology-data of PyPSA-Eur and FES and assigns to powerplants"
