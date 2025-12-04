@@ -122,7 +122,7 @@ if __name__ == "__main__":
     set_scenario_config(snakemake)
 
     df_eur = pd.read_csv(snakemake.input.eur_data).query("Variable == 'Demand (TWh)'")
-    demands = [_load_demand(file) for file in snakemake.input.demands]
+    demands = [_load_demand(file) for file in snakemake.input.electricity_demands]
     df_gb = pd.concat(demands, axis=1).rename_axis(columns="load_type").stack()
     df_totals = pd.read_csv(
         snakemake.input.energy_totals, index_col=["country", "year"]

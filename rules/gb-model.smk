@@ -426,7 +426,7 @@ rule create_hydrogen_storage_table:
             for sheet in sheets.values()
         ],
     output:
-        hydrogen_storage=resources("gb-model/hydrogen_storage.csv"),
+        csv=resources("gb-model/H2_storage_capacity.csv"),
     log:
         logs("create_hydrogen_storage_table.log"),
     script:
@@ -687,7 +687,7 @@ rule distribute_eur_demands:
     input:
         eur_data=resources("gb-model/national_eur_data.csv"),
         energy_totals=resources("energy_totals.csv"),
-        demands=expand(
+        electricity_demands=expand(
             resources("gb-model/regional_{demand_type}_demand_annual.csv"),
             demand_type=config["fes"]["gb"]["demand"]["Technology Detail"].keys(),
         ),
@@ -745,7 +745,7 @@ rule scaled_demand_profile:
 
 use rule scaled_demand_profile as scaled_heat_demand_profile with:
     input:
-        gb_demand_annual=resources("gb-model/reigonal_{demand_type}_demand_annual.csv"),
+        gb_demand_annual=resources("gb-model/regional_{demand_type}_demand_annual.csv"),
         eur_demand_annual=resources("gb-model/eur_demand_annual.csv"),
         demand_shape=resources("gb-model/{demand_type}_demand_shape/{year}.csv"),
     wildcard_constraints:
@@ -754,7 +754,7 @@ use rule scaled_demand_profile as scaled_heat_demand_profile with:
 
 use rule scaled_demand_profile as scaled_ev_demand_profile with:
     input:
-        gb_demand_annual=resources("gb-model/reigonal_{demand_type}_demand_annual.csv"),
+        gb_demand_annual=resources("gb-model/regional_{demand_type}_demand_annual.csv"),
         eur_demand_annual=resources("gb-model/eur_demand_annual.csv"),
         demand_shape=resources("gb-model/{demand_type}_demand_shape.csv"),
         gb_demand_peak=resources("gb-model/regional_{demand_type}_peak.csv"),
