@@ -938,11 +938,14 @@ rule solve_constrained:
 rule prepare_constrained_network:
     message:
         "Prepare network for constrained optimization"
+    params:
+        bids_and_offers=config_provider("redispatch"),
     input:
-        network=resources("networks/composed_clustered_{year}.nc"),
+        network=resources("networks/composed_clustered/{year}.nc"),
+        unconstrained_result=RESULTS + "networks/unconstrained_clustered/{year}.nc",
     output:
-        network=resources("networks/constrained_clustered_{year}.nc"),
+        network=resources("networks/constrained_clustered/{year}.nc"),
     log:
-        logs("prepare_constrained_network_{year}.log"),
+        logs("prepare_constrained_network/{year}.log"),
     script:
         "../scripts/gb_model/prepare_constrained_network.py"
