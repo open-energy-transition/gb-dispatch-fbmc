@@ -64,13 +64,14 @@ def create_up_down_plants(network, result, bids_and_offers):
         down_limit = -result_component.dynamic.p / result_component.static.p_nom
 
         # Add bid and offer multipliers
-        bid_multiplier=bids_and_offers["bid_multiplier"]
-        offer_multiplier=bids_and_offers["offer_multiplier"]
-        g_up=g_up.assign(multiplier=g_up["carrier"].map(bid_multiplier)).fillna(1)
-        g_down=g_down.assign(multiplier=g_up["carrier"].map(offer_multiplier)).fillna(1)
+        bid_multiplier = bids_and_offers["bid_multiplier"]
+        offer_multiplier = bids_and_offers["offer_multiplier"]
+        g_up = g_up.assign(multiplier=g_up["carrier"].map(bid_multiplier)).fillna(1)
+        g_down = g_down.assign(multiplier=g_up["carrier"].map(offer_multiplier)).fillna(
+            1
+        )
         g_up["marginal_cost"] *= g_up["multiplier"]
         g_down["marginal_cost"] *= g_down["multiplier"]
-
 
         # Add generators that can increase dispatch
         network.add(
