@@ -108,10 +108,10 @@ def create_up_down_plants(
 
         # Add bid/offer multipliers and set strike prices
         g_up = _apply_multiplier_and_strike_prices(
-            g_up, bids_and_offers["bid_multiplier"], strike_prices
+            g_up, bids_and_offers["offer_multiplier"], strike_prices
         )
         g_down = _apply_multiplier_and_strike_prices(
-            g_down, bids_and_offers["offer_multiplier"], strike_prices
+            g_down, bids_and_offers["bid_multiplier"], strike_prices
         )
 
         # Add generators that can increase dispatch
