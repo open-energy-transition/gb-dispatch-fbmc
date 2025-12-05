@@ -943,6 +943,7 @@ rule prepare_constrained_network:
     input:
         network=resources("networks/composed_clustered/{year}.nc"),
         unconstrained_result=RESULTS + "networks/unconstrained_clustered/{year}.nc",
+        strike_prices=resources("gb-model/CfD_strike_prices.csv"),
     output:
         network=resources("networks/constrained_clustered/{year}.nc"),
     log:
