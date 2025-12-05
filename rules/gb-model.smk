@@ -966,3 +966,16 @@ rule get_renewable_payment_profile:
         logs("get_renewable_payment_profile/{year}.log"),
     script:
         "../scripts/gb_model/get_renewable_payment_profile.py"
+        
+rule calculate_interconnector_bid_offer_prices:
+    message: 
+        "Calculate bid/offer prices for interconnectors"
+    input:
+        unconstrained_result=RESULTS + "networks/unconstrained_clustered/{year}.nc"
+    output:
+        csv=resources("gb-model/interconnector_bids_and_offers/{year}.csv")
+    log:
+        logs("calculate_interconnector_bid_offer_prices/{year}.log")
+    script:
+        "../scripts/gb_model/calculate_interconnector_bid_offer_prices.py"
+    
