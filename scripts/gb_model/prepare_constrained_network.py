@@ -36,7 +36,7 @@ def fix_dispatch(constrianed_network, unconstrained_result):
 
         constrianed_network.components[comp.name].dynamic.p_max_pu = p_fix
         constrianed_network.components[comp.name].dynamic.p_min_pu = p_fix
-    
+
     logger.info("Fixed the dispatch of generators")
 
 
@@ -134,6 +134,7 @@ def create_up_down_plants(
         )
 
         logger.info("Added generators that can mimic increase and decrease in dispatch")
+
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
