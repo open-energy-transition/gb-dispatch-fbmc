@@ -17,7 +17,7 @@ from scripts._helpers import configure_logging, set_scenario_config
 logger = logging.getLogger(__name__)
 
 
-def fix_dispatch(constrianed_network, unconstrained_result):
+def fix_dispatch(constrained_network, unconstrained_result):
     """
     Fix dispatch of generators and storage units based on the result of unconstrained optimization
 
@@ -34,8 +34,8 @@ def fix_dispatch(constrianed_network, unconstrained_result):
             continue
         p_fix = comp.dynamic.p / comp.static.p_nom
 
-        constrianed_network.components[comp.name].dynamic.p_max_pu = p_fix
-        constrianed_network.components[comp.name].dynamic.p_min_pu = p_fix
+        constrained_network.components[comp.name].dynamic.p_max_pu = p_fix
+        constrained_network.components[comp.name].dynamic.p_min_pu = p_fix
 
     logger.info("Fixed the dispatch of generators")
 
