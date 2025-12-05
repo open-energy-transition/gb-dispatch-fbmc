@@ -36,6 +36,8 @@ def fix_dispatch(constrianed_network, unconstrained_result):
 
         constrianed_network.components[comp.name].dynamic.p_max_pu = p_fix
         constrianed_network.components[comp.name].dynamic.p_min_pu = p_fix
+    
+    logger.info("Fixed the dispatch of generators")
 
 
 def _apply_multiplier_and_strike_prices(
@@ -131,6 +133,7 @@ def create_up_down_plants(
             **g_down.drop(["p_max_pu", "p_min_pu"], axis=1),
         )
 
+        logger.info("Added generators that can mimic increase and decrease in dispatch")
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
@@ -154,3 +157,4 @@ if __name__ == "__main__":
     create_up_down_plants(network, unconstrained_result, bids_and_offers, strike_prices)
 
     network.export_to_netcdf(snakemake.output.network)
+    logger.info(f"Exported network to {snakemake.output.network}")
