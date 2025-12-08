@@ -35,7 +35,7 @@ def fix_dispatch(constrained_network, unconstrained_result):
         p_fix = comp.dynamic.p / comp.static.p_nom
 
         # Filter only GB plants
-        p_fix = p_fix.filter(like='GB')
+        p_fix = p_fix.filter(like="GB")
 
         constrained_network.components[comp.name].dynamic.p_max_pu = p_fix
         constrained_network.components[comp.name].dynamic.p_min_pu = p_fix
@@ -98,7 +98,7 @@ def create_up_down_plants(
     for comp in constrained_network.components:
         if comp.name not in ["Generator", "StorageUnit"]:
             continue
-        
+
         g_up = comp.static.copy()
         g_down = comp.static.copy()
 
