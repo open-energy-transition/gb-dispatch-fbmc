@@ -967,9 +967,9 @@ rule get_renewable_payment_profile:
     script:
         "../scripts/gb_model/get_renewable_payment_profile.py"
         
-rule calculate_interconnector_bid_offer_prices:
+rule get_EU_generator_bid_offer_profile:
     message: 
-        "Calculate bid/offer prices for interconnectors"
+        "Calculate bid/offer prices for EU marginal generator"
     params:
         bids_and_offers=config_provider("redispatch"),
         countries=config_provider("countries")
@@ -977,9 +977,9 @@ rule calculate_interconnector_bid_offer_prices:
         unconstrained_result=RESULTS + "networks/unconstrained_clustered/{year}.nc",
         strike_prices=resources("gb-model/CfD_strike_prices.csv"),
     output:
-        csv=resources("gb-model/interconnector_bids_and_offers/{year}.csv"),
+        csv=resources("gb-model/bids_and_offers/EU_generator_{year}.csv"),
     log:
-        logs("calculate_interconnector_bid_offer_prices/{year}.log"),
+        logs("get_EU_generator_bid_offer_profile/{year}.log"),
     script:
-        "../scripts/gb_model/calculate_interconnector_bid_offer_prices.py"
+        "../scripts/gb_model/get_EU_generator_bid_offer_profile.py"
     

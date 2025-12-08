@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 """
-Calculate interconnector bids and offer prices
+Calculate EU marginal generator bids and offer price profiles
 """
 
 import logging
@@ -17,8 +17,15 @@ from scripts._helpers import configure_logging, set_scenario_config
 
 logger = logging.getLogger(__name__)
 
-def extract_marginal_price_profiles(network):
+def extract_marginal_price_profiles(network: pypsa.Network):
+    """
+    Extract marginal prices at the buses
 
+    Parameters
+    ----------
+    network: pypsa.Network
+        Unconstrained network optimization result
+    """
     ac_buses = network.buses.query("carrier == 'AC'").index
     marginal_price_profile = network.buses_t.marginal_price[ac_buses]
 
@@ -26,12 +33,28 @@ def extract_marginal_price_profiles(network):
 
 
 def filter_interconnectors(df):
+    """
+    Filter to obtain links between GB and EU
+    """
     m1 = df["bus0"].str.startswith("GB")
     m2 = df["bus1"].str.startswith("GB")
 
     return df[(m1 & ~m2) | (~m1 & m2)].query("carrier == 'DC'")
 
-def compute_interconnector_fee(marginal_price_profile, unconstrained_result):
+def compute_interconnector_fee(
+        marginal_price_profile: pd.DataFrame, 
+        unconstrained_result: pypsa.Network
+    ) -> pd.DataFrame:
+    """
+    Compute the spread between the marginal costs of GB and EU node
+    
+    Parameters:
+    -----------
+    marginal_price_profile: pd.DataFrame
+        Dataframe of marginal costs at each bus
+    unconstrained_result: pypsa.Network
+        pypsa network with the results of the unconstrained optimization
+    """
 
     interconnectors = filter_interconnectors(unconstrained_result.links)
     fee_profile=pd.DataFrame(index=unconstrained_result.snapshots, columns=interconnectors.index)
@@ -42,13 +65,40 @@ def compute_interconnector_fee(marginal_price_profile, unconstrained_result):
         fee = (bus0_marginal_price - bus1_marginal_price).abs()
         fee_profile[idx] = fee
 
+    logger.info("Calculated interconnector fee")
     return fee_profile
 
 
-def get_price_setting_carrier(x, generator_marginal_prices, bid_multiplier, offer_multiplier, strike_prices):
-    marginal_gen = (generator_marginal_prices - x).abs().sort_values()
+def calc_bid_offer_multiplier(
+        gb_marginal_electricity_price: float, 
+        generator_marginal_prices: pd.DataFrame, 
+        bid_multiplier: dict[str, list], 
+        offer_multiplier: dict[str, list], 
+        strike_prices: dict[str, list]
+    ) -> tuple[float]:
+    """
+    Calculate bid/offer multiplier profile based on the marginal generator at each EU node for every time step
+
+    Parameters:
+    -----------
+    gb_marginal_electricity_price: float
+        Marginal cost of electricity at the GB node for the interconnector
+    generator_marginal_prices: pd.DataFrame
+        Dataframe of marginal costs for each carrier at the EU node
+    bid_multiplier: dict[str, list]
+        Multiplier for bids for conventional carriers
+    offer_multiplier: dict[str, list]
+        Multiplier for offers for conventional carriers
+    strike_prices: dict[str, list]
+        Strike prices for renewable carriers
+    """
+
+    # Calculate marginal generator at the EU node
+    marginal_gen = (generator_marginal_prices - gb_marginal_electricity_price).abs().sort_values()
     marginal_carrier = marginal_gen.index[0]
     marginal_gen_cost = marginal_gen.iloc[0]
+
+    # Adjust marginal cost for both offer and bid
     if marginal_carrier in strike_prices.keys():
         return strike_prices[marginal_carrier], strike_prices[marginal_carrier]
     elif marginal_carrier in bid_multiplier.keys():
@@ -57,7 +107,14 @@ def get_price_setting_carrier(x, generator_marginal_prices, bid_multiplier, offe
         return 1,1
 
 
-def get_EU_marginal_generator(countries, marginal_price_profile, unconstrained_result, bids_and_offers_multipliers, strike_prices):
+def get_EU_marginal_generator(
+        countries: list[str], 
+        marginal_price_profile: pd.DataFrame, 
+        unconstrained_result: pypsa.Network, 
+        bids_and_offers_multipliers: dict[dict[str, list]], 
+        strike_prices: dict[str, list]
+    ) -> pd.DataFrame:
+
     countries.remove('GB')
     EU_buses = unconstrained_result.buses.query("country in @countries and carrier == 'AC'").index
     columns = [f"{x} bid" for x in EU_buses] + [f"{x} offer" for x in EU_buses]
@@ -66,6 +123,7 @@ def get_EU_marginal_generator(countries, marginal_price_profile, unconstrained_r
     bid_multiplier = bids_and_offers_multipliers['bid_multiplier']
     offer_multiplier = bids_and_offers_multipliers['offer_multiplier']
 
+    # Calculate bid and offer profile for the marginal generator at each EU node
     for EU_bus in EU_buses:
         generator_marginal_prices=(unconstrained_result.generators
                                 .query("bus == @EU_bus")
@@ -73,46 +131,8 @@ def get_EU_marginal_generator(countries, marginal_price_profile, unconstrained_r
                                 .marginal_cost.mean()
                                 .round(3)
                                 )   
-        EU_marginal_gen_profile[[f"{EU_bus} bid",f"{EU_bus} offer"]]=marginal_price_profile[EU_bus].apply(lambda x: get_price_setting_carrier(np.round(x,3), generator_marginal_prices, bid_multiplier, offer_multiplier, strike_prices)).tolist()
+        EU_marginal_gen_profile[[f"{EU_bus} bid",f"{EU_bus} offer"]]=marginal_price_profile[EU_bus].apply(lambda x: calc_bid_offer_multiplier(np.round(x,3), generator_marginal_prices, bid_multiplier, offer_multiplier, strike_prices)).tolist()
     return EU_marginal_gen_profile
-
-def _apply_multiplier_and_strike_prices(
-    df: pd.DataFrame,
-    multiplier: dict[str, float],
-    strike_prices: dict[str, float],
-) -> pd.DataFrame:
-    """
-    Apply bid/offer multiplier and strike prices
-
-    Parameters
-    ----------
-    df: pd.DataFrame
-        Generator dataframe
-    multiplier: dict[str, float]
-        Mapping of conventional carrier to multiplier
-    strike_prices: dict[str, float]
-        Mapping of renewable carrier to strike price
-    """
-    breakpoint()
-    df_multiplier = df.map(multiplier).fillna(1)
-
-    df["marginal_cost"] *= df["multiplier"]
-
-    df["marginal_cost"] = (
-        df["carrier"]
-        .map(strike_prices)
-        .where(df["carrier"].isin(strike_prices), df["marginal_cost"])
-    )
-
-    return df
-
-def calc_generator_bids_offers(EU_marginal_gen_profile, countries, bids_and_offers_multipliers, strike_prices):
-    columns = [f"{x} bid" for x in countries] + [f"{x} offer" for x in countries]
-    EU_bid_offer_profile = pd.DataFrame(index=EU_marginal_gen_profile.index, columns=columns)
-    for country in countries:
-        EU_bid_offer_profile[f"{country} bid"] = _apply_multiplier_and_strike_prices(EU_marginal_gen_profile[country], bids_and_offers_multipliers['bid_multiplier'], strike_prices)
-
-
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
@@ -137,5 +157,8 @@ if __name__ == "__main__":
 
     EU_marginal_gen_profile = get_EU_marginal_generator(countries, marginal_price_profile, unconstrained_result, bids_and_offers_multipliers, strike_prices)
 
-    EU_marginal_gen_profile.to_csv(snakemake.output.csv)
-    logger.info(f"Exported profile to {snakemake.output.csv}")
+    interconnector_fee_profile.to_csv(snakemake.output.interconnector_fee)
+    logger.info(f"Exported interconnector fee profile to {snakemake.output.interconnector_fee}")
+
+    EU_marginal_gen_profile.to_csv(snakemake.output.generator_csv)
+    logger.info(f"Exported EU marginal generator bid/offer profile to {snakemake.output.generator_csv}")
