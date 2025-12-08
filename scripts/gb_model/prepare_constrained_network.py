@@ -34,6 +34,9 @@ def fix_dispatch(constrained_network, unconstrained_result):
             continue
         p_fix = comp.dynamic.p / comp.static.p_nom
 
+        # Filter only GB plants
+        p_fix = p_fix.filter(like='GB')
+
         constrained_network.components[comp.name].dynamic.p_max_pu = p_fix
         constrained_network.components[comp.name].dynamic.p_min_pu = p_fix
 
@@ -90,12 +93,18 @@ def create_up_down_plants(
     strike_prices: dict[str, float]
         Strike prices for renewable carriers
     """
+    gb_buses = unconstrained_result.buses.query("country == 'GB'").index
 
     for comp in constrained_network.components:
         if comp.name not in ["Generator", "StorageUnit"]:
             continue
+        
         g_up = comp.static.copy()
         g_down = comp.static.copy()
+
+        # Filter GB plants
+        g_up = g_up.query("bus in @gb_buses")
+        g_down = g_down.query("bus in @gb_buses")
 
         # Compute dispatch limits for the up and down generators
         result_component = unconstrained_result.components[comp.name]
