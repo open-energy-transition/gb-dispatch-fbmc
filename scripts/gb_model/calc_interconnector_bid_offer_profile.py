@@ -1,0 +1,147 @@
+# SPDX-FileCopyrightText: gb-dispatch-model contributors
+#
+# SPDX-License-Identifier: MIT
+
+"""
+Calculate interconnector bids and offer prices
+"""
+
+import logging
+from pathlib import Path
+
+import pandas as pd
+import pypsa
+
+from scripts._helpers import configure_logging, set_scenario_config
+
+logger = logging.getLogger(__name__)
+
+
+def filter_interconnectors(df):
+    """
+    Filter to obtain links between GB and EU
+    """
+    m1 = df["bus0"].str.startswith("GB")
+    m2 = df["bus1"].str.startswith("GB")
+
+    return df[(m1 & ~m2) | (~m1 & m2)].query("carrier == 'DC'")
+
+
+def calc_interconnector_bids_and_offers(
+    interconnectors: pd.DataFrame,
+    EU_marginal_gen_profile: pd.DataFrame,
+    interconnector_fee_profile: pd.DataFrame,
+) -> tuple[pd.DataFrame]:
+    """
+    Calculate the bids and offers for import, export and floating condition of each interconnector
+
+    Parameters
+    ----------
+        interconnectors: pd.DataFrame
+            Dataframe of interconnectors from the pypsa network.links
+        EU_marginal_gen_profile: pd.DataFrame
+            bid / offer for the marginal generator at each EU bus
+        interconnector_fee_profile: pd.DataFrame
+            Spread in marginal prices for each interconnector
+    """
+    (
+        import_bid_profile,
+        import_offer_profile,
+        float_import_profile,
+        export_bid_profile,
+        export_offer_profile,
+        float_export_profile,
+    ) = (
+        pd.DataFrame(
+            index=interconnector_fee_profile.index, columns=interconnectors.index
+        )
+        for _ in range(6)
+    )
+
+    for connector, row in interconnectors.iterrows():
+        if "GB" in row["bus0"]:
+            gb_bus = row["bus0"]
+            EU_bus = row["bus1"]
+        else:
+            gb_bus = row["bus1"]
+            EU_bus = row["bus0"]
+
+        fee = interconnector_fee_profile[connector]
+        p_gb = unconstrained_result.buses_t.marginal_price[gb_bus]
+        p_eu = unconstrained_result.buses_t.marginal_price[EU_bus]
+        bid = EU_marginal_gen_profile[f"{EU_bus} bid"]
+        offer = EU_marginal_gen_profile[f"{EU_bus} offer"]
+        loss = 0
+
+        # Import bid profile
+        import_bid_profile[connector] = p_gb - p_eu * (1 + loss) - bid * (1 + loss)
+
+        # Import offer profile / Import float profile
+        import_offer_profile[connector], float_import_profile[connector] = [
+            fee + offer * (1 + loss)
+        ] * 2
+
+        # Export float profile / Export bid profile
+        float_export_profile[connector], export_bid_profile[connector] = [
+            fee - bid * (1 - loss)
+        ] * 2
+
+        # Export offer profile
+        export_offer_profile[connector] = p_eu * (1 - loss) - p_gb + offer * (1 - loss)
+
+    return (
+        import_bid_profile,
+        import_offer_profile,
+        float_import_profile,
+        float_export_profile,
+        export_bid_profile,
+        export_offer_profile,
+    )
+
+
+if __name__ == "__main__":
+    if "snakemake" not in globals():
+        from scripts._helpers import mock_snakemake
+
+        snakemake = mock_snakemake(Path(__file__).stem, year=2022)
+
+    configure_logging(snakemake)
+    set_scenario_config(snakemake)
+
+    # Load input networks and parameters
+    unconstrained_result = pypsa.Network(snakemake.input.unconstrained_result)
+    interconnector_fee_profile = pd.read_csv(
+        snakemake.input.interconnector_fee_profile,
+        index_col="snapshot",
+        parse_dates=True,
+    )
+    EU_marginal_gen_profile = pd.read_csv(
+        snakemake.input.EU_marginal_gen_profile, index_col="snapshot", parse_dates=True
+    )
+
+    countries = snakemake.params.countries
+    countries.remove("GB")
+
+    interconnectors = filter_interconnectors(unconstrained_result.links)
+
+    import_bid, import_offer, float_import, float_export, export_bid, export_offer = (
+        calc_interconnector_bids_and_offers(
+            interconnectors, EU_marginal_gen_profile, interconnector_fee_profile
+        )
+    )
+
+    [
+        file.to_csv(name)
+        for file, name in zip(
+            [
+                import_bid,
+                import_offer,
+                float_import,
+                float_export,
+                export_bid,
+                export_offer,
+            ],
+            snakemake.output,
+        )
+    ]
+    logger.info(f"Exported interconnector bid/offer profiles to {snakemake.output}")

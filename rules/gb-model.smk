@@ -968,18 +968,51 @@ rule get_renewable_payment_profile:
         "../scripts/gb_model/get_renewable_payment_profile.py"
         
 rule get_EU_generator_bid_offer_profile:
-    message: 
+    message:
         "Calculate bid/offer prices for EU marginal generator"
     params:
         bids_and_offers=config_provider("redispatch"),
-        countries=config_provider("countries")
+        countries=config_provider("countries"),
     input:
         unconstrained_result=RESULTS + "networks/unconstrained_clustered/{year}.nc",
         strike_prices=resources("gb-model/CfD_strike_prices.csv"),
     output:
-        csv=resources("gb-model/bids_and_offers/EU_generator_{year}.csv"),
+        generator_csv=resources("gb-model/bids_and_offers/EU_generator_{year}.csv"),
+        interconnector_fee=resources(
+            "gb-model/bids_and_offers/interconnector_fee_{year}.csv"
+        ),
     log:
         logs("get_EU_generator_bid_offer_profile/{year}.log"),
     script:
         "../scripts/gb_model/get_EU_generator_bid_offer_profile.py"
-    
+
+
+rule calc_interconnector_bid_offer_profile:
+    message:
+        "Calculate interconnector bid/offer profiles"
+    params:
+        countries=config_provider("countries"),
+    input:
+        unconstrained_result=RESULTS + "networks/unconstrained_clustered/{year}.nc",
+        interconnector_fee_profile=resources(
+            "gb-model/bids_and_offers/interconnector_fee_{year}.csv"
+        ),
+        EU_marginal_gen_profile=resources(
+            "gb-model/bids_and_offers/EU_generator_{year}.csv"
+        ),
+    output:
+        expand(
+            resources("gb-model/bids_and_offers/{profile}.csv"),
+            profile=[
+                "import_bid_{year}",
+                "import_offer_{year}",
+                "float_import_{year}",
+                "float_export_{year}",
+                "export_bid_{year}",
+                "export_offer_{year}",
+            ],
+        ),
+    log:
+        logs("calc_interconnector_bid_offer_profile/{year}.log"),
+    script:
+        "../scripts/gb_model/calc_interconnector_bid_offer_profile.py"
