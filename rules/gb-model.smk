@@ -943,10 +943,26 @@ rule prepare_constrained_network:
     input:
         network=resources("networks/composed_clustered/{year}.nc"),
         unconstrained_result=RESULTS + "networks/unconstrained_clustered/{year}.nc",
-        strike_prices=resources("gb-model/CfD_strike_prices.csv"),
+        renewable_payment_profile=resources(
+            "gb-model/renewable_payment_profile/{year}.csv"
+        ),
     output:
         network=resources("networks/constrained_clustered/{year}.nc"),
     log:
         logs("prepare_constrained_network/{year}.log"),
     script:
         "../scripts/gb_model/prepare_constrained_network.py"
+
+
+rule get_renewable_payment_profile:
+    message:
+        "Compute the difference in market rate and strike prices as a profile for renewable generators"
+    input:
+        unconstrained_result=RESULTS + "networks/unconstrained_clustered/{year}.nc",
+        strike_prices=resources("gb-model/CfD_strike_prices.csv"),
+    output:
+        csv=resources("gb-model/renewable_payment_profile/{year}.csv"),
+    log:
+        logs("get_renewable_payment_profile/{year}.log"),
+    script:
+        "../scripts/gb_model/get_renewable_payment_profile.py"
