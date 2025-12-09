@@ -180,7 +180,7 @@ def _load_powerplants(
     pd.DataFrame
         Powerplant data filtered by year
     """
-    ppl = pd.read_csv(powerplants_path, index_col=0, dtype={"bus": "str"})
+    ppl = pd.read_csv(powerplants_path, index_col="name", dtype={"bus": "str"})
     ppl = ppl[ppl.build_year == year]
     ppl["max_hours"] = 0  # Initialize max_hours column
 
@@ -949,6 +949,102 @@ def attach_wind_and_solar(
             )
 
 
+def add_H2(
+    n: pypsa.Network,
+    ppl: pd.DataFrame,
+    year: int,
+    regional_H2_demand_annual_inc_eur: str,
+    regional_off_grid_electrolysis_electricity_demand_inc_eur: str,
+    regional_H2_storage_capacity_inc_eur_inc_tech_data: str,
+    regional_grid_electrolysis_capacities_inc_eur_inc_tech_data: str,
+) -> None:
+    demand = _load_regional_data(regional_H2_demand_annual_inc_eur, year)
+    demand_fixed = _load_regional_data(
+        regional_off_grid_electrolysis_electricity_demand_inc_eur, year
+    )
+    storage_caps = _load_powerplants(
+        regional_H2_storage_capacity_inc_eur_inc_tech_data, year
+    )
+    electrolysis_caps = _load_powerplants(
+        regional_grid_electrolysis_capacities_inc_eur_inc_tech_data, year
+    )
+
+    n.add("Carrier", "H2")
+    all_nodes = n.buses[n.buses.carrier == "AC"].index
+    n.add("Bus", all_nodes, suffix=" H2", carrier="H2", unit="MWh_LHV")
+
+    n.add(
+        "Load",
+        demand.index,
+        suffix=" H2 demand",
+        bus=demand.index + " H2",
+        carrier="H2",
+        p_set=demand.p_set / n.snapshot_weightings.objective.sum(),
+    )
+    n.add(
+        "Load",
+        demand_fixed.index,
+        suffix=" Electricity for off-grid electrolysis",
+        bus=demand_fixed.index,
+        p_set=demand_fixed.p_set / n.snapshot_weightings.objective.sum(),
+    )
+
+    n.add("Carrier", "H2 Electrolysis")
+    n.add(
+        "Link",
+        electrolysis_caps.index,
+        bus1=electrolysis_caps.bus + " H2",
+        bus0=electrolysis_caps.bus,
+        p_nom=electrolysis_caps.p_nom,
+        carrier="H2 Electrolysis",
+        efficiency=electrolysis_caps.efficiency,
+        marginal_cost=electrolysis_caps.marginal_cost,
+        capital_cost=0,
+        lifetime=electrolysis_caps.lifetime,
+    )
+    if not (fuel_cells := ppl[ppl.carrier == "hydrogen fuel cell"]).empty:
+        n.add("Carrier", "H2 fuel cell")
+        n.add(
+            "Link",
+            fuel_cells.index,
+            bus0=fuel_cells.bus + " H2",
+            bus1=fuel_cells.bus,
+            p_nom=fuel_cells.p_nom,
+            carrier="H2 Fuel Cell",
+            marginal_cost=fuel_cells.marginal_cost,
+            efficiency=fuel_cells.efficiency,
+            # NB: fixed cost is per MWel
+            capital_cost=0,
+            lifetime=fuel_cells.lifetime,
+        )
+    if not (turbines := ppl[ppl.carrier == "hydrogen turbine"]).empty:
+        n.add("Carrier", "H2 Turbine")
+        n.add(
+            "Link",
+            turbines.index,
+            bus0=turbines.bus + " H2",
+            bus1=turbines.bus,
+            carrier="H2 Turbine",
+            p_nom=turbines.p_nom,
+            marginal_cost=turbines.marginal_cost,
+            efficiency=turbines.efficiency,
+            capital_cost=0,
+            lifetime=turbines.lifetime,
+        )
+    n.add("Carrier", "H2 Store")
+    n.add(
+        "Store",
+        storage_caps.index,
+        bus=storage_caps.bus + " H2",
+        e_nom=storage_caps.e_nom,
+        e_cyclic=True,
+        carrier="H2 Store",
+        marginal_cost=storage_caps.marginal_cost,
+        capital_cost=0,
+        lifetime=storage_caps.lifetime,
+    )
+
+
 def _prepare_costs(
     ppl: pd.DataFrame,
     year: int,
@@ -1068,6 +1164,7 @@ def compose_network(
     ev_data: dict[str, str],
     prune_lines: list[dict[str, int]],
     dsr: dict[str, str],
+    H2_data: dict[str, Any],
     enable_chp: bool,
     dsr_hours_dict: dict[str, list],
     year: int,
@@ -1186,6 +1283,8 @@ def compose_network(
         ev_availability_profile,
     )
 
+    add_H2(network, ppl, year, **H2_data)
+
     attach_dc_interconnectors(
         network, interconnectors_path, year, interconnectors_availability_path
     )
@@ -1232,6 +1331,7 @@ if __name__ == "__main__":
         demands=_input_list_to_dict(snakemake.input.demands, parent=True),
         ev_data=_input_list_to_dict(snakemake.input.ev_data),
         dsr=_input_list_to_dict(snakemake.input.dsr),
+        H2_data=_input_list_to_dict(snakemake.input.H2_data),
         enable_chp=snakemake.params.enable_chp,
         prune_lines=snakemake.params.prune_lines,
         dsr_hours_dict=snakemake.params.dsr_hours_dict,
