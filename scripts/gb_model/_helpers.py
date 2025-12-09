@@ -139,3 +139,13 @@ def time_difference_hours(country):
     diff = offset_country - offset_gb
 
     return int(diff)
+
+
+def filter_interconnectors(df):
+    """
+    Filter to obtain links between GB and EU
+    """
+    m1 = df["bus0"].str.startswith("GB")
+    m2 = df["bus1"].str.startswith("GB")
+
+    return df[(m1 & ~m2) | (~m1 & m2)].query("carrier == 'DC'")

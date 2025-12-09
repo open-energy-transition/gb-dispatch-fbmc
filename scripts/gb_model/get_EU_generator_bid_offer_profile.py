@@ -13,12 +13,12 @@ import numpy as np
 import pandas as pd
 import pypsa
 
-from scripts._helpers import configure_logging, set_scenario_config
+from scripts._helpers import configure_logging, set_scenario_config, filter_interconnectors
 
 logger = logging.getLogger(__name__)
 
 
-def extract_marginal_price_profiles(network: pypsa.Network):
+def _extract_marginal_price_profiles(network: pypsa.Network):
     """
     Extract marginal prices at the buses
 
@@ -31,17 +31,6 @@ def extract_marginal_price_profiles(network: pypsa.Network):
     marginal_price_profile = network.buses_t.marginal_price[ac_buses]
 
     return marginal_price_profile
-
-
-def filter_interconnectors(df):
-    """
-    Filter to obtain links between GB and EU
-    """
-    m1 = df["bus0"].str.startswith("GB")
-    m2 = df["bus1"].str.startswith("GB")
-
-    return df[(m1 & ~m2) | (~m1 & m2)].query("carrier == 'DC'")
-
 
 def compute_interconnector_fee(
     marginal_price_profile: pd.DataFrame, unconstrained_result: pypsa.Network
@@ -174,7 +163,7 @@ if __name__ == "__main__":
     bids_and_offers_multipliers = snakemake.params.bids_and_offers
     countries = snakemake.params.countries
 
-    marginal_price_profile = extract_marginal_price_profiles(unconstrained_result)
+    marginal_price_profile = _extract_marginal_price_profiles(unconstrained_result)
 
     interconnector_fee_profile = compute_interconnector_fee(
         marginal_price_profile, unconstrained_result

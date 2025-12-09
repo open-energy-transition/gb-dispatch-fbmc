@@ -12,19 +12,9 @@ from pathlib import Path
 import pandas as pd
 import pypsa
 
-from scripts._helpers import configure_logging, set_scenario_config
+from scripts._helpers import configure_logging, set_scenario_config, filter_interconnectors
 
 logger = logging.getLogger(__name__)
-
-
-def filter_interconnectors(df):
-    """
-    Filter to obtain links between GB and EU
-    """
-    m1 = df["bus0"].str.startswith("GB")
-    m2 = df["bus1"].str.startswith("GB")
-
-    return df[(m1 & ~m2) | (~m1 & m2)].query("carrier == 'DC'")
 
 
 def calc_interconnector_bids_and_offers(
@@ -118,9 +108,6 @@ if __name__ == "__main__":
     EU_marginal_gen_profile = pd.read_csv(
         snakemake.input.EU_marginal_gen_profile, index_col="snapshot", parse_dates=True
     )
-
-    countries = snakemake.params.countries
-    countries.remove("GB")
 
     interconnectors = filter_interconnectors(unconstrained_result.links)
 

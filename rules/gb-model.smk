@@ -990,8 +990,6 @@ rule get_EU_generator_bid_offer_profile:
 rule calc_interconnector_bid_offer_profile:
     message:
         "Calculate interconnector bid/offer profiles"
-    params:
-        countries=config_provider("countries"),
     input:
         unconstrained_result=RESULTS + "networks/unconstrained_clustered/{year}.nc",
         interconnector_fee_profile=resources(
