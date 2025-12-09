@@ -63,12 +63,15 @@ def _apply_multiplier_and_strike_prices(
     df = df.assign(multiplier=df["carrier"].map(multiplier)).fillna(1)
 
     df["marginal_cost"] *= df["multiplier"]
-
+    breakpoint()
     df["marginal_cost"] = (
         df["carrier"]
         .map(strike_prices)
         .where(df["carrier"].isin(strike_prices), df["marginal_cost"])
     )
+
+    undefined_multipliers=[x for x in df['carrier'].unique() if x not in (strike_prices | multiplier).keys()]
+    logger.warning(f"Neither bid/offer multiplier nor strike price provided for the carriers: {undefined_multipliers}")
 
     return df
 

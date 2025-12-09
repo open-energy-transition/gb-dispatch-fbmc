@@ -140,7 +140,7 @@ low_carbon_register:
 solving:
   options:
     clip_p_max_pu: 1.e-2
-    load_shedding: false
+    load_shedding: 6000 #£/MWh - based on `value_of_lost_load` from (https://www.nationalgrid.com/sites/default/files/documents/Long-term%20Market%20and%20Network%20Constraint%20Modelling.pdf)
     curtailment_mode: false
     noisy_costs: true
     skip_iterations: true
@@ -149,7 +149,6 @@ solving:
   solver:
     name: gurobi
     options: gurobi-default
-    # options: gurobi-default
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#electricity
 electricity:
@@ -1270,4 +1269,3 @@ redispatch:
     oil: 4.16
     OCGT: 1.31
     CCGT: 1.63 #using same value as that of gas
-  value_of_lost_load: 6000 £/MWh #Cost if load shedding in applied
