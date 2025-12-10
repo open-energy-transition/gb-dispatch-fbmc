@@ -70,6 +70,8 @@ def to_numeric(series: pd.Series) -> pd.Series:
 
 def standardize_year(series: pd.Series) -> pd.Series:
     """Standardize year format in a pandas Series."""
+    if series.dtype.kind == "M":
+        series = series.dt.year
     if series.dtype == "object" and "-" in str(series.iloc[0]):
         series = pd.to_datetime(series).dt.year
     return series.astype(int) if series.dtype == "object" else series
@@ -112,7 +114,7 @@ def parse_flexibility_data(
 
     # Select scenario
     df_flexibility = df_flexibility[
-        df_flexibility["Scenario"].str.lower() == fes_scenario
+        df_flexibility["Scenario"].str.lower() == fes_scenario.lower()
     ]
 
     detail_data = df_flexibility.copy()

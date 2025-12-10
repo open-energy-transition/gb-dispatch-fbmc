@@ -37,9 +37,7 @@ if __name__ == "__main__":
     carrier_mapping = snakemake.params.carrier_mapping
 
     df_flexibility = parse_flexibility_data(
-        flexibility_data,
-        fes_scenario,
-        year_range,
+        flexibility_data, fes_scenario, year_range, carrier_mapping
     )
 
     df_flexibility = (df_flexibility * 1000).to_frame("p_nom")  # Convert GW to MW

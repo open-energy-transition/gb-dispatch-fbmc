@@ -50,7 +50,7 @@ def parse_ev_v2g_storage_data(storage_sheet_path: str, scenario: str) -> pd.Data
     )
 
     # Pre-format dataframe
-    df_storage = pre_format(df_storage.reset_index()).set_index("year")
+    df_storage = pre_format(df_storage.reset_index()).set_index("year").data
 
     return df_storage
 
@@ -77,11 +77,11 @@ def interpolate_storage_data(
     # Compute energy to power ratio
     energy_to_power_ratio = df_storage / df_flexibility.loc[df_storage.index]
     logger.info(
-        f"Computed energy to power ratio for EV V2G storage: {(-energy_to_power_ratio['data']).to_dict()}"
+        f"Computed energy to power ratio for EV V2G storage: {(-energy_to_power_ratio).to_dict()}"
     )
 
     # Compute mean energy to power ratio
-    mean_energy_to_power_ratio = energy_to_power_ratio["data"].mean()
+    mean_energy_to_power_ratio = energy_to_power_ratio.mean()
 
     # Determine storage capacity based on flexibility data and energy to power ratio
     df_storage_interp = df_flexibility * mean_energy_to_power_ratio
@@ -93,10 +93,7 @@ def interpolate_storage_data(
     ]
 
     # Convert GWh to MWh
-    df_storage_interp["data"] = df_storage_interp["data"] * 1000
-
-    # Set -0.0 to 0 with abs
-    df_storage_interp["data"] = df_storage_interp["data"].abs()
+    df_storage_interp["data"] = (df_storage_interp.data * 1000).abs()
 
     # Set name as MWh
     df_storage_interp = df_storage_interp.rename(columns={"data": "MWh"}).set_index(
