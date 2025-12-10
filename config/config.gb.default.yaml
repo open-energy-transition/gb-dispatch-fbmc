@@ -917,6 +917,7 @@ fes:
         Non-renewable CHP: CHP
         Storage: Store
 
+
     demand:
       Technology Detail:
         baseline_electricity: ["baseline demand"]
@@ -927,12 +928,20 @@ fes:
         electrified_heating_technologies: ["Electric resistive", "ASHP", "GSHP"]
 
     flexibility:
-      Technology Detail:
-        ev_dsr: "smart charging impact at peak"
-        ev_v2g: "v2g impact at peak"
-        residential_dsr: "residential peak shifting (smart/touts effect)"
-        iandc_dsr: "i&c dsr impact at peak (processes)"
-        iandc_heat_dsr: "i&c dsr impact at peak (heat)"
+      carrier_mapping:
+        battery:
+          Data item: "Electricity storage energy storage potential"
+          Detail: "Battery"
+        ev_v2g:
+          Detail: "V2G impact at peak"
+        ev_dsr:
+          Detail: "smart charging impact at peak"
+        residential_dsr:
+          Detail: "residential peak shifting (smart/touts effect)"
+        iandc_dsr:
+          Detail: "i&c dsr impact at peak (processes)"
+        iandc_heat_dsr:
+          Detail: "i&c dsr impact at peak (heat)"
       regional_distribution_reference:
         ev_dsr: ["v2g"]
         ev_v2g: ["v2g"]

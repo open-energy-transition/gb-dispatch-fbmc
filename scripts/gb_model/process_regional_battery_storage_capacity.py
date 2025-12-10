@@ -97,10 +97,7 @@ if __name__ == "__main__":
         flexibility_df,
         snakemake.params.scenario,
         snakemake.params.year_range,
-        {
-            "Data item": "Electricity storage energy storage potential",
-            "Detail": "Battery",
-        },
+        snakemake.params.carrier_mapping,
     )
     battery_capacity_mwh = battery_capacity * 1000  # Convert GWh to MWh
     # Parse input data

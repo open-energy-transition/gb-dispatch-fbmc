@@ -34,10 +34,12 @@ if __name__ == "__main__":
     fes_scenario = snakemake.params.scenario
     year_range = snakemake.params.year_range
     flexibility_type = snakemake.wildcards.flexibility_type
-    technology_detail = snakemake.params.technology_detail[flexibility_type]
+    carrier_mapping = snakemake.params.carrier_mapping
 
     df_flexibility = parse_flexibility_data(
-        flexibility_data, fes_scenario, year_range, {"Detail": technology_detail}
+        flexibility_data,
+        fes_scenario,
+        year_range,
     )
 
     df_flexibility = (df_flexibility * 1000).to_frame("p_nom")  # Convert GW to MW

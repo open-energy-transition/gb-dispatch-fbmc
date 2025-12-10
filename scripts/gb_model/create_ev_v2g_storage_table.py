@@ -121,13 +121,14 @@ if __name__ == "__main__":
     # Load parameters
     fes_scenario = snakemake.params.scenario
     year_range = snakemake.params.year_range
+    carrier_mapping = snakemake.params.carrier_mapping
 
     # Parse storage data
     df_storage = parse_ev_v2g_storage_data(storage_sheet_path, fes_scenario)
 
     # Parse flexibility data
     df_flexibility = parse_flexibility_data(
-        flexibility_sheet, fes_scenario, year_range, {"Detail": "V2G impact at peak"}
+        flexibility_sheet, fes_scenario, year_range, carrier_mapping
     )
 
     # Interpolate storage data based on energy to power ratio
