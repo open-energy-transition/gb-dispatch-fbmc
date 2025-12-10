@@ -343,7 +343,9 @@ def process_demand_data(
     return load
 
 
-def add_load(n: pypsa.Network, demands: dict[str, str]):
+def add_load(
+    n: pypsa.Network, demands: dict[str, str], load_bus_suffixes: dict[str, str]
+):
     """
     Add load as a timeseries to PyPSA network
 
@@ -362,21 +364,12 @@ def add_load(n: pypsa.Network, demands: dict[str, str]):
                 "All demand types should start with 'demand_'."
             )
         # Process data for the demand type
-        if demand_type == "ev_demand":
-            add_EV_load(n, demand_path)
-        else:
-            load = pd.read_csv(demand_path, index_col=[0], parse_dates=True)
-            # Add the load to pypsa Network
-            suffix = f" {demand_type.removesuffix('_demand')}"
-            n.add(
-                "Load",
-                load.columns + suffix,
-                bus=load.columns,
-                p_set=load.add_suffix(suffix),
-            )
+        suffix = load_bus_suffixes[demand_type.removesuffix("_demand")]
+        load = pd.read_csv(demand_path, index_col=[0], parse_dates=True)
+        _add_load_bus(n, load, suffix)
 
 
-def add_EV_load(n: pypsa.Network, ev_demand_path: str):
+def _add_load_bus(n: pypsa.Network, load: pd.DataFrame, suffix: str):
     """
     Add EV load as a timeseries to PyPSA network
 
@@ -384,56 +377,50 @@ def add_EV_load(n: pypsa.Network, ev_demand_path: str):
     ----------
     n : pypsa.Network
         Network to finalize
-    ev_demand_path : str
-        Path to EV demand CSV
+    load : pd.DataFrame
+        DataFrame containing load data indexed by time and bus
+    suffix : str
+        Suffix to append to load buses
     """
-    # Compute EV demand profile using demand shape, annual EV demand and peak EV demand
+    # Add load carrier to pypsa Network
+    carrier = suffix.strip()
+    link_carrier = f"{carrier} unmanaged load"
+    n.add("Carrier", carrier)
 
-    ev_demand = pd.read_csv(ev_demand_path, index_col=[0], parse_dates=True)
+    # Add unmanaged load carrier to pypsa Network
+    n.add("Carrier", link_carrier)
 
-    # Add EV carrier to pypsa Network
-    n.add(
-        "Carrier",
-        "EV",
-    )
-
-    # Add EV unmanaged charging carrier to pypsa Network
-    n.add(
-        "Carrier",
-        "EV unmanaged charging",
-    )
-
-    # Add EV bus
+    # Add load bus
     n.add(
         "Bus",
-        ev_demand.columns,
-        suffix=" EV",
-        carrier="EV",
-        x=n.buses.loc[ev_demand.columns].x,
-        y=n.buses.loc[ev_demand.columns].y,
-        country=n.buses.loc[ev_demand.columns].country,
+        load.columns,
+        suffix=suffix,
+        carrier=carrier,
+        x=n.buses.loc[load.columns].x,
+        y=n.buses.loc[load.columns].y,
+        country=n.buses.loc[load.columns].country,
     )
 
-    # Add the EV load to pypsa Network
+    # Add the load to pypsa Network
     n.add(
         "Load",
-        ev_demand.columns,
-        suffix=" EV",
-        bus=ev_demand.columns + " EV",
-        carrier="EV",
-        p_set=ev_demand.add_suffix(" EV"),
+        load.columns,
+        suffix=suffix,
+        bus=load.columns + suffix,
+        carrier=carrier,
+        p_set=load.add_suffix(suffix),
     )
 
-    # Add EV unmanaged charging
+    # Link the load profile to the AC bus
     n.add(
         "Link",
-        ev_demand.columns,
-        suffix=" EV unmanaged charging",
-        bus0=ev_demand.columns,
-        bus1=ev_demand.columns + " EV",
-        p_nom=ev_demand.max(),
+        load.columns,
+        suffix=" " + link_carrier,
+        bus0=load.columns,
+        bus1=load.columns + suffix,
+        p_nom=load.max(),
         efficiency=1.0,
-        carrier="EV unmanaged charging",
+        carrier=link_carrier,
     )
 
 
@@ -581,6 +568,8 @@ def _add_dsr_pypsa_components(
     storage_capacity: pd.DataFrame,
     e_max_pu: pd.DataFrame,
     p_max_pu: pd.DataFrame,
+    load_bus_suffixes: dict[str, str],
+    flex_carrier_suffixes: dict[str, str],
 ):
     """
     Add DSR components for a given sector to PyPSA network
@@ -599,38 +588,29 @@ def _add_dsr_pypsa_components(
             DataFrame containing maximum state of charge as per unit of the store indexed by time and bus
         p_max_pu : pd.DataFrame
             DataFrame containing maximum power availability as per unit of the link indexed by time and bus
+        load_bus_suffixes: dict[str, str]
+            Suffixes to append to load buses
+        flex_carrier_suffixes : dict[str, str]
+            Suffixes to append to flexibility carriers for each flexibility type
     """
-
-    store_carrier = f"{key} DSR"
-    if key == "ev":
-        bus_suffix = " EV"
-    else:
-        bus_suffix = ""
+    load_bus_suffix = load_bus_suffixes[key]
+    dsr_carrier_suffix = flex_carrier_suffixes[key]
 
     # Add the store carrier to the PyPSA network
-    n.add(
-        "Carrier",
-        store_carrier,
-    )
+    n.add("Carrier", dsr_carrier_suffix.strip())
 
     # Add the DSR shift and reverse carriers to the PyPSA network
-    n.add(
-        "Carrier",
-        f"{key} DSR shift",
-    )
+    n.add("Carrier", f"{dsr_carrier_suffix.strip()} shift")
 
-    n.add(
-        "Carrier",
-        f"{key} DSR reverse",
-    )
+    n.add("Carrier", f"{dsr_carrier_suffix.strip()} reverse")
 
     # Create storage buses, links and stores
     # Add the storage bus to the PyPSA network
     n.add(
         "Bus",
         df.index,
-        suffix=f" {store_carrier} bus",
-        carrier=store_carrier,
+        suffix=dsr_carrier_suffix,
+        carrier=dsr_carrier_suffix.strip(),
         x=n.buses.loc[df.index].x,
         y=n.buses.loc[df.index].y,
         country=n.buses.loc[df.index].country,
@@ -640,37 +620,37 @@ def _add_dsr_pypsa_components(
     n.add(
         "Link",
         df.index,
-        suffix=f" {key} DSR",
-        bus0=df.index + bus_suffix,
-        bus1=df.index + f" {store_carrier} bus",
+        suffix=dsr_carrier_suffix,
+        bus0=df.index + load_bus_suffix,
+        bus1=df.index + dsr_carrier_suffix,
         p_nom=df.p_nom.abs(),
         p_max_pu=p_max_pu,
         efficiency=1.0,
-        carrier=f"{key} DSR shift",
+        carrier=f"{dsr_carrier_suffix.strip()} shift",
     )
 
     # Add the DSR link from DSR bus to AC bus to the PyPSA network
     n.add(
         "Link",
         df.index,
-        suffix=f" {key} DSR reverse",
-        bus0=df.index + f" {store_carrier} bus",
-        bus1=df.index + bus_suffix,
+        suffix=f"{dsr_carrier_suffix} reverse",
+        bus0=df.index + dsr_carrier_suffix,
+        bus1=df.index + load_bus_suffix,
         p_nom=df.p_nom.abs(),
         p_max_pu=p_max_pu,
         efficiency=1.0,
-        carrier=f"{key} DSR reverse",
+        carrier=f"{dsr_carrier_suffix.strip()} reverse",
     )
 
     # Add the DSR store to the PyPSA network
     n.add(
         "Store",
         df.index,
-        suffix=f" {store_carrier}",
-        bus=df.index + f" {store_carrier} bus",
+        suffix=dsr_carrier_suffix,
+        bus=df.index + dsr_carrier_suffix,
         e_nom=storage_capacity,
         e_cyclic=True,
-        carrier=store_carrier,
+        carrier=dsr_carrier_suffix.strip(),
         e_max_pu=e_max_pu,
     )
 
@@ -683,6 +663,8 @@ def add_DSR(
     dsr: dict[str, str],
     dsr_hours_dict: dict[str, list],
     ev_availability_profile: pd.DataFrame,
+    load_bus_suffixes: dict[str, str],
+    flex_carrier_suffixes: dict[str, str],
 ):
     """
     Add DSR components for residential, i&c and i&c heat sectors to PyPSA network
@@ -699,6 +681,11 @@ def add_DSR(
             Hours during which demand-side management can occur
         ev_availability_profile : pd.DataFrame
             DataFrame containing EV availability profile indexed by time and bus
+        load_bus_suffixes: dict[str, str]
+            Suffixes to append to load buses for each flexibility type
+        flex_carrier_suffixes : dict[str, str]
+            Suffixes to append to flexibility carriers for each flexibility type
+
     """
     # Iterate through each demand key in the DSR dictionary
     for file, path in dsr.items():
@@ -725,7 +712,14 @@ def add_DSR(
         )
 
         _add_dsr_pypsa_components(
-            n, df_dsr, dsr_type, storage_capacity, e_max_pu, p_max_pu
+            n,
+            df_dsr,
+            dsr_type,
+            storage_capacity,
+            e_max_pu,
+            p_max_pu,
+            load_bus_suffixes,
+            flex_carrier_suffixes,
         )
 
 
@@ -1167,6 +1161,8 @@ def compose_network(
     H2_data: dict[str, Any],
     enable_chp: bool,
     dsr_hours_dict: dict[str, list],
+    load_bus_suffixes: dict[str, str],
+    flex_carrier_suffixes: dict[str, str],
     year: int,
 ) -> None:
     """
@@ -1212,6 +1208,10 @@ def compose_network(
         Dictionary containing DSR flexibility data for baseline and electrified heat
     dsr_hours_dict: dict[str, list]
         DSR hours for each demand type
+    load_bus_suffixes : dict[str, str]
+        Suffixes to append to load buses for each demand type
+    flex_carrier_suffixes : dict[str, str]
+        Suffixes to append to flexibility carriers for each demand type
     enable_chp : bool
         Whether to enable CHP constraints
     year: int
@@ -1261,7 +1261,7 @@ def compose_network(
         )
         attach_chp_constraints(network, chp_p_min_pu)
 
-    add_load(network, demands)
+    add_load(network, demands, load_bus_suffixes)
 
     ev_availability_profile = pd.read_csv(
         ev_data["avail_profile_s_clustered"], index_col=0, parse_dates=True
@@ -1273,6 +1273,8 @@ def compose_network(
         dsr,
         dsr_hours_dict,
         ev_availability_profile,
+        load_bus_suffixes,
+        flex_carrier_suffixes,
     )
 
     add_EV_V2G(
@@ -1335,5 +1337,7 @@ if __name__ == "__main__":
         enable_chp=snakemake.params.enable_chp,
         prune_lines=snakemake.params.prune_lines,
         dsr_hours_dict=snakemake.params.dsr_hours_dict,
+        load_bus_suffixes=snakemake.params.load_bus_suffixes,
+        flex_carrier_suffixes=snakemake.params.flex_carrier_suffixes,
         year=int(snakemake.wildcards.year),
     )
