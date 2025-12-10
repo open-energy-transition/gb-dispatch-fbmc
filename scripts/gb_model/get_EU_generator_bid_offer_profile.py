@@ -33,6 +33,7 @@ def _extract_marginal_price_profiles(network: pypsa.Network):
 
     return marginal_price_profile
 
+
 def compute_interconnector_fee(
     marginal_price_profile: pd.DataFrame, unconstrained_result: pypsa.Network
 ) -> pd.DataFrame:
