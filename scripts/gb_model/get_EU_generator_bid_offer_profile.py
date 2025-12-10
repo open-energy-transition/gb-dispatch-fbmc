@@ -68,7 +68,7 @@ def calc_bid_offer_multiplier(
     generator_marginal_prices: pd.DataFrame,
     bid_multiplier: dict[str, list],
     offer_multiplier: dict[str, list],
-    strike_prices: dict[str, list],
+    renewable_payment_profile: pd.Series,
 ) -> tuple[float]:
     """
     Calculate bid/offer multiplier profile based on the marginal generator at each EU node for every time step
@@ -83,8 +83,8 @@ def calc_bid_offer_multiplier(
         Multiplier for bids for conventional carriers
     offer_multiplier: dict[str, list]
         Multiplier for offers for conventional carriers
-    strike_prices: dict[str, list]
-        Strike prices for renewable carriers
+    renewable_payment_profile: pd.Series
+        Renewable payment profile for a particular timestamp at the EU node
     """
 
     # Calculate marginal generator at the EU node
@@ -95,14 +95,17 @@ def calc_bid_offer_multiplier(
     marginal_gen_cost = marginal_gen.iloc[0]
 
     # Adjust marginal cost for both offer and bid
-    if marginal_carrier in strike_prices.keys():
-        return strike_prices[marginal_carrier], strike_prices[marginal_carrier]
+    if renewable_payment_profile.index.str.contains(marginal_carrier).any():
+        cost = renewable_payment_profile[
+            renewable_payment_profile.index.str.contains(marginal_carrier)
+        ][0]
+        return cost, cost
     elif marginal_carrier in bid_multiplier.keys():
         return marginal_gen_cost * bid_multiplier[
             marginal_carrier
         ], marginal_gen_cost * offer_multiplier[marginal_carrier]
     else:
-        return 1, 1
+        return marginal_gen_cost, marginal_gen_cost
 
 
 def get_EU_marginal_generator(
@@ -110,7 +113,7 @@ def get_EU_marginal_generator(
     marginal_price_profile: pd.DataFrame,
     unconstrained_result: pypsa.Network,
     bids_and_offers_multipliers: dict[dict[str, list]],
-    strike_prices: dict[str, list],
+    renewable_payment_profile: pd.DataFrame,
 ) -> pd.DataFrame:
     countries.remove("GB")
     EU_buses = unconstrained_result.buses.query(
@@ -132,18 +135,19 @@ def get_EU_marginal_generator(
             .marginal_cost.mean()
             .round(3)
         )
+
         EU_marginal_gen_profile[[f"{EU_bus} bid", f"{EU_bus} offer"]] = (
-            marginal_price_profile[EU_bus]
-            .apply(
-                lambda x: calc_bid_offer_multiplier(
-                    np.round(x, 3),
+            marginal_price_profile.apply(
+                lambda row: calc_bid_offer_multiplier(
+                    # np.round(x, 3),
+                    np.round(row[EU_bus], 3),
                     generator_marginal_prices,
                     bid_multiplier,
                     offer_multiplier,
-                    strike_prices,
-                )
-            )
-            .tolist()
+                    renewable_payment_profile.filter(like=EU_bus).loc[row.name],
+                ),
+                axis=1,
+            ).tolist()
         )
     return EU_marginal_gen_profile
 
@@ -159,9 +163,11 @@ if __name__ == "__main__":
 
     # Load input networks and parameters
     unconstrained_result = pypsa.Network(snakemake.input.unconstrained_result)
-    strike_prices = pd.read_csv(
-        snakemake.input.strike_prices, index_col="carrier"
-    ).to_dict()["strike_price_GBP_per_MWh"]
+    renewable_payment_profile = pd.read_csv(
+        snakemake.input.renewable_payment_profile,
+        index_col="snapshot",
+        parse_dates=True,
+    )
     bids_and_offers_multipliers = snakemake.params.bids_and_offers
     countries = snakemake.params.countries
 
@@ -176,7 +182,7 @@ if __name__ == "__main__":
         marginal_price_profile,
         unconstrained_result,
         bids_and_offers_multipliers,
-        strike_prices,
+        renewable_payment_profile,
     )
 
     interconnector_fee_profile.to_csv(snakemake.output.interconnector_fee)

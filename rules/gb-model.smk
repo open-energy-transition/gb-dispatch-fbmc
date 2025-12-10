@@ -976,7 +976,9 @@ rule get_EU_generator_bid_offer_profile:
         countries=config_provider("countries"),
     input:
         unconstrained_result=RESULTS + "networks/unconstrained_clustered/{year}.nc",
-        strike_prices=resources("gb-model/CfD_strike_prices.csv"),
+        renewable_payment_profile=resources(
+            "gb-model/renewable_payment_profile/{year}.csv"
+        ),
     output:
         generator_csv=resources("gb-model/bids_and_offers/EU_generator_{year}.csv"),
         interconnector_fee=resources(
