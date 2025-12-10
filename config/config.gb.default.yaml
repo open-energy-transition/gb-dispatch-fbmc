@@ -221,7 +221,7 @@ low_carbon_register:
 solving:
   options:
     clip_p_max_pu: 1.e-2
-    load_shedding: false
+    load_shedding: 6000 #£/MWh - based on `value_of_lost_load` from (https://www.nationalgrid.com/sites/default/files/documents/Long-term%20Market%20and%20Network%20Constraint%20Modelling.pdf)
     curtailment_mode: false
     noisy_costs: true
     skip_iterations: true
@@ -1350,3 +1350,18 @@ interconnectors:
     2030: [Cronos, Tarchon]
     2033: [Kulizumboo, SENECA, FAB Link, Gridlink, LirIC]
     2037: [Continental Link]
+
+redispatch:
+  # Source for bid and offers multipliers : https://www.nationalgrid.com/sites/default/files/documents/Long-term%20Market%20and%20Network%20Constraint%20Modelling.pdf
+  bid_multiplier:
+    gas: 0.8
+    coal: 0.7
+    oil: 0.38
+    OCGT: 1.37
+    CCGT: 0.8 #using same value as that of gas
+  offer_multiplier:
+    gas: 1.63
+    coal: 1.56
+    oil: 4.16
+    OCGT: 1.31
+    CCGT: 1.63 #using same value as that of gas
