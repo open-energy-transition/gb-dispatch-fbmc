@@ -221,7 +221,7 @@ low_carbon_register:
 solving:
   options:
     clip_p_max_pu: 1.e-2
-    load_shedding: false
+    load_shedding: 6000 #£/MWh - based on `value_of_lost_load` from (https://www.nationalgrid.com/sites/default/files/documents/Long-term%20Market%20and%20Network%20Constraint%20Modelling.pdf)
     curtailment_mode: false
     noisy_costs: true
     skip_iterations: true
@@ -791,6 +791,18 @@ fes-sheet-config:
       rename:
         columns: year
 
+    FL.10:
+    - usecols: "L:AV"
+      skiprows: 60
+      nrows: 5
+      index_col: 0
+      header: 0
+      rename:
+        columns: year
+        index: flex_source
+      add_index:
+        scenario: leading the way
+
     # Annual storage data for 2030 and 2050
     # SHeet contains multiple tables, one for each scenario
     FL.14:
@@ -926,6 +938,14 @@ fes:
         iandc_heat: ["i&c hp demand"]
       heat:
         electrified_heating_technologies: ["Electric resistive", "ASHP", "GSHP"]
+      bus_suffix:
+        baseline_electricity: " Baseline Electricity"
+        residential: " Baseline Electricity"
+        iandc: " Baseline Electricity"
+        ev: " EV"
+        residential_heat: " Residential Heat"
+        iandc_heat: " I&C Heat"
+
 
     flexibility:
       carrier_mapping:
@@ -948,11 +968,21 @@ fes:
         residential_dsr: ["baseline demand"]
         iandc_dsr: ["i&c flexibility (tout)"]
         iandc_heat_dsr: ["i&c hp demand"]
+        residential_heat_dsr: ["residential hp demand"]
       dsr_hours:  # hours during which demand-side management can occur (E.g., 5pm-8pm)
+        residential_heat_dsr: [0, 22]
         residential_dsr: [17, 20]
         iandc_dsr: [17, 20]
-        iandc_heat_dsr: [17, 20]
+        iandc_heat_dsr: [0, 22]
         ev_dsr: [8, 6]
+      carrier_suffix:
+        residential: " Baseline Electricity (Residential) DSR"
+        iandc: " Baseline Electricity (I&C) DSR"
+        ev: " EV DSR"
+        residential_heat: " Residential Heat DSR"
+        iandc_heat: " I&C Heat DSR"
+      residential_heat_flex_level: "Peak after flexing by storage heaters, Hybrid HPs, District Heat, and thermal storage"
+
 
   eur:
     scenario: CT & LW    # "Leading the Way" equivalent in the NESO european supply table
@@ -1023,6 +1053,7 @@ fes:
       residential_dsr: "baseline_electricity"
       iandc_dsr: "baseline_electricity"
       iandc_heat_dsr: "iandc_heat"
+      residential_heat_dsr: "residential_heat"
       H2_demand_annual: "H2"
       off_grid_electrolysis_electricity_demand: "H2"
       H2_storage_capacity: "H2"
@@ -1328,3 +1359,18 @@ interconnectors:
     2030: [Cronos, Tarchon]
     2033: [Kulizumboo, SENECA, FAB Link, Gridlink, LirIC]
     2037: [Continental Link]
+
+redispatch:
+  # Source for bid and offers multipliers : https://www.nationalgrid.com/sites/default/files/documents/Long-term%20Market%20and%20Network%20Constraint%20Modelling.pdf
+  bid_multiplier:
+    gas: 0.8
+    coal: 0.7
+    oil: 0.38
+    OCGT: 1.37
+    CCGT: 0.8 #using same value as that of gas
+  offer_multiplier:
+    gas: 1.63
+    coal: 1.56
+    oil: 4.16
+    OCGT: 1.31
+    CCGT: 1.63 #using same value as that of gas
