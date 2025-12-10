@@ -967,6 +967,7 @@ rule get_renewable_payment_profile:
     script:
         "../scripts/gb_model/get_renewable_payment_profile.py"
         
+        
 rule get_EU_generator_bid_offer_profile:
     message:
         "Calculate bid/offer prices for EU marginal generator"
@@ -1014,3 +1015,27 @@ rule calc_interconnector_bid_offer_profile:
         logs("calc_interconnector_bid_offer_profile/{year}.log"),
     script:
         "../scripts/gb_model/calc_interconnector_bid_offer_profile.py"
+
+
+rule assign_interconnector_bid_offer:
+    message:
+        "Assign bid/offer profile based on status of interconnector"
+    input:
+        unconstrained_result=RESULTS + "networks/unconstrained_clustered/{year}.nc",
+        bid_offer_profiles = expand(
+            resources("gb-model/bids_and_offers/{profile}.csv"),
+            profile=[
+                "import_bid_{year}",
+                "import_offer_{year}",
+                "float_import_{year}",
+                "float_export_{year}",
+                "export_bid_{year}",
+                "export_offer_{year}",
+            ],
+        ),
+    output:
+        csv=resources("gb-model/bids_and_offers/interconnector_{year}.csv")
+    log:
+        logs("assign_interconnector_bid_offer/{year}.log")
+    script:
+        "../scripts/gb_model/assign_interconnector_bid_offer.py"
