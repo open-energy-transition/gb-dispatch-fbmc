@@ -98,7 +98,7 @@ def create_up_down_plants(
     renewable_payment_profile: pd.DataFrame
         Dataframe of the renewable price profile
     """
-    gb_buses = unconstrained_result.buses.query("country == 'GB'").index
+    gb_buses = unconstrained_result.buses.query("country == 'GB'").index  # noqa: F841
 
     for comp in constrained_network.components:
         if comp.name not in ["Generator", "StorageUnit"]:
