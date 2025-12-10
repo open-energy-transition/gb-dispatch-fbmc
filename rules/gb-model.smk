@@ -10,10 +10,6 @@ from pathlib import Path
 import numpy as np
 
 
-wildcard_constraints:
-    flexibility_type="|".join(config["fes"]["gb"]["flexibility"]["Technology Detail"]),
-
-
 # Rule to download and extract ETYS boundary data
 rule download_data:
     message:
@@ -463,8 +459,29 @@ rule create_flexibility_table:
         flexibility=resources("gb-model/{flexibility_type}_flexibility.csv"),
     log:
         logs("create_{flexibility_type}_flexibility_table.log"),
+    wildcard_constraints:
+        flexibility_type="|".join(
+            config["fes"]["gb"]["flexibility"]["Technology Detail"]
+        ),
     script:
         "../scripts/gb_model/create_flexibility_table.py"
+
+
+rule create_heat_flexibility_table:
+    message:
+        "Process residential heat demand flexibility from FES workbook"
+    params:
+        scenario=config["fes"]["gb"]["scenario"],
+        year_range=config["fes"]["year_range_incl"],
+        flex_level=config["fes"]["gb"]["flexibility"]["residential_heat_flex_level"],
+    input:
+        flexibility_sheet=resources("gb-model/fes/2021/FL.10.csv"),
+    output:
+        csv=resources("gb-model/residential_heat_dsr_flexibility.csv"),
+    log:
+        logs("create_heat_flexibility_table.log"),
+    script:
+        "../scripts/gb_model/create_heat_flexibility_table.py"
 
 
 rule process_regional_flexibility_table:
@@ -481,6 +498,10 @@ rule process_regional_flexibility_table:
         regional_flexibility=resources("gb-model/regional_{flexibility_type}.csv"),
     log:
         logs("process_regional_{flexibility_type}_flexibility_table.log"),
+    wildcard_constraints:
+        flexibility_type="|".join(
+            config["fes"]["gb"]["flexibility"]["regional_distribution_reference"]
+        ),
     script:
         "../scripts/gb_model/process_regional_flexibility_table.py"
 
@@ -831,6 +852,8 @@ rule compose_network:
         enable_chp=config["chp"]["enable"],
         prune_lines=config["region_operations"]["prune_lines"],
         dsr_hours_dict=config["fes"]["gb"]["flexibility"]["dsr_hours"],
+        load_bus_suffixes=config["fes"]["gb"]["demand"]["bus_suffix"],
+        flex_carrier_suffixes=config["fes"]["gb"]["flexibility"]["carrier_suffix"],
     input:
         unpack(input_profile_tech),
         demands=expand(
@@ -839,7 +862,7 @@ rule compose_network:
         ),
         dsr=expand(
             resources("gb-model/regional_{sector}_dsr_inc_eur.csv"),
-            sector=["residential", "iandc", "iandc_heat", "ev"],
+            sector=["residential", "iandc", "iandc_heat", "ev", "residential_heat"],
         ),
         ev_data=expand(
             resources("gb-model/regional_ev_{ev_data}_inc_eur.csv"),
