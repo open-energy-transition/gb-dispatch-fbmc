@@ -12,15 +12,45 @@ from pathlib import Path
 import pandas as pd
 import pypsa
 
-from scripts._helpers import configure_logging, set_scenario_config, filter_interconnectors
+from scripts._helpers import configure_logging, set_scenario_config
+from scripts.gb_model._helpers import filter_interconnectors
 
 logger = logging.getLogger(__name__)
 
+
+def _calculate_interconnector_loss(
+    unconstrained_result: pypsa.Network,
+    interconnectors: pd.DataFrame
+) -> pd.DataFrame:
+    """
+    Calculate capacity weighted average of interconnector losses at each foreign market
+
+    Parameters
+    ----------
+    unconstrained_result: pypsa.Network
+        Result of the unconstrained optimization
+    interconnectors: pd.DataFrame
+        Dataframe of interconnectors and their pypsa parameters
+    """
+    interconnector_grouping=interconnectors.index.to_series().groupby(interconnectors["bus1"]).agg(list)
+    loss_profile=pd.DataFrame(index=unconstrained_result.snapshots,columns=interconnector_grouping.index)
+    for bus in interconnector_grouping.index:
+        group=interconnector_grouping.loc[bus]
+        # Capacity weighted average of interconnectors connected to each EU node
+        loss_profile[bus] = (
+            (unconstrained_result.links_t.p1[group] - unconstrained_result.links_t.p0[group]*-1).abs() # interconnector loss between GB and EU node 
+            .mul(interconnectors.loc[group].p_nom).sum(axis=1) 
+            .div(interconnectors.loc[group].p_nom.sum())
+        )
+
+    logger.info("Calculated the interconnector loss profile")
+    return loss_profile
 
 def calc_interconnector_bids_and_offers(
     interconnectors: pd.DataFrame,
     EU_marginal_gen_profile: pd.DataFrame,
     interconnector_fee_profile: pd.DataFrame,
+    loss_profile: pd.DataFrame
 ) -> tuple[pd.DataFrame]:
     """
     Calculate the bids and offers for import, export and floating condition of each interconnector
@@ -33,6 +63,8 @@ def calc_interconnector_bids_and_offers(
             bid / offer for the marginal generator at each EU bus
         interconnector_fee_profile: pd.DataFrame
             Spread in marginal prices for each interconnector
+        loss_profile: pd.DataFrame
+            Weighted capacity average of losses of interconnectors connected to each EU bus
     """
     (
         import_bid_profile,
@@ -61,7 +93,7 @@ def calc_interconnector_bids_and_offers(
         p_eu = unconstrained_result.buses_t.marginal_price[EU_bus]
         bid = EU_marginal_gen_profile[f"{EU_bus} bid"]
         offer = EU_marginal_gen_profile[f"{EU_bus} offer"]
-        loss = 0
+        loss = loss_profile[EU_bus]
 
         # Import bid profile
         import_bid_profile[connector] = p_gb - p_eu * (1 + loss) - bid * (1 + loss)
@@ -111,9 +143,11 @@ if __name__ == "__main__":
 
     interconnectors = filter_interconnectors(unconstrained_result.links)
 
+    loss_profile = _calculate_interconnector_loss(unconstrained_result, interconnectors)
+
     import_bid, import_offer, float_import, float_export, export_bid, export_offer = (
         calc_interconnector_bids_and_offers(
-            interconnectors, EU_marginal_gen_profile, interconnector_fee_profile
+            interconnectors, EU_marginal_gen_profile, interconnector_fee_profile, loss_profile
         )
     )
 

@@ -13,7 +13,8 @@ import numpy as np
 import pandas as pd
 import pypsa
 
-from scripts._helpers import configure_logging, set_scenario_config, filter_interconnectors
+from scripts._helpers import configure_logging, set_scenario_config
+from scripts.gb_model._helpers import filter_interconnectors
 
 logger = logging.getLogger(__name__)
 
