@@ -979,9 +979,9 @@ rule get_EU_generator_bid_offer_profile:
             "gb-model/renewable_payment_profile/{year}.csv"
         ),
     output:
-        generator_csv=resources("gb-model/bids_and_offers/EU_generator_{year}.csv"),
+        generator_csv=resources("gb-model/bids_and_offers/{year}/EU_marginal_generator.csv"),
         interconnector_fee=resources(
-            "gb-model/bids_and_offers/interconnector_fee_{year}.csv"
+            "gb-model/bids_and_offers/{year}/interconnector_fee.csv"
         ),
     log:
         logs("get_EU_generator_bid_offer_profile/{year}.log"),
@@ -995,21 +995,22 @@ rule calc_interconnector_bid_offer_profile:
     input:
         unconstrained_result=RESULTS + "networks/unconstrained_clustered/{year}.nc",
         interconnector_fee_profile=resources(
-            "gb-model/bids_and_offers/interconnector_fee_{year}.csv"
+            "gb-model/bids_and_offers/{year}/interconnector_fee.csv"
         ),
         EU_marginal_gen_profile=resources(
-            "gb-model/bids_and_offers/EU_generator_{year}.csv"
+            "gb-model/bids_and_offers/{year}/EU_marginal_generator.csv"
         ),
     output:
-        expand(
+        loss_profile=resources("gb-model/bids_and_offers/{year}/loss_profile.csv"),
+        bid_profiles=expand(
             resources("gb-model/bids_and_offers/{profile}.csv"),
             profile=[
-                "import_bid_{year}",
-                "import_offer_{year}",
-                "float_import_{year}",
-                "float_export_{year}",
-                "export_bid_{year}",
-                "export_offer_{year}",
+                "{year}/import_bid",
+                "{year}/import_offer",
+                "{year}/float_import",
+                "{year}/float_export",
+                "{year}/export_bid",
+                "{year}/export_offer",
             ],
         ),
     log:
@@ -1026,16 +1027,16 @@ rule assign_interconnector_bid_offer:
         bid_offer_profiles=expand(
             resources("gb-model/bids_and_offers/{profile}.csv"),
             profile=[
-                "import_bid_{year}",
-                "import_offer_{year}",
-                "float_import_{year}",
-                "float_export_{year}",
-                "export_bid_{year}",
-                "export_offer_{year}",
+                "{year}/import_bid",
+                "{year}/import_offer",
+                "{year}/float_import",
+                "{year}/float_export",
+                "{year}/export_bid",
+                "{year}/export_offer",
             ],
         ),
     output:
-        csv=resources("gb-model/bids_and_offers/interconnector_{year}.csv"),
+        csv=resources("gb-model/bids_and_offers/{year}/interconnector_bid_offer.csv"),
     log:
         logs("assign_interconnector_bid_offer/{year}.log"),
     script:

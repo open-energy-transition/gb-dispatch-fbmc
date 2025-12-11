@@ -62,6 +62,7 @@ def assign_bid_offer(
     ).add_suffix(" offer")
 
     interconnector_profile = pd.concat([bid_profiles, offer_profiles], axis=1)
+    interconnector_profile.index=unconstrained_result.snapshots
     logger.info(
         "Assigned the bid/offer to each interconnector based on the status of the interconnector"
     )

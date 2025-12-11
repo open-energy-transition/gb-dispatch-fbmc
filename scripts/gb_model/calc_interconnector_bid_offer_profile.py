@@ -166,6 +166,9 @@ if __name__ == "__main__":
 
     loss_profile = _calculate_interconnector_loss(unconstrained_result, interconnectors)
 
+    loss_profile.to_csv(snakemake.output.loss_profile)
+    logger.info(f"Exported loss profile CSV to {snakemake.output.loss_profile}")
+
     import_bid, import_offer, float_import, float_export, export_bid, export_offer = (
         calc_interconnector_bids_and_offers(
             interconnectors,
@@ -186,7 +189,7 @@ if __name__ == "__main__":
                 export_bid,
                 export_offer,
             ],
-            snakemake.output,
+            snakemake.output.bid_profiles,
         )
     ]
-    logger.info(f"Exported interconnector bid/offer profiles to {snakemake.output}")
+    logger.info(f"Exported interconnector bid/offer profiles to {snakemake.output.bid_profiles}")
