@@ -12,6 +12,7 @@ Release Notes
 Upcoming Release
 ================
 
+* Calculate interconnector bids and offers (#151)
 * Add bid/offers for generators (#147)
 * Process low carbon register CfD strike prices for use in redispatch
 * Define independent DSR hours for each demand type (#144)
