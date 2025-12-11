@@ -980,13 +980,15 @@ def add_battery_storage(
         "StorageUnit",
         all_data_battery.index,
         bus=all_data_battery.bus,
-        p_nom=all_data_battery.p_nom,
-        max_hours=max_hours,
-        e_cyclic=True,
         carrier="Battery Storage",
+        p_nom_extendable=False,
         marginal_cost=all_data_battery.marginal_cost,
         capital_cost=0,
         lifetime=all_data_battery.lifetime,
+        efficiency_store=all_data_battery.efficiency**0.5,
+        efficiency_dispatch=all_data_battery.efficiency**0.5,
+        max_hours=max_hours,
+        cyclic_state_of_charge=True,
     )
 
 
