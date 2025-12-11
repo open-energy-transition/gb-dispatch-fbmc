@@ -192,4 +192,6 @@ if __name__ == "__main__":
             snakemake.output.bid_profiles,
         )
     ]
-    logger.info(f"Exported interconnector bid/offer profiles to {snakemake.output.bid_profiles}")
+    logger.info(
+        f"Exported interconnector bid/offer profiles to {snakemake.output.bid_profiles}"
+    )
