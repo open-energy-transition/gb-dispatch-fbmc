@@ -970,11 +970,11 @@ def add_battery_storage(
     all_data_battery = (
         ppl_battery.reset_index().merge(battery_e_nom, on="bus").set_index("name")
     )
-    max_hours = all_data_battery.e_nom / all_data_battery.p_nom
     if all_data_battery.empty:
         logger.info(f"No battery storage data found for year {year}")
         return
 
+    max_hours = all_data_battery.e_nom / all_data_battery.p_nom
     n.add("Carrier", "Battery Storage")
     n.add(
         "StorageUnit",
