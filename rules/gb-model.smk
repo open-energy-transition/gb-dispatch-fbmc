@@ -452,7 +452,9 @@ rule create_flexibility_table:
     params:
         scenario=config["fes"]["gb"]["scenario"],
         year_range=config["fes"]["year_range_incl"],
-        technology_detail=config["fes"]["gb"]["flexibility"]["Technology Detail"],
+        carrier_mapping=lambda wildcards: config["fes"]["gb"]["flexibility"][
+            "carrier_mapping"
+        ][wildcards.flexibility_type],
     input:
         flexibility_sheet=resources("gb-model/fes/2021/FLX1.csv"),
     output:
@@ -460,9 +462,7 @@ rule create_flexibility_table:
     log:
         logs("create_{flexibility_type}_flexibility_table.log"),
     wildcard_constraints:
-        flexibility_type="|".join(
-            config["fes"]["gb"]["flexibility"]["Technology Detail"]
-        ),
+        flexibility_type="|".join(config["fes"]["gb"]["flexibility"]["carrier_mapping"]),
     script:
         "../scripts/gb_model/create_flexibility_table.py"
 
@@ -619,6 +619,7 @@ rule create_ev_v2g_storage_table:
     params:
         scenario=config["fes"]["gb"]["scenario"],
         year_range=config["fes"]["year_range_incl"],
+        carrier_mapping=config["fes"]["gb"]["flexibility"]["carrier_mapping"]["ev_v2g"],
     input:
         storage_sheet=resources("gb-model/fes/2021/FL.14.csv"),
         flexibility_sheet=resources("gb-model/fes/2021/FLX1.csv"),
@@ -663,6 +664,24 @@ rule process_regional_ev_data:
         ev_data_type="v2g_storage|peak",
     script:
         "../scripts/gb_model/process_regional_ev_data.py"
+
+
+rule process_regional_battery_storage_capacity:
+    message:
+        "Process national storage data from FES workbook into CSV format"
+    params:
+        scenario=config["fes"]["gb"]["scenario"],
+        year_range=config["fes"]["year_range_incl"],
+        carrier_mapping=config["fes"]["gb"]["flexibility"]["carrier_mapping"]["battery"],
+    input:
+        flexibility_sheet=resources("gb-model/fes/2021/FLX1.csv"),
+        regional_data=resources("gb-model/fes_powerplants.csv"),
+    output:
+        csv=resources("gb-model/regional_battery_storage_capacity_inc_eur.csv"),
+    log:
+        logs("process_regional_battery_storage_capacity.log"),
+    script:
+        "../scripts/gb_model/process_regional_battery_storage_capacity.py"
 
 
 rule process_H2_demand:
@@ -743,6 +762,8 @@ rule synthesise_eur_data:
         csv=resources("gb-model/regional_{dataset}_inc_eur.csv"),
     log:
         logs("synthesise_eur_data_{dataset}.log"),
+    wildcard_constraints:
+        dataset="|".join(config["fes"]["eur"]["add_data_reference"].keys()),
     script:
         "../scripts/gb_model/synthesise_eur_data.py"
 
@@ -882,6 +903,9 @@ rule compose_network:
         ),
         generator_availability=resources(
             "gb-model/GB_generator_monthly_availability_fraction.csv"
+        ),
+        battery_e_nom=resources(
+            "gb-model/regional_battery_storage_capacity_inc_eur.csv"
         ),
         H2_data=[
             resources("gb-model/regional_H2_demand_annual_inc_eur.csv"),
