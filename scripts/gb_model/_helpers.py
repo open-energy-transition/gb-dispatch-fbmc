@@ -149,3 +149,26 @@ def filter_interconnectors(df):
     m2 = df["bus1"].str.startswith("GB")
 
     return df[(m1 & ~m2) | (~m1 & m2)].query("carrier == 'DC'")
+
+
+def marginal_costs_bus(bus, network):
+    """
+    Get the marginal costs of generators present at a particular bus
+
+    Parameters
+    ----------
+    bus: str
+        Bus ID for which the marginal costs are required
+    network: pypsa.Network
+        pypsa model to be finalized
+    """
+
+    return pd.concat(
+        [
+            x.static.query("bus == @b and carrier != 'load'", local_dict={"b": bus})
+            .groupby("carrier")
+            .marginal_cost.mean()
+            .round(3)
+            for x in network.components[["Generator", "StorageUnit"]]
+        ]
+    )

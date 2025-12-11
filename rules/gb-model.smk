@@ -973,7 +973,6 @@ rule get_EU_generator_bid_offer_profile:
         "Calculate bid/offer prices for EU marginal generator"
     params:
         bids_and_offers=config_provider("redispatch"),
-        countries=config_provider("countries"),
     input:
         unconstrained_result=RESULTS + "networks/unconstrained_clustered/{year}.nc",
         renewable_payment_profile=resources(

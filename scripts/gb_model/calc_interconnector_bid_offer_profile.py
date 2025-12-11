@@ -13,7 +13,7 @@ import pandas as pd
 import pypsa
 
 from scripts._helpers import configure_logging, set_scenario_config
-from scripts.gb_model._helpers import filter_interconnectors
+from scripts.gb_model._helpers import filter_interconnectors, marginal_costs_bus
 
 logger = logging.getLogger(__name__)
 
@@ -97,9 +97,21 @@ def calc_interconnector_bids_and_offers(
             gb_bus = row["bus1"]
             EU_bus = row["bus0"]
 
+        EU_highest_marginal_cost = marginal_costs_bus(
+            EU_bus, unconstrained_result
+        ).sort_values(ascending=False)[0]
+        GB_highest_marginal_cost = marginal_costs_bus(
+            gb_bus, unconstrained_result
+        ).sort_values(ascending=False)[0]
+
         fee = interconnector_fee_profile[connector]
-        p_gb = unconstrained_result.buses_t.marginal_price[gb_bus]
-        p_eu = unconstrained_result.buses_t.marginal_price[EU_bus]
+        # Reset bus shadow price if load generator set the LMP
+        p_gb = unconstrained_result.buses_t.marginal_price[gb_bus].apply(
+            lambda x: GB_highest_marginal_cost if x > 1000 else x
+        )
+        p_eu = unconstrained_result.buses_t.marginal_price[EU_bus].apply(
+            lambda x: EU_highest_marginal_cost if x > 1000 else x
+        )
         bid = EU_marginal_gen_profile[f"{EU_bus} bid"]
         offer = EU_marginal_gen_profile[f"{EU_bus} offer"]
         loss = loss_profile[EU_bus]
