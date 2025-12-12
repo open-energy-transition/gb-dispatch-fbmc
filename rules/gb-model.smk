@@ -912,19 +912,19 @@ rule solve_constrained:
         etys_boundaries_to_lines=config["region_operations"]["etys_boundaries_lines"],
         etys_boundaries_to_links=config["region_operations"]["etys_boundaries_links"],
     input:
-        network=resources("networks/constrained_clustered_{year}.nc"),
+        network=resources("networks/constrained_clustered/{year}.nc"),
         etys_caps=resources("gb-model/etys_boundary_capabilities.csv"),
     output:
-        network=RESULTS + "networks/constrained_clustered_{year}.nc",
-        config=RESULTS + "configs/config.constrained_clustered_{year}.yaml",
+        network=RESULTS + "networks/constrained_clustered/{year}.nc",
+        config=RESULTS + "configs/config.constrained_clustered/{year}.yaml",
     log:
         solver=normpath(
-            RESULTS + "logs/solve_network/constrained_clustered_{year}_solver.log"
+            RESULTS + "logs/solve_network/constrained_clustered/{year}_solver.log"
         ),
-        memory=RESULTS + "logs/solve_network/constrained_clustered_{year}_memory.log",
-        python=RESULTS + "logs/solve_network/constrained_clustered_{year}_python.log",
+        memory=RESULTS + "logs/solve_network/constrained_clustered/{year}_memory.log",
+        python=RESULTS + "logs/solve_network/constrained_clustered/{year}_python.log",
     benchmark:
-        (RESULTS + "benchmarks/solve_network/constrained_clustered_{year}")
+        (RESULTS + "benchmarks/solve_network/constrained_clustered/{year}")
     threads: solver_threads
     resources:
         mem_mb=config_provider("solving", "mem_mb"),

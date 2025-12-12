@@ -148,7 +148,7 @@ def create_up_down_plants(
             else result_component.dynamic.p
         )
 
-        if comp.name != "Link":
+        if comp.name == "Generator":
             up_limit = (
                 unconstrained_result.get_switchable_as_dense(comp.name, "p_max_pu")
                 * result_component.static.p_nom
