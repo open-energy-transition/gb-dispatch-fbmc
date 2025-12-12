@@ -946,6 +946,9 @@ rule prepare_constrained_network:
         renewable_payment_profile=resources(
             "gb-model/renewable_payment_profile/{year}.csv"
         ),
+        interconnector_bid_offer=resources(
+            "gb-model/bids_and_offers/{year}/interconnector_bid_offer.csv"
+        ),
     output:
         network=resources("networks/constrained_clustered/{year}.nc"),
     log:
