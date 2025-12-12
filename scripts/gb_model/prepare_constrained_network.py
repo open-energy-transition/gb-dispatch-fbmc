@@ -220,8 +220,10 @@ def create_up_down_plants(
             f"Added {comp.name} that can mimic increase and decrease in dispatch"
         )
 
+
 def _read_csv(filepath):
-    return pd.read_csv(filepath, index_col='snapshot', parse_dates=True)
+    return pd.read_csv(filepath, index_col="snapshot", parse_dates=True)
+
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
@@ -237,7 +239,9 @@ if __name__ == "__main__":
     unconstrained_result = pypsa.Network(snakemake.input.unconstrained_result)
     bids_and_offers = snakemake.params.bids_and_offers
     renewable_payment_profile = _read_csv(snakemake.input.renewable_payment_profile)
-    interconnector_bid_offer_profile = _read_csv(snakemake.input.interconnector_bid_offer)
+    interconnector_bid_offer_profile = _read_csv(
+        snakemake.input.interconnector_bid_offer
+    )
 
     fix_dispatch(network, unconstrained_result)
 
