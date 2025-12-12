@@ -12,6 +12,7 @@ Release Notes
 Upcoming Release
 ================
 
+* Add interconnector bids and offers to constrained network (#153)
 * Calculate interconnector bids and offers (#151)
 * Add bid/offers for generators (#147)
 * Process low carbon register CfD strike prices for use in redispatch
