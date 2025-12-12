@@ -54,7 +54,7 @@ def compute_interconnector_fee(
     )
 
     for idx, connector in interconnectors.iterrows():
-        # Generators with highest marginal cost to replace the load shedding generator costs
+        #  Replace the load shedding generator costs with the otherwise most expensive generator
         EU_highest_marginal_cost = marginal_costs_bus(
             connector.bus1, unconstrained_result
         ).sort_values(ascending=False)[0]
@@ -106,7 +106,7 @@ def calc_bid_offer_multiplier(
     marginal_carrier = marginal_gen.index[0]
     marginal_gen_cost = marginal_gen.iloc[0]
 
-    # Resetting the EU shadow bus price if load shedding had occured (using a random high threshold of 1000)
+    # Resetting the EU shadow bus price if load shedding had occurred (using a random high threshold of 1000)
     # The carrier with the highest marginal cost is used to decide the price rates
     if gb_marginal_electricity_price > 1000:
         marginal_gen_cost = generator_marginal_prices[marginal_carrier]
