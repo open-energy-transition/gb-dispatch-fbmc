@@ -979,7 +979,9 @@ rule get_EU_generator_bid_offer_profile:
             "gb-model/renewable_payment_profile/{year}.csv"
         ),
     output:
-        generator_csv=resources("gb-model/bids_and_offers/{year}/EU_marginal_generator.csv"),
+        generator_csv=resources(
+            "gb-model/bids_and_offers/{year}/EU_marginal_generator.csv"
+        ),
         interconnector_fee=resources(
             "gb-model/bids_and_offers/{year}/interconnector_fee.csv"
         ),
