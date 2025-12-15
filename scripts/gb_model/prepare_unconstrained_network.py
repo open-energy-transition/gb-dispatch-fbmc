@@ -37,7 +37,7 @@ def copperplate_gb(network: pypsa.Network) -> pypsa.Network:
         _get_intra_gb(network.links) & network.links.carrier.isin(["DC"]), "p_nom"
     ] = 1e6
     logger.info(
-        "Set all intra-GB transmission line capacities to very large values for copperplate model."
+        "Set all intra-GB transmission line capacities and DC link capacities to very large values for copperplate model."
     )
     return network
 

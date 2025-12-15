@@ -28,7 +28,7 @@ def compute_payment_profile(
     result: pypsa.Network
         Unconstrained optimisation result
     strike_prices: dict[str, float]
-        Dicitonary of strike prices for each renewable generator
+        Dictionary of strike prices for each renewable generator
     """
 
     generator_columns = result.generators.query(
