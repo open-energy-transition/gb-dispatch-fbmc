@@ -545,13 +545,7 @@ region_operations:
     - bus0: 29
       bus1: 27
   # These are manually selected spurious lines originating from not removing stubs earlier
-  prune_lines:
-  - bus0: 10
-    bus1: 11
-  - bus0: 26
-    bus1: 29
-  - bus0: 11
-    bus1: 16
+  prune_lines: []
 
 # Note: Set ENTSO_E_API_KEY in your .env file or environment variables
 # Register at https://transparency.entsoe.eu/ to get API key

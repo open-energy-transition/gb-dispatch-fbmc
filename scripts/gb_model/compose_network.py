@@ -1170,6 +1170,10 @@ def _prune_lines(
         n (pypsa.Network): The PyPSA network to modify.
         prune_lines (list[dict[str, int]]): The lines to prune.
     """
+    if not prune_lines:
+        logger.info("No lines to prune")
+        return
+
     # Prune specified lines
     for line in prune_lines:
         mask = get_lines(n.lines, line["bus0"], line["bus1"])
