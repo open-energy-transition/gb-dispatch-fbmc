@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 import pytz
 from pytz import country_timezones
+import pypsa
 
 logger = logging.getLogger(__name__)
 
@@ -189,17 +190,23 @@ def time_difference_hours(country):
     return int(diff)
 
 
-def filter_interconnectors(df):
+def filter_interconnectors(df: pd.DataFrame) -> pd.DataFrame:
     """
     Filter to obtain links between GB and EU
+
+    Parameters
+    ----------
+    df: pd.DataFrame
+        Dataframe of Links components in PyPSA model
     """
+    
     m1 = df["bus0"].str.startswith("GB")
     m2 = df["bus1"].str.startswith("GB")
 
     return df[(m1 & ~m2) | (~m1 & m2)].query("carrier == 'DC'")
 
 
-def marginal_costs_bus(bus, network):
+def marginal_costs_bus(bus: str, network: pypsa.Network) -> pd.DataFrame:
     """
     Get the marginal costs of generators present at a particular bus
 

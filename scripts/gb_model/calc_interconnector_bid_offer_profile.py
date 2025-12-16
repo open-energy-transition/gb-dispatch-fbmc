@@ -90,12 +90,8 @@ def calc_interconnector_bids_and_offers(
     )
 
     for connector, row in interconnectors.iterrows():
-        if "GB" in row["bus0"]:
-            gb_bus = row["bus0"]
-            EU_bus = row["bus1"]
-        else:
-            gb_bus = row["bus1"]
-            EU_bus = row["bus0"]
+        gb_bus = row["bus0"]
+        EU_bus = row["bus1"]
 
         EU_highest_marginal_cost = marginal_costs_bus(
             EU_bus, unconstrained_result
@@ -120,14 +116,10 @@ def calc_interconnector_bids_and_offers(
         import_bid_profile[connector] = p_gb - p_eu * (1 + loss) - bid * (1 + loss)
 
         # Import offer profile / Import float profile
-        import_offer_profile[connector], float_import_profile[connector] = [
-            fee + offer * (1 + loss)
-        ] * 2
+        import_offer_profile[connector] = float_import_profile[connector] = fee + offer * (1 + loss)
 
         # Export float profile / Export bid profile
-        float_export_profile[connector], export_bid_profile[connector] = [
-            fee - bid * (1 - loss)
-        ] * 2
+        float_export_profile[connector] = export_bid_profile[connector] = fee - bid * (1 - loss)
 
         # Export offer profile
         export_offer_profile[connector] = p_eu * (1 - loss) - p_gb + offer * (1 - loss)
@@ -166,8 +158,7 @@ if __name__ == "__main__":
 
     loss_profile = _calculate_interconnector_loss(unconstrained_result, interconnectors)
 
-    loss_profile.to_csv(snakemake.output.loss_profile)
-    logger.info(f"Exported loss profile CSV to {snakemake.output.loss_profile}")
+    loss_profile = loss_profile.fillna(0)
 
     import_bid, import_offer, float_import, float_export, export_bid, export_offer = (
         calc_interconnector_bids_and_offers(

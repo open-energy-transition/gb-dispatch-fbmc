@@ -1060,7 +1060,7 @@ rule get_renewable_payment_profile:
         "../scripts/gb_model/get_renewable_payment_profile.py"
 
 
-rule get_EU_generator_bid_offer_profile:
+rule get_eur_generator_bid_offer_profile:
     message:
         "Calculate bid/offer prices for EU marginal generator"
     params:
@@ -1078,9 +1078,9 @@ rule get_EU_generator_bid_offer_profile:
             "gb-model/bids_and_offers/{year}/interconnector_fee.csv"
         ),
     log:
-        logs("get_EU_generator_bid_offer_profile/{year}.log"),
+        logs("get_eur_generator_bid_offer_profile/{year}.log"),
     script:
-        "../scripts/gb_model/get_EU_generator_bid_offer_profile.py"
+        "../scripts/gb_model/get_eur_generator_bid_offer_profile.py"
 
 
 rule calc_interconnector_bid_offer_profile:
@@ -1095,7 +1095,6 @@ rule calc_interconnector_bid_offer_profile:
             "gb-model/bids_and_offers/{year}/EU_marginal_generator.csv"
         ),
     output:
-        loss_profile=resources("gb-model/bids_and_offers/{year}/loss_profile.csv"),
         bid_profiles=expand(
             resources("gb-model/bids_and_offers/{profile}.csv"),
             profile=[
