@@ -126,7 +126,7 @@ def create_up_down_plants(
     interconnector_bid_offer_profile: pd.DataFrame
         Interconnectors bid/offer profile for each interconnector
     """
-    gb_buses = unconstrained_result.buses.query("country == 'GB'").index
+    gb_buses = unconstrained_result.buses.query("country == 'GB'").index  # noqa: F841
 
     for comp in constrained_network.components:
         if comp.name not in ["Generator", "StorageUnit", "Link"]:
