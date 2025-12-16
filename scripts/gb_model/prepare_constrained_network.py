@@ -33,6 +33,8 @@ def fix_dispatch(constrained_network, unconstrained_result):
     for comp in unconstrained_result.components:
         if comp.name not in ["Generator", "StorageUnit"]:
             continue
+
+        # if comp.name == 'Generator':
         p_fix = comp.dynamic.p / comp.static.p_nom
 
         # Filter only GB plants
@@ -41,8 +43,31 @@ def fix_dispatch(constrained_network, unconstrained_result):
         # Drop load shedding generators
         p_fix = p_fix.drop(columns=p_fix.filter(like="load").columns)
 
-        constrained_network.components[comp.name].dynamic.p_max_pu = p_fix
-        constrained_network.components[comp.name].dynamic.p_min_pu = p_fix
+        # Round the p_fix value to avoid numerical troubles with solver
+        p_fix = p_fix.round(5)
+
+        constrained_network.components[comp.name].dynamic.p_max_pu = p_fix.fillna(0)
+        constrained_network.components[comp.name].dynamic.p_min_pu = p_fix.fillna(0)
+        
+        # elif comp.name == 'StorageUnit':
+        #     p_min_fix = (comp.dynamic.p_dispatch / comp.static.p_nom)
+        #     p_max_fix = (comp.dynamic.p_store / comp.static.p_nom)
+        #     p_min_fix = (   p_min_fix
+        #                     .filter(like='GB')
+        #                     .drop(columns=p_min_fix.filter(like="load").columns)
+        #                     .round(5)
+        #                 )   
+        #     p_max_fix = (
+        #                     p_max_fix
+        #                     .filter(like='GB')
+        #                     .drop(columns=p_max_fix.filter(like="load").columns)
+        #                     .round(5)
+        #                 )
+            
+            
+        #     constrained_network.components[comp.name].dynamic.p_max_pu = p_max_fix.fillna(0)
+        #     constrained_network.components[comp.name].dynamic.p_min_pu = p_min_fix.fillna(0)
+
 
         logger.info(f"Fixed the dispatch of {comp.name}")
 
@@ -64,6 +89,9 @@ def fix_interconnector_dispatch(constrained_network, unconstrained_result):
     p0_fix = (
         unconstrained_result.links_t.p0[interconnectors.index] / interconnectors.p_nom
     )
+
+    # Round the p0_fix value to avoid numerical troubles with solver
+    # p0_fix = p0_fix.round(5)
 
     constrained_network.links_t.p_max_pu[interconnectors.index] = p0_fix
 
@@ -137,8 +165,8 @@ def create_up_down_plants(
 
         if comp.name != "Link":
             # Filter GB plants
-            g_up = g_up.query("bus in @gb_buses")
-            g_down = g_down.query("bus in @gb_buses")
+            g_up = g_up.query("bus in @gb_buses and p_nom != 0")
+            g_down = g_down.query("bus in @gb_buses and p_nom != 0")
 
         # Compute dispatch limits for the up and down generators
         result_component = unconstrained_result.components[comp.name]
@@ -175,7 +203,7 @@ def create_up_down_plants(
             g_down, marginal_cost_down = _apply_multiplier(
                 g_down, bids_and_offers["bid_multiplier"], renewable_payment_profile
             )
-
+        
         # Add generators that can increase dispatch
         constrained_network.add(
             comp.name,
