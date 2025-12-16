@@ -626,7 +626,7 @@ if __name__ == "__main__":
     if "snakemake" not in globals():
         from scripts._helpers import mock_snakemake
 
-        snakemake = mock_snakemake("cluster_network", clusters=60)
+        snakemake = mock_snakemake("cluster_network", clusters="clustered")
     configure_logging(snakemake)
     set_scenario_config(snakemake)
 
@@ -675,6 +675,14 @@ if __name__ == "__main__":
                 f"Imported custom shapes from {snakemake.input.custom_busshapes}"
             )
             if mode == "gb_shapes":
+                custom_busmap = pd.read_csv(
+                    snakemake.input.custom_busmap, index_col=0
+                ).squeeze()
+                custom_busmap.index = custom_busmap.index.astype(str)
+                logger.info(
+                    f"Imported custom busmap from {snakemake.input.custom_busmap}"
+                )
+
                 bus_to_country = custom_shapes.set_index("name").country.to_dict()
                 _update_bus_country(n, custom_busmap, bus_to_country)
 
