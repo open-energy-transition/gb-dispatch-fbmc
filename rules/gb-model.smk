@@ -1060,11 +1060,12 @@ rule get_renewable_payment_profile:
         "../scripts/gb_model/get_renewable_payment_profile.py"
 
 
-rule get_EU_generator_bid_offer_profile:
+rule get_eur_generator_bid_offer_profile:
     message:
         "Calculate bid/offer prices for EU marginal generator"
     params:
         bids_and_offers=config_provider("redispatch"),
+        load_shedding_price=config["solving"]["options"]["load_shedding"],
     input:
         unconstrained_result=RESULTS + "networks/unconstrained_clustered/{year}.nc",
         renewable_payment_profile=resources(
@@ -1072,66 +1073,35 @@ rule get_EU_generator_bid_offer_profile:
         ),
     output:
         generator_csv=resources(
-            "gb-model/bids_and_offers/{year}/EU_marginal_generator.csv"
+            "gb-model/bids_and_offers/{year}/eur_marginal_generator.csv"
         ),
         interconnector_fee=resources(
             "gb-model/bids_and_offers/{year}/interconnector_fee.csv"
         ),
     log:
-        logs("get_EU_generator_bid_offer_profile/{year}.log"),
+        logs("get_eur_generator_bid_offer_profile/{year}.log"),
     script:
-        "../scripts/gb_model/get_EU_generator_bid_offer_profile.py"
+        "../scripts/gb_model/get_eur_generator_bid_offer_profile.py"
 
 
 rule calc_interconnector_bid_offer_profile:
     message:
         "Calculate interconnector bid/offer profiles"
+    params:
+        load_shedding_price=config["solving"]["options"]["load_shedding"],
     input:
         unconstrained_result=RESULTS + "networks/unconstrained_clustered/{year}.nc",
         interconnector_fee_profile=resources(
             "gb-model/bids_and_offers/{year}/interconnector_fee.csv"
         ),
-        EU_marginal_gen_profile=resources(
-            "gb-model/bids_and_offers/{year}/EU_marginal_generator.csv"
+        eur_marginal_gen_profile=resources(
+            "gb-model/bids_and_offers/{year}/eur_marginal_generator.csv"
         ),
     output:
-        loss_profile=resources("gb-model/bids_and_offers/{year}/loss_profile.csv"),
-        bid_profiles=expand(
-            resources("gb-model/bids_and_offers/{profile}.csv"),
-            profile=[
-                "{year}/import_bid",
-                "{year}/import_offer",
-                "{year}/float_import",
-                "{year}/float_export",
-                "{year}/export_bid",
-                "{year}/export_offer",
-            ],
+        bid_offer_profile=resources(
+            "gb-model/bids_and_offers/{year}/interconnector_bid_offer_profile.csv"
         ),
     log:
         logs("calc_interconnector_bid_offer_profile/{year}.log"),
     script:
         "../scripts/gb_model/calc_interconnector_bid_offer_profile.py"
-
-
-rule assign_interconnector_bid_offer:
-    message:
-        "Assign bid/offer profile based on status of interconnector"
-    input:
-        unconstrained_result=RESULTS + "networks/unconstrained_clustered/{year}.nc",
-        bid_offer_profiles=expand(
-            resources("gb-model/bids_and_offers/{profile}.csv"),
-            profile=[
-                "{year}/import_bid",
-                "{year}/import_offer",
-                "{year}/float_import",
-                "{year}/float_export",
-                "{year}/export_bid",
-                "{year}/export_offer",
-            ],
-        ),
-    output:
-        csv=resources("gb-model/bids_and_offers/{year}/interconnector_bid_offer.csv"),
-    log:
-        logs("assign_interconnector_bid_offer/{year}.log"),
-    script:
-        "../scripts/gb_model/assign_interconnector_bid_offer.py"
