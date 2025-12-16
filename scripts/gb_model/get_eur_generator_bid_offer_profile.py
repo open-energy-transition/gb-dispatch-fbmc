@@ -19,7 +19,7 @@ from scripts.gb_model._helpers import filter_interconnectors, marginal_costs_bus
 logger = logging.getLogger(__name__)
 
 
-def _extract_marginal_price_profiles(network: pypsa.Network):
+def extract_marginal_price_profiles(network: pypsa.Network):
     """
     Extract marginal prices at the buses
 
@@ -194,7 +194,7 @@ if __name__ == "__main__":
     )
     bids_and_offers_multipliers = snakemake.params.bids_and_offers
 
-    marginal_price_profile = _extract_marginal_price_profiles(unconstrained_result)
+    marginal_price_profile = extract_marginal_price_profiles(unconstrained_result)
 
     interconnector_fee_profile = compute_interconnector_fee(
         marginal_price_profile, unconstrained_result
