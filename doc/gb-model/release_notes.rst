@@ -12,6 +12,7 @@ Release Notes
 Upcoming Release
 ================
 
+* Enable custom busmap to prevent incorrect clustering of offshore buses (#159) 
 * Add bid/offers for generators (#147)
 * Distribute all loads into their own buses with independently linked DSR stores
 * Add residential heat demand DSR, including district heating flexibility (as it cannot be separated)
