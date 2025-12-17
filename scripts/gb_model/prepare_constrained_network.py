@@ -18,7 +18,9 @@ from scripts.gb_model._helpers import filter_interconnectors
 logger = logging.getLogger(__name__)
 
 
-def fix_dispatch(constrained_network, unconstrained_result):
+def fix_dispatch(
+    constrained_network: pypsa.Network, unconstrained_result: pypsa.Network
+):
     """
     Fix dispatch of generators and storage units based on the result of unconstrained optimization
 
@@ -30,49 +32,41 @@ def fix_dispatch(constrained_network, unconstrained_result):
         Result of the unconstrained optimization
     """
 
+    def _process_p_fix(dispatch_t: pd.DataFrame, p_nom: pd.DataFrame):
+        p_fix = (dispatch_t / p_nom).round(5).fillna(0)
+        p_fix = p_fix.drop(columns=p_fix.filter(like="load").columns).filter(like="GB")
+
+        return p_fix
+
     for comp in unconstrained_result.components:
         if comp.name not in ["Generator", "StorageUnit"]:
             continue
 
-        # if comp.name == 'Generator':
-        p_fix = comp.dynamic.p / comp.static.p_nom
+        if comp.name == "Generator":
+            p_max_fix = p_min_fix = _process_p_fix(
+                comp.dynamic.p, comp.static.p_nom
+            )
 
-        # Filter only GB plants
-        p_fix = p_fix.filter(like="GB")
+        elif comp.name == "StorageUnit":
+            # For storage units: the decision variables are `p_dispatch` and `p_store`.
+            # p = p_dispatch - p_store
+            # Refer https://docs.pypsa.org/latest/user-guide/optimization/storage/#storage-units
+            p_max_fix = _process_p_fix(
+                comp.dynamic.p_dispatch, comp.static.p_nom
+            )
+            p_min_fix = _process_p_fix(
+                -1 * comp.dynamic.p_store, comp.static.p_nom
+            )
 
-        # Drop load shedding generators
-        p_fix = p_fix.drop(columns=p_fix.filter(like="load").columns)
-
-        # Round the p_fix value to avoid numerical troubles with solver
-        p_fix = p_fix.round(5)
-
-        constrained_network.components[comp.name].dynamic.p_max_pu = p_fix.fillna(0)
-        constrained_network.components[comp.name].dynamic.p_min_pu = p_fix.fillna(0)
-        
-        # elif comp.name == 'StorageUnit':
-        #     p_min_fix = (comp.dynamic.p_dispatch / comp.static.p_nom)
-        #     p_max_fix = (comp.dynamic.p_store / comp.static.p_nom)
-        #     p_min_fix = (   p_min_fix
-        #                     .filter(like='GB')
-        #                     .drop(columns=p_min_fix.filter(like="load").columns)
-        #                     .round(5)
-        #                 )   
-        #     p_max_fix = (
-        #                     p_max_fix
-        #                     .filter(like='GB')
-        #                     .drop(columns=p_max_fix.filter(like="load").columns)
-        #                     .round(5)
-        #                 )
-            
-            
-        #     constrained_network.components[comp.name].dynamic.p_max_pu = p_max_fix.fillna(0)
-        #     constrained_network.components[comp.name].dynamic.p_min_pu = p_min_fix.fillna(0)
-
+        constrained_network.components[comp.name].dynamic.p_max_pu = p_max_fix
+        constrained_network.components[comp.name].dynamic.p_min_pu = p_min_fix
 
         logger.info(f"Fixed the dispatch of {comp.name}")
 
 
-def fix_interconnector_dispatch(constrained_network, unconstrained_result):
+def fix_interconnector_dispatch(
+    constrained_network: pypsa.Network, unconstrained_result: pypsa.Network
+):
     """
     Fix dispatch of interconnectors based on the result of unconstrained optimization
 
@@ -94,6 +88,7 @@ def fix_interconnector_dispatch(constrained_network, unconstrained_result):
     # p0_fix = p0_fix.round(5)
 
     constrained_network.links_t.p_max_pu[interconnectors.index] = p0_fix
+    constrained_network.links_t.p_min_pu[interconnectors.index] = p0_fix
 
 
 def _apply_multiplier(
@@ -203,7 +198,7 @@ def create_up_down_plants(
             g_down, marginal_cost_down = _apply_multiplier(
                 g_down, bids_and_offers["bid_multiplier"], renewable_payment_profile
             )
-        
+
         # Add generators that can increase dispatch
         constrained_network.add(
             comp.name,
@@ -249,7 +244,7 @@ def create_up_down_plants(
         )
 
 
-def _read_csv(filepath):
+def read_csv(filepath):
     return pd.read_csv(filepath, index_col="snapshot", parse_dates=True)
 
 
@@ -266,8 +261,8 @@ if __name__ == "__main__":
     network = pypsa.Network(snakemake.input.network)
     unconstrained_result = pypsa.Network(snakemake.input.unconstrained_result)
     bids_and_offers = snakemake.params.bids_and_offers
-    renewable_payment_profile = _read_csv(snakemake.input.renewable_payment_profile)
-    interconnector_bid_offer_profile = _read_csv(
+    renewable_payment_profile = read_csv(snakemake.input.renewable_payment_profile)
+    interconnector_bid_offer_profile = read_csv(
         snakemake.input.interconnector_bid_offer
     )
 
