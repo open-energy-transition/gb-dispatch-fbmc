@@ -31,7 +31,7 @@ from scripts.add_electricity import (
     attach_hydro,
     flatten,
 )
-from scripts.gb_model._helpers import get_lines, time_difference_hours
+from scripts.gb_model._helpers import time_difference_hours
 
 logger = logging.getLogger(__name__)
 
@@ -1160,35 +1160,6 @@ def _add_generator_availability(
     )
 
 
-def _prune_lines(
-    n: pypsa.Network,
-    prune_lines: list[dict[str, int]],
-) -> None:
-    """
-    Prune lines between bus0 and bus1 by setting their s_max_pu to 0.
-
-    Args:
-        n (pypsa.Network): The PyPSA network to modify.
-        prune_lines (list[dict[str, int]]): The lines to prune.
-    """
-    # Prune specified lines
-    for line in prune_lines:
-        mask = get_lines(n.lines, line["bus0"], line["bus1"])
-        if mask.any():
-            # Get lines to remove
-            lines_to_remove = n.lines[mask].index
-
-            # Remove the lines from the network
-            n.remove("Line", lines_to_remove)
-            logger.info(
-                f"Deleted line between bus {line['bus0']} and bus {line['bus1']}"
-            )
-        else:
-            logger.warning(
-                f"No line found to prune between bus {line['bus0']} and bus {line['bus1']}"
-            )
-
-
 def add_load_shedding(n: pypsa.Network, voll: float) -> None:
     """
     Add a load shedding generator to the network.
@@ -1235,7 +1206,6 @@ def compose_network(
     renewable_config: dict[str, Any],
     demands: dict[str, str],
     ev_data: dict[str, str],
-    prune_lines: list[dict[str, int]],
     dsr: dict[str, str],
     H2_data: dict[str, Any],
     enable_chp: bool,
@@ -1281,8 +1251,6 @@ def compose_network(
         Dictionary mapping demand types to paths for the demand data
     ev_data : dict[str, str]
         Dictionary containing EV flexibility data
-    prune_lines : list[dict[str, int]]
-        List of lines to prune between specified bus pairs
     dsr : dict[str, str]
         Dictionary containing DSR flexibility data for baseline and electrified heat
     dsr_hours_dict: dict[str, list]
@@ -1372,7 +1340,6 @@ def compose_network(
 
     add_battery_storage(network, ppl, battery_e_nom_path, year)
     _add_generator_availability(network, generator_availability_path)
-    _prune_lines(network, prune_lines)
     add_load_shedding(network, costs_config["voll"])
 
     finalise_composed_network(network, context)
@@ -1417,7 +1384,6 @@ if __name__ == "__main__":
         dsr=_input_list_to_dict(snakemake.input.dsr),
         H2_data=_input_list_to_dict(snakemake.input.H2_data),
         enable_chp=snakemake.params.enable_chp,
-        prune_lines=snakemake.params.prune_lines,
         dsr_hours_dict=snakemake.params.dsr_hours_dict,
         load_bus_suffixes=snakemake.params.load_bus_suffixes,
         flex_carrier_suffixes=snakemake.params.flex_carrier_suffixes,
