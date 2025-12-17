@@ -676,9 +676,8 @@ if __name__ == "__main__":
             )
             if mode == "gb_shapes":
                 custom_gb_busmap = pd.read_csv(
-                    snakemake.input.custom_busmap, index_col=0
+                    snakemake.input.custom_busmap, index_col="Index", dtype={"Index": "str"})
                 ).squeeze()
-                custom_gb_busmap.index = custom_gb_busmap.index.astype(str)
 
                 # Replace bus assignments based on gb custom busmap
                 overlapping_indices = custom_busmap.index.intersection(
