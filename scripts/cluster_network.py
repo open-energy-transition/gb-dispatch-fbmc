@@ -626,7 +626,7 @@ if __name__ == "__main__":
     if "snakemake" not in globals():
         from scripts._helpers import mock_snakemake
 
-        snakemake = mock_snakemake("cluster_network", clusters="clustered")
+        snakemake = mock_snakemake("cluster_network", clusters=60)
     configure_logging(snakemake)
     set_scenario_config(snakemake)
 
@@ -675,12 +675,21 @@ if __name__ == "__main__":
                 f"Imported custom shapes from {snakemake.input.custom_busshapes}"
             )
             if mode == "gb_shapes":
-                custom_busmap = pd.read_csv(
+                custom_gb_busmap = pd.read_csv(
                     snakemake.input.custom_busmap, index_col=0
                 ).squeeze()
-                custom_busmap.index = custom_busmap.index.astype(str)
+                custom_gb_busmap.index = custom_gb_busmap.index.astype(str)
+
+                # Replace bus assignments based on gb custom busmap
+                overlapping_indices = custom_busmap.index.intersection(
+                    custom_gb_busmap.index
+                )
+                custom_busmap.update(custom_gb_busmap)
                 logger.info(
-                    f"Imported custom busmap from {snakemake.input.custom_busmap}"
+                    f"Replaced {len(overlapping_indices)} entries in custom busmap from {snakemake.input.custom_busmap}"
+                )
+                assert len(overlapping_indices) == len(custom_gb_busmap), (
+                    "Some buses in the custom gb busmap do not exist in the network."
                 )
 
                 bus_to_country = custom_shapes.set_index("name").country.to_dict()

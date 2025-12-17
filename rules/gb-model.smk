@@ -871,7 +871,6 @@ rule compose_network:
         clustering=config["clustering"],
         renewable=config["renewable"],
         enable_chp=config["chp"]["enable"],
-        prune_lines=config["region_operations"]["prune_lines"],
         dsr_hours_dict=config["fes"]["gb"]["flexibility"]["dsr_hours"],
         load_bus_suffixes=config["fes"]["gb"]["demand"]["bus_suffix"],
         flex_carrier_suffixes=config["fes"]["gb"]["flexibility"]["carrier_suffix"],
