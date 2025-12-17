@@ -676,7 +676,9 @@ if __name__ == "__main__":
             )
             if mode == "gb_shapes":
                 custom_gb_busmap = pd.read_csv(
-                    snakemake.input.custom_busmap, index_col="Index", dtype={"Index": "str"})
+                    snakemake.input.custom_busmap,
+                    index_col="Index",
+                    dtype={"Index": "str"},
                 ).squeeze()
 
                 # Replace bus assignments based on gb custom busmap
