@@ -1373,7 +1373,7 @@ def compose_network(
     add_battery_storage(network, ppl, battery_e_nom_path, year)
     _add_generator_availability(network, generator_availability_path)
     _prune_lines(network, prune_lines)
-    add_load_shedding(network, costs["voll"])
+    add_load_shedding(network, costs_config["voll"])
 
     finalise_composed_network(network, context)
 
