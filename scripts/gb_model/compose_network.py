@@ -183,6 +183,7 @@ def _load_powerplants(
     ppl = pd.read_csv(powerplants_path, index_col="name", dtype={"bus": "str"})
     ppl = ppl[ppl.build_year == year]
     ppl["max_hours"] = 0  # Initialize max_hours column
+    ppl["efficiency"] = 1.0  # Initialize efficiency column
 
     return ppl
 
@@ -1159,6 +1160,34 @@ def _add_generator_availability(
     )
 
 
+def add_load_shedding(n: pypsa.Network, voll: float) -> None:
+    """
+    Add a load shedding generator to the network.
+
+    Parameters
+    ----------
+    n : pypsa.Network
+        The PyPSA network to attach the load shedding to.
+    voll : float
+        Value of lost load (VOLL) in EUR/MWh. If zero, load shedding is not added.
+    """
+    if voll > 0:
+        n.add("Carrier", "Load Shedding")
+        buses = n.buses.query("carrier=='AC'").index
+        n.add(
+            "Generator",
+            buses,
+            suffix=" Load Shedding",
+            marginal_cost=voll,
+            carrier="Load Shedding",
+            bus=buses,
+            p_nom=np.inf,
+        )
+        logger.info("Added load shedding generators to all AC buses")
+    else:
+        logger.info("VOLL is zero or False; load shedding not added to the network")
+
+
 def compose_network(
     network_path: str,
     output_path: str,
@@ -1263,7 +1292,7 @@ def compose_network(
     attach_conventional_generators(
         network,
         costs,
-        ppl,
+        ppl.assign(),
         conventional_carriers,
         extendable_carriers={"Generator": []},
         conventional_params={},
@@ -1311,6 +1340,7 @@ def compose_network(
 
     add_battery_storage(network, ppl, battery_e_nom_path, year)
     _add_generator_availability(network, generator_availability_path)
+    add_load_shedding(network, costs_config["voll"])
 
     finalise_composed_network(network, context)
 
