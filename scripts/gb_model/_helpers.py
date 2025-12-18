@@ -9,6 +9,7 @@ from datetime import datetime
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+import pypsa
 import pytz
 from pytz import country_timezones
 import pypsa
@@ -199,7 +200,6 @@ def filter_interconnectors(df: pd.DataFrame) -> pd.DataFrame:
     df: pd.DataFrame
         Dataframe of Links components in PyPSA model
     """
-    
     m1 = df["bus0"].str.startswith("GB")
     m2 = df["bus1"].str.startswith("GB")
 
