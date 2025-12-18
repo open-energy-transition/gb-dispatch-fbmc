@@ -988,6 +988,10 @@ rule prepare_unconstrained:
         network=resources("networks/composed_clustered/{year}.nc"),
     output:
         network=resources("networks/unconstrained_clustered/{year}.nc"),
+    params:
+        unconstrain_marginal_eur_plants=config["fes"]["eur"][
+            "unconstrain_marginal_plants"
+        ],
     log:
         logs("prepare_unconstrained_network/{year}.log"),
     script:

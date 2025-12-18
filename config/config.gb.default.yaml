@@ -1047,6 +1047,9 @@ fes:
       iandc_dsr: "baseline_electricity"
       iandc_heat_dsr: "iandc_heat"
       residential_heat_dsr: "residential_heat"
+    # If true, do not set capacity limits on the most expensive powerplant in each european country.
+    # This is a stand-in for load shedding which gives us more reasonable marginal prices for use in re-dispatch.
+    unconstrain_marginal_plants: true
 
   hydrogen:
     demand:

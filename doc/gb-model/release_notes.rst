@@ -12,7 +12,8 @@ Release Notes
 Upcoming Release
 ================
 
-* Enable custom busmap to prevent incorrect clustering of offshore buses (#159) 
+* Add config option to unconstrain `p_nom` for each EUR country's most expensive powerplant, instead of using load shedding.
+* Enable custom busmap to prevent incorrect clustering of offshore buses (#159)
 * Fix H2 demands in Europe using TYNDP H2 NT scenario demands (#152)
 * Add bid/offers for generators (#147)
 * Distribute all loads into their own buses with independently linked DSR stores
