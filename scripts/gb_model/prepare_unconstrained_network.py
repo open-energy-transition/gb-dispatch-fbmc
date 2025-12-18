@@ -58,18 +58,18 @@ def unconstrain_marginal_plant_max_dispatch(network: pypsa.Network) -> None:
         The input PyPSA network representing the GB power system.
 
     """
+    # Remove GB load shedding plants; we shouldn't need them if we are unconstraining
+    # the marginal plants in Europe
     network.remove(
-        "Generator", network.generators.filter(like="Load Shedding", axis=0).index
+        "Generator",
+        network.generators.filter(regex=r"GB \d+ Load Shedding", axis=0).index,
     )
-    marginal_plants = (
-        network.generators[
-            (network.generators.set == "PP")
-            & ~network.generators.bus.str.startswith("GB")
-        ]
-        .groupby("bus")
-        .marginal_cost.idxmax()
-    )
-    network.generators.loc[marginal_plants, "p_nom"] = LARGE_NUMBER
+    max_marginal_plant_cost = network.generators[
+        (network.generators.set == "PP") & ~network.generators.bus.str.startswith("GB")
+    ].marginal_cost.max()
+    network.generators.loc[
+        network.generators.index.str.contains("Load Shedding"), "marginal_cost"
+    ] = max_marginal_plant_cost + 1.0
 
 
 if __name__ == "__main__":
