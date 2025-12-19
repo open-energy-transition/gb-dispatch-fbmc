@@ -1063,9 +1063,9 @@ rule get_renewable_payment_profile:
         "../scripts/gb_model/get_renewable_payment_profile.py"
 
 
-rule get_eur_generator_bid_offer_profile:
+rule calc_interconnector_bid_offer_profile:
     message:
-        "Calculate bid/offer prices for EU marginal generator"
+        "Calculate interconnector bid/offer profiles"
     params:
         bids_and_offers=config_provider("redispatch"),
         load_shedding_price=config["solving"]["options"]["load_shedding"],
@@ -1073,32 +1073,6 @@ rule get_eur_generator_bid_offer_profile:
         unconstrained_result=RESULTS + "networks/unconstrained_clustered/{year}.nc",
         renewable_payment_profile=resources(
             "gb-model/renewable_payment_profile/{year}.csv"
-        ),
-    output:
-        generator_csv=resources(
-            "gb-model/bids_and_offers/{year}/eur_marginal_generator.csv"
-        ),
-        interconnector_fee=resources(
-            "gb-model/bids_and_offers/{year}/interconnector_fee.csv"
-        ),
-    log:
-        logs("get_eur_generator_bid_offer_profile/{year}.log"),
-    script:
-        "../scripts/gb_model/get_eur_generator_bid_offer_profile.py"
-
-
-rule calc_interconnector_bid_offer_profile:
-    message:
-        "Calculate interconnector bid/offer profiles"
-    params:
-        load_shedding_price=config["solving"]["options"]["load_shedding"],
-    input:
-        unconstrained_result=RESULTS + "networks/unconstrained_clustered/{year}.nc",
-        interconnector_fee_profile=resources(
-            "gb-model/bids_and_offers/{year}/interconnector_fee.csv"
-        ),
-        eur_marginal_gen_profile=resources(
-            "gb-model/bids_and_offers/{year}/eur_marginal_generator.csv"
         ),
     output:
         bid_offer_profile=resources(
