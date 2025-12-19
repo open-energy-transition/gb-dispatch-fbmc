@@ -49,8 +49,9 @@ def copperplate_gb(network: pypsa.Network) -> None:
 
 def unconstrain_marginal_plant_max_dispatch(network: pypsa.Network) -> None:
     """
-    Modify the network in-place to allow the marginal plants in Europe to operate at any capacity,
-    so that our "load shedding" equivalent is represented by these plants increasing their output.
+    Modify the network in-place to remove the GB load shedding plants and set the
+    marginal cost of all non-GB marginal plants to be at least as high as the
+    most expensive marginal plant in Europe.
 
     Parameters
     ----------
@@ -58,8 +59,7 @@ def unconstrain_marginal_plant_max_dispatch(network: pypsa.Network) -> None:
         The input PyPSA network representing the GB power system.
 
     """
-    # Remove GB load shedding plants; we shouldn't need them if we are unconstraining
-    # the marginal plants in Europe
+    # Limiting to just `PP` generators, which are the conventional, dispatchable plants.
     network.remove(
         "Generator",
         network.generators.filter(regex=r"GB \d+ Load Shedding", axis=0).index,
@@ -67,9 +67,14 @@ def unconstrain_marginal_plant_max_dispatch(network: pypsa.Network) -> None:
     max_marginal_plant_cost = network.generators[
         (network.generators.set == "PP") & ~network.generators.bus.str.startswith("GB")
     ].marginal_cost.max()
+    # add 0.1 to ensure they are always the most expensive
     network.generators.loc[
         network.generators.index.str.contains("Load Shedding"), "marginal_cost"
-    ] = max_marginal_plant_cost + 1.0
+    ] = max_marginal_plant_cost + 0.1
+    logger.info(
+        "Removed GB load shedding generators and set Eur load shedding generator marginal costs to %.2f",
+        max_marginal_plant_cost + 0.1,
+    )
 
 
 if __name__ == "__main__":
