@@ -43,7 +43,7 @@ def compute_interconnector_fee(
 
     for connector, row in interconnectors.iterrows():
         #  Replace the load shedding generator costs with the otherwise most expensive generator
-        
+
         p_gb = marginal_price_profile[row.bus0]
         p_eur = marginal_price_profile[row.bus1]
         # Price spread calculated as the absolute difference
