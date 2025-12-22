@@ -156,10 +156,21 @@ def _add_line_endings(buses, lines, add=0, name="line-end"):
 
     endpoints = pd.concat([endpoints0, endpoints1], ignore_index=True)
     endpoints.drop_duplicates(subset=["geometry", "voltage"], inplace=True)
-    endpoints.reset_index(drop=True, inplace=True)
 
-    endpoints["bus_id"] = endpoints.index + add + 1
-    endpoints["bus_id"] = "virtual" + "-" + endpoints["bus_id"].astype(str)
+    # Create deterministic ID from rounded coordinates
+    def create_virtual_id(row):
+        lat = round(row.geometry.y, 4)  # around 11 m precision
+        lon = round(row.geometry.x, 4)
+        voltage_kv = int(row["voltage"] / 1000)
+
+        # Replace dots with 'p' and minus with 'm' to avoid issues with file systems
+        lat = str(lat).replace("-", "m").replace(".", "p")
+        lon = str(lon).replace("-", "m").replace(".", "p")
+
+        # Format: virtual-lat-lon-voltage
+        return f"virtual_{lat}_{lon}_{voltage_kv}"
+
+    endpoints["bus_id"] = endpoints.apply(create_virtual_id, axis=1)
 
     endpoints["contains"] = name
 
