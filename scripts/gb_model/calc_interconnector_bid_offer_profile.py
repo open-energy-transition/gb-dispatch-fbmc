@@ -23,7 +23,6 @@ def compute_interconnector_fee(
     marginal_price_profile: pd.DataFrame,
     unconstrained_result: pypsa.Network,
     interconnectors: pd.DataFrame,
-    load_shedding_price: float,
 ) -> pd.DataFrame:
     """
     Compute the spread between the marginal costs of GB and eur node
@@ -36,31 +35,19 @@ def compute_interconnector_fee(
         pypsa network with the results of the unconstrained optimization
     interconnectors: pd.DataFrame
         Dataframe of interconnectors between GB and eur bus
-    load_shedding_price: float
-        Cost of load shedding
     """
 
     fee_profile = pd.DataFrame(
         index=unconstrained_result.snapshots, columns=interconnectors.index
     )
 
-    for idx, connector in interconnectors.iterrows():
+    for connector, row in interconnectors.iterrows():
         #  Replace the load shedding generator costs with the otherwise most expensive generator
-        eur_highest_marginal_cost = marginal_costs_bus(
-            connector.bus1, unconstrained_result
-        ).sort_values(ascending=False)[0]
-        GB_highest_marginal_cost = marginal_costs_bus(
-            connector.bus0, unconstrained_result
-        ).sort_values(ascending=False)[0]
-
-        eur_bus_price = marginal_price_profile[connector.bus1].apply(
-            lambda x: eur_highest_marginal_cost if x > load_shedding_price else x
-        )
-        GB_bus_price = marginal_price_profile[connector.bus0].apply(
-            lambda x: GB_highest_marginal_cost if x > load_shedding_price else x
-        )
-
-        fee_profile[idx] = (GB_bus_price - eur_bus_price).abs()
+        
+        p_gb = marginal_price_profile[row.bus0]
+        p_eur = marginal_price_profile[row.bus1]
+        # Price spread calculated as the absolute difference
+        fee_profile[connector] = (p_gb - p_eur).abs()
 
     logger.info("Calculated interconnector fee")
     return fee_profile
@@ -91,11 +78,6 @@ def get_gen_marginal_cost(
     marginal_carrier = price_spread.index[0]
     marginal_gen_cost = gb_marginal_electricity_price
 
-    # Resetting the eur shadow bus price if load shedding had occurred (using a random high threshold of 1000)
-    # The carrier with the highest marginal cost is used to decide the price rates
-    if gb_marginal_electricity_price >= load_shedding_price:
-        marginal_gen_cost = generator_marginal_prices[marginal_carrier]
-
     return marginal_carrier, marginal_gen_cost
 
 
@@ -105,7 +87,6 @@ def calc_bid_offer_multiplier(
     bid_multiplier: dict[str, list],
     offer_multiplier: dict[str, list],
     renewable_payment_profile: pd.Series,
-    load_shedding_price: float,
 ) -> tuple[float]:
     """
     Calculate bid/offer multiplier profile based on the marginal generator at each eur node for every time step
@@ -122,12 +103,10 @@ def calc_bid_offer_multiplier(
         Multiplier for offers for conventional carriers
     renewable_payment_profile: pd.Series
         Renewable payment profile for a particular timestamp at the eur node
-    load_shedding_price: float
-        Cost of load shedding in GBP/MWh
     """
 
     marginal_carrier, marginal_gen_cost = get_gen_marginal_cost(
-        generator_marginal_prices, gb_marginal_electricity_price, load_shedding_price
+        generator_marginal_prices, gb_marginal_electricity_price
     )
 
     # Adjust marginal cost for both offer and bid
@@ -148,7 +127,6 @@ def get_eur_marginal_generator(
     unconstrained_result: pypsa.Network,
     bids_and_offers_multipliers: dict[dict[str, float]],
     renewable_payment_profile: pd.DataFrame,
-    load_shedding_price: float,
 ) -> pd.DataFrame:
     """
     Obtain the marginal generator at eur node at each timestamp
@@ -163,8 +141,6 @@ def get_eur_marginal_generator(
         Bid and offer multiplier to be applied for conventional generation
     renewable_payment_profile: pd.DataFrame
         Renewable payment profile based on CfD contracts adjusted for electricity market price
-    load_shedding_price: float
-        Cost of load shedding
     """
 
     # Filter AC buses at eur nodes
@@ -191,7 +167,6 @@ def get_eur_marginal_generator(
                     renewable_payment_profile.filter(regex=rf"^{eur_bus}").loc[
                         row.name
                     ],
-                    load_shedding_price,
                 ),
                 axis=1,
             ).tolist()
@@ -248,7 +223,6 @@ def calc_interconnector_bids_and_offers(
     eur_marginal_gen_profile: pd.DataFrame,
     interconnector_fee_profile: pd.DataFrame,
     loss_profile: pd.DataFrame,
-    load_shedding_price: float,
 ) -> pd.DataFrame:
     """
     Calculate the bids and offers for import, export and floating condition of each interconnector
@@ -265,8 +239,6 @@ def calc_interconnector_bids_and_offers(
             Spread in marginal prices for each interconnector
         loss_profile: pd.DataFrame
             Weighted capacity average of losses of interconnectors connected to each eur bus
-        load_shedding_price: float
-            Cost of load shedding
     """
     profile_dict = {}
 
@@ -274,21 +246,10 @@ def calc_interconnector_bids_and_offers(
         gb_bus = row["bus0"]
         eur_bus = row["bus1"]
 
-        eur_highest_marginal_cost = marginal_costs_bus(
-            eur_bus, unconstrained_result
-        ).sort_values(ascending=False)[0]
-        GB_highest_marginal_cost = marginal_costs_bus(
-            gb_bus, unconstrained_result
-        ).sort_values(ascending=False)[0]
-
         fee = interconnector_fee_profile[connector]
         # Reset bus shadow price if load generator set the LMP
-        p_gb = unconstrained_result.buses_t.marginal_price[gb_bus].apply(
-            lambda x: GB_highest_marginal_cost if x >= load_shedding_price else x
-        )
-        p_eur = unconstrained_result.buses_t.marginal_price[eur_bus].apply(
-            lambda x: eur_highest_marginal_cost if x >= load_shedding_price else x
-        )
+        p_gb = unconstrained_result.buses_t.marginal_price[gb_bus]
+        p_eur = unconstrained_result.buses_t.marginal_price[eur_bus]
         bid = eur_marginal_gen_profile[f"{eur_bus} bid"]
         offer = eur_marginal_gen_profile[f"{eur_bus} offer"]
         loss = loss_profile[eur_bus]
@@ -377,7 +338,6 @@ def assign_bid_offer(
 
 def compose_data(
     unconstrained_result: pypsa.Network,
-    load_shedding_price: float,
     bids_and_offers_multipliers: dict[dict[str, float]],
     renewable_payment_profile_path: str,
 ):
@@ -388,8 +348,6 @@ def compose_data(
     ----------
     unconstrained_result: pypsa.Network
         Unconstrained optimization network
-    load_shedding_price: float
-        Cost of load shedding in GBP/MWh
     bids_and_offers_multipliers: dict[dict[str,float]]
         Bid and offer multiplier to be applied for conventional generation
     renewable_payment_profile_path: str
@@ -415,7 +373,6 @@ def compose_data(
         marginal_price_profile,
         unconstrained_result,
         interconnectors,
-        load_shedding_price,
     )
 
     # Compute marginal generator at the eur bus
@@ -424,7 +381,6 @@ def compose_data(
         unconstrained_result,
         bids_and_offers_multipliers,
         renewable_payment_profile,
-        load_shedding_price,
     )
 
     # Compute interconnector losses
@@ -437,7 +393,6 @@ def compose_data(
         eur_marginal_gen_profile,
         interconnector_fee_profile,
         loss_profile,
-        load_shedding_price,
     )
 
     # Assign bid/offer from one of the six profiles to interconnector at each time stamp depending on it's status
@@ -459,7 +414,6 @@ if __name__ == "__main__":
 
     interconnector_profile = compose_data(
         unconstrained_result=pypsa.Network(snakemake.input.unconstrained_result),
-        load_shedding_price=snakemake.params.load_shedding_price,
         bids_and_offers_multipliers=snakemake.params.bids_and_offers,
         renewable_payment_profile_path=snakemake.input.renewable_payment_profile,
     )

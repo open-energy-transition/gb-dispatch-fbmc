@@ -1065,7 +1065,6 @@ rule calc_interconnector_bid_offer_profile:
         "Calculate interconnector bid/offer profiles"
     params:
         bids_and_offers=config_provider("redispatch"),
-        load_shedding_price=config["solving"]["options"]["load_shedding"],
     input:
         unconstrained_result=RESULTS + "networks/unconstrained_clustered/{year}.nc",
         renewable_payment_profile=resources(
