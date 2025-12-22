@@ -34,19 +34,26 @@ def fix_dispatch(
 
     def _process_p_fix(dispatch_t: pd.DataFrame, p_nom: pd.DataFrame):
         p_fix = (dispatch_t / p_nom).round(5).fillna(0)
-        p_fix = p_fix.drop(columns=p_fix.filter(like="load").columns).filter(like="GB")
+        p_fix = p_fix.drop(columns=p_fix.filter(like="load").columns)
 
         return p_fix
 
     for comp in unconstrained_result.components:
-        if comp.name not in ["Generator", "StorageUnit"]:
+        if comp.name not in ["Generator", "StorageUnit","Link"]:
             continue
 
         if comp.name == "Generator":
             p_max_fix = p_min_fix = _process_p_fix(
                 comp.dynamic.p, comp.static.p_nom
             )
-
+        elif comp.name == "Link":
+            # Dispatch of intra gb DC links are not be fixed
+            mask = comp.static.bus0.str.startswith("GB") & comp.static.bus1.str.startswith("GB")
+            intra_gb_dc_links = comp.static[mask].query("carrier == 'DC'").index
+            
+            p_max_fix = p_min_fix = _process_p_fix(
+                comp.dynamic.p0, comp.static.p_nom
+            ).drop(intra_gb_dc_links, axis=1)
         elif comp.name == "StorageUnit":
             # For storage units: the decision variables are `p_dispatch` and `p_store`.
             # p = p_dispatch - p_store
@@ -62,33 +69,6 @@ def fix_dispatch(
         constrained_network.components[comp.name].dynamic.p_min_pu = p_min_fix
 
         logger.info(f"Fixed the dispatch of {comp.name}")
-
-
-def fix_interconnector_dispatch(
-    constrained_network: pypsa.Network, unconstrained_result: pypsa.Network
-):
-    """
-    Fix dispatch of interconnectors based on the result of unconstrained optimization
-
-    Parameters
-    ----------
-    constrained_network: pypsa.Network
-        Constrained network to finalize
-    unconstrained_result: pypsa.Network
-        Result of the unconstrained optimization
-    """
-
-    interconnectors = filter_interconnectors(unconstrained_result.links)
-
-    p0_fix = (
-        unconstrained_result.links_t.p0[interconnectors.index] / interconnectors.p_nom
-    )
-
-    # Round the p0_fix value to avoid numerical troubles with solver
-    # p0_fix = p0_fix.round(5)
-
-    constrained_network.links_t.p_max_pu[interconnectors.index] = p0_fix
-    constrained_network.links_t.p_min_pu[interconnectors.index] = p0_fix
 
 
 def _apply_multiplier(
@@ -267,8 +247,6 @@ if __name__ == "__main__":
     )
 
     fix_dispatch(network, unconstrained_result)
-
-    fix_interconnector_dispatch(network, unconstrained_result)
 
     create_up_down_plants(
         network,
