@@ -1094,3 +1094,20 @@ rule get_renewable_payment_profile:
         logs("get_renewable_payment_profile/{year}.log"),
     script:
         "../scripts/gb_model/get_renewable_payment_profile.py"
+
+
+rule calc_interconnector_bid_offer_profile:
+    message:
+        "Calculate interconnector bid/offer profiles"
+    params:
+        bids_and_offers=config_provider("redispatch"),
+    input:
+        unconstrained_result=RESULTS + "networks/unconstrained_clustered/{year}.nc",
+    output:
+        bid_offer_profile=resources(
+            "gb-model/bids_and_offers/{year}/interconnector_bid_offer_profile.csv"
+        ),
+    log:
+        logs("calc_interconnector_bid_offer_profile/{year}.log"),
+    script:
+        "../scripts/gb_model/calc_interconnector_bid_offer_profile.py"
