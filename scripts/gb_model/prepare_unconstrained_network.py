@@ -47,7 +47,7 @@ def copperplate_gb(network: pypsa.Network) -> None:
     )
 
 
-def unconstrain_marginal_plant_max_dispatch(network: pypsa.Network) -> None:
+def update_load_shedding(network: pypsa.Network, add_cost: float) -> None:
     """
     Modify the network in-place to remove the GB load shedding plants and set the
     marginal cost of all non-GB marginal plants to be at least as high as the
@@ -57,7 +57,8 @@ def unconstrain_marginal_plant_max_dispatch(network: pypsa.Network) -> None:
     ----------
     network : pypsa.Network
         The input PyPSA network representing the GB power system.
-
+    add_cost : float
+        The additional cost to add on top of the maximum European marginal plant cost.
     """
     # Limiting to just `PP` generators, which are the conventional, dispatchable plants.
     network.remove(
@@ -67,13 +68,13 @@ def unconstrain_marginal_plant_max_dispatch(network: pypsa.Network) -> None:
     max_marginal_plant_cost = network.generators[
         (network.generators.set == "PP") & ~network.generators.bus.str.startswith("GB")
     ].marginal_cost.max()
-    # add 0.1 to ensure they are always the most expensive
+    # add a cost to ensure they are always the most expensive
     network.generators.loc[
         network.generators.index.str.contains("Load Shedding"), "marginal_cost"
-    ] = max_marginal_plant_cost + 0.1
+    ] = max_marginal_plant_cost + add_cost
     logger.info(
         "Removed GB load shedding generators and set Eur load shedding generator marginal costs to %.2f",
-        max_marginal_plant_cost + 0.1,
+        max_marginal_plant_cost + add_cost,
     )
 
 
@@ -90,6 +91,6 @@ if __name__ == "__main__":
     network = pypsa.Network(snakemake.input.network)
 
     copperplate_gb(network)
-    if snakemake.params["unconstrain_marginal_eur_plants"]:
-        unconstrain_marginal_plant_max_dispatch(network)
+    if pd.notna(add_cost := snakemake.params["load_shedding_cost_above_marginal"]):
+        update_load_shedding(network, add_cost)
     network.export_to_netcdf(snakemake.output.network)
