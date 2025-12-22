@@ -53,12 +53,12 @@ def compute_interconnector_fee(
     return fee_profile
 
 
-def get_gen_marginal_cost(
+def get_gen_marginal_carrier(
     generator_marginal_prices: pd.DataFrame,
     gb_marginal_electricity_price: float,
-) -> tuple[str, float]:
+) -> str:
     """
-    To identify marginal generator at the EU bus
+    To identify marginal carrier at the EUR bus
 
     Parameters
     ----------
@@ -73,9 +73,8 @@ def get_gen_marginal_cost(
         (generator_marginal_prices - gb_marginal_electricity_price).abs().sort_values()
     )
     marginal_carrier = price_spread.index[0]
-    marginal_gen_cost = gb_marginal_electricity_price
 
-    return marginal_carrier, marginal_gen_cost
+    return marginal_carrier
 
 
 def calc_bid_offer_multiplier(
@@ -83,7 +82,6 @@ def calc_bid_offer_multiplier(
     generator_marginal_prices: pd.DataFrame,
     bid_multiplier: dict[str, list],
     offer_multiplier: dict[str, list],
-    renewable_payment_profile: pd.Series,
 ) -> tuple[float]:
     """
     Calculate bid/offer multiplier profile based on the marginal generator at each eur node for every time step
@@ -98,20 +96,18 @@ def calc_bid_offer_multiplier(
         Multiplier for bids for conventional carriers
     offer_multiplier: dict[str, list]
         Multiplier for offers for conventional carriers
-    renewable_payment_profile: pd.Series
-        Renewable payment profile for a particular timestamp at the eur node
     """
 
-    marginal_carrier, marginal_gen_cost = get_gen_marginal_cost(
+    marginal_carrier = get_gen_marginal_carrier(
         generator_marginal_prices, gb_marginal_electricity_price
     )
 
     # Adjust marginal cost for both offer and bid
     if marginal_carrier in bid_multiplier.keys():
-        bid_cost = marginal_gen_cost * bid_multiplier[marginal_carrier]
-        offer_cost = marginal_gen_cost * offer_multiplier[marginal_carrier]
+        bid_cost = gb_marginal_electricity_price * bid_multiplier[marginal_carrier]
+        offer_cost = gb_marginal_electricity_price * offer_multiplier[marginal_carrier]
     else:
-        bid_cost = offer_cost = marginal_gen_cost
+        bid_cost = offer_cost = gb_marginal_electricity_price
 
     return bid_cost, offer_cost
 
@@ -120,7 +116,6 @@ def get_eur_marginal_generator(
     marginal_price_profile: pd.DataFrame,
     unconstrained_result: pypsa.Network,
     bids_and_offers_multipliers: dict[dict[str, float]],
-    renewable_payment_profile: pd.DataFrame,
 ) -> pd.DataFrame:
     """
     Obtain the marginal generator at eur node at each timestamp
@@ -133,8 +128,6 @@ def get_eur_marginal_generator(
         Unconstrained optimization model result
     bids_and_offers_multipliers: dict[dict[str, float]]
         Bid and offer multiplier to be applied for conventional generation
-    renewable_payment_profile: pd.DataFrame
-        Renewable payment profile based on CfD contracts adjusted for electricity market price
     """
 
     # Filter AC buses at eur nodes
@@ -158,9 +151,6 @@ def get_eur_marginal_generator(
                     generator_marginal_prices,
                     bids_and_offers_multipliers["bid_multiplier"],
                     bids_and_offers_multipliers["offer_multiplier"],
-                    renewable_payment_profile.filter(regex=rf"^{eur_bus}").loc[
-                        row.name
-                    ],
                 ),
                 axis=1,
             ).tolist()
@@ -333,7 +323,6 @@ def assign_bid_offer(
 def compose_data(
     unconstrained_result: pypsa.Network,
     bids_and_offers_multipliers: dict[dict[str, float]],
-    renewable_payment_profile_path: str,
 ):
     """
     Main composition function to process the data
@@ -344,19 +333,10 @@ def compose_data(
         Unconstrained optimization network
     bids_and_offers_multipliers: dict[dict[str,float]]
         Bid and offer multiplier to be applied for conventional generation
-    renewable_payment_profile_path: str
-        CSV path for renewable payments based of CfD strike prices for GB
     """
 
     # Get list of interconnectors between GB and Eur
     interconnectors = filter_interconnectors(unconstrained_result.links)
-
-    # Read renewable payment profile
-    renewable_payment_profile = pd.read_csv(
-        renewable_payment_profile_path,
-        index_col="snapshot",
-        parse_dates=True,
-    )
 
     # Compute shadow prices at buses
     ac_buses = unconstrained_result.buses.query("carrier == 'AC'").index
@@ -374,7 +354,6 @@ def compose_data(
         marginal_price_profile,
         unconstrained_result,
         bids_and_offers_multipliers,
-        renewable_payment_profile,
     )
 
     # Compute interconnector losses
@@ -409,7 +388,6 @@ if __name__ == "__main__":
     interconnector_profile = compose_data(
         unconstrained_result=pypsa.Network(snakemake.input.unconstrained_result),
         bids_and_offers_multipliers=snakemake.params.bids_and_offers,
-        renewable_payment_profile_path=snakemake.input.renewable_payment_profile,
     )
 
     interconnector_profile.to_csv(snakemake.output.bid_offer_profile)
