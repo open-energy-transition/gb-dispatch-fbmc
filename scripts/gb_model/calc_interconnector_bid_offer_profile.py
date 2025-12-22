@@ -56,7 +56,6 @@ def compute_interconnector_fee(
 def get_gen_marginal_cost(
     generator_marginal_prices: pd.DataFrame,
     gb_marginal_electricity_price: float,
-    load_shedding_price: float,
 ) -> tuple[str, float]:
     """
     To identify marginal generator at the EU bus
@@ -67,8 +66,6 @@ def get_gen_marginal_cost(
         Dataframe of marginal costs for each carrier at the eur node
     gb_marginal_electricity_price: float
         Marginal cost of electricity at the GB node for the interconnector
-    load_shedding_price: float
-        Cost of load shedding in GBP/MWh
     """
 
     # Calculate price difference between generator marginal costs and GB marginal electricity price
@@ -110,15 +107,12 @@ def calc_bid_offer_multiplier(
     )
 
     # Adjust marginal cost for both offer and bid
-    if renewable_payment_profile.index.str.contains(marginal_carrier).any():
-        bid_cost = offer_cost = renewable_payment_profile[
-            renewable_payment_profile.index.str.contains(marginal_carrier)
-        ][0]
-    elif marginal_carrier in bid_multiplier.keys():
+    if marginal_carrier in bid_multiplier.keys():
         bid_cost = marginal_gen_cost * bid_multiplier[marginal_carrier]
         offer_cost = marginal_gen_cost * offer_multiplier[marginal_carrier]
     else:
         bid_cost = offer_cost = marginal_gen_cost
+
     return bid_cost, offer_cost
 
 
