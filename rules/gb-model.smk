@@ -988,6 +988,10 @@ rule prepare_unconstrained:
         network=resources("networks/composed_clustered/{year}.nc"),
     output:
         network=resources("networks/unconstrained_clustered/{year}.nc"),
+    params:
+        load_shedding_cost_above_marginal=config["fes"]["eur"][
+            "load_shedding_cost_above_marginal"
+        ],
     log:
         logs("prepare_unconstrained_network/{year}.log"),
     script:
