@@ -731,7 +731,7 @@ rule distribute_eur_demands:
             resources("gb-model/regional_{demand_type}_demand_annual.csv"),
             demand_type=config["fes"]["gb"]["demand"]["Technology Detail"].keys(),
         ),
-        extra_demands=[resources("gb-model/H2_demand_annual.csv")],
+        extra_demands=[],
     params:
         totals_to_demands=config["fes"]["eur"]["totals_to_demand_groups"],
         base_year=config["energy"]["energy_totals_year"],
@@ -745,6 +745,39 @@ rule distribute_eur_demands:
 
 def _ref_demand_type(w):
     return config["fes"]["eur"]["add_data_reference"][w.dataset]
+
+
+rule add_eur_H2_demand:
+    message:
+        "Add European H2 demand based on historical data combined with TYNDP future scenario demands"
+    input:
+        gb_demand=resources("gb-model/regional_H2_demand_annual.csv"),
+        eur_demand_tyndp="data/gb-model/tyndp_h2_demand.csv",
+        eur_demand_today="data/gb-model/downloaded/eur_H2_demand_today.xlsx",
+    params:
+        countries=config["countries"],
+    output:
+        csv=resources("gb-model/regional_H2_demand_annual_inc_eur.csv"),
+    log:
+        logs("add_eur_H2_demand.log"),
+    script:
+        "../scripts/gb_model/add_eur_H2_demand.py"
+
+
+rule synthesise_eur_H2_data:
+    message:
+        "Synthesise European H2 {wildcards.dataset} data using GB data"
+    input:
+        h2_demand=resources("gb-model/regional_H2_demand_annual_inc_eur.csv"),
+        gb_only_dataset=resources("gb-model/regional_{dataset}.csv"),
+    output:
+        csv=resources("gb-model/regional_{dataset}_inc_eur.csv"),
+    log:
+        logs("synthesise_eur_H2_data_{dataset}.log"),
+    wildcard_constraints:
+        dataset="off_grid_electrolysis_electricity_demand|H2_storage_capacity|grid_electrolysis_capacities",
+    script:
+        "../scripts/gb_model/synthesise_eur_H2_data.py"
 
 
 rule synthesise_eur_data:
@@ -871,7 +904,6 @@ rule compose_network:
         clustering=config["clustering"],
         renewable=config["renewable"],
         enable_chp=config["chp"]["enable"],
-        prune_lines=config["region_operations"]["prune_lines"],
         dsr_hours_dict=config["fes"]["gb"]["flexibility"]["dsr_hours"],
         load_bus_suffixes=config["fes"]["gb"]["demand"]["bus_suffix"],
         flex_carrier_suffixes=config["fes"]["gb"]["flexibility"]["carrier_suffix"],
@@ -956,6 +988,10 @@ rule prepare_unconstrained:
         network=resources("networks/composed_clustered/{year}.nc"),
     output:
         network=resources("networks/unconstrained_clustered/{year}.nc"),
+    params:
+        load_shedding_cost_above_marginal=config["fes"]["eur"][
+            "load_shedding_cost_above_marginal"
+        ],
     log:
         logs("prepare_unconstrained_network/{year}.log"),
     script:

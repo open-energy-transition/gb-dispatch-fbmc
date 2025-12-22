@@ -45,13 +45,25 @@ energy:
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#countries
 countries:
-- "BE"
-- "DK"
-- "FR"
-- "GB"
-- "IE"
-- "NL"
+- AT
+- BE
+- CH
+- CZ
+- DE
+- DK
+- ES
+- FI
+- FR
+- GB
+- IE
+- IT
+- LU
+- NL
 - "NO"
+- PL
+- PT
+- SE
+- SI
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#enable
 enable:
@@ -206,6 +218,7 @@ costs:
     oil PP: Other Thermal-Fuel Oil
     waste PP: WoodPellets-Waste
     waste CHP: Gas-Waste CHP
+  voll: 6000 #£/MWh - based on `value_of_lost_load` from (https://www.nationalgrid.com/sites/default/files/documents/Long-term%20Market%20and%20Network%20Constraint%20Modelling.pdf)
 
 low_carbon_register:
   carrier_mapping:
@@ -216,12 +229,11 @@ low_carbon_register:
     Biomass Conversion: biomass
     Dedicated Biomass: biomass
 
-
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#solving
 solving:
   options:
     clip_p_max_pu: 1.e-2
-    load_shedding: 6000 #£/MWh - based on `value_of_lost_load` from (https://www.nationalgrid.com/sites/default/files/documents/Long-term%20Market%20and%20Network%20Constraint%20Modelling.pdf)
+    load_shedding: false
     curtailment_mode: false
     noisy_costs: true
     skip_iterations: true
@@ -268,6 +280,7 @@ urls:
   eur-supply-table: https://api.neso.energy/dataset/bd83ce0b-7b1e-4ff2-89e8-12d524c34d99/resource/6563801b-6da4-46e7-b147-3d81c0237779/download/fes2023_es2_v001.csv
   etys: https://www.neso.energy/document/223046/download # ETYS November 2021
   low-carbon-contracts: https://dp.lowcarboncontracts.uk/dataset/5427b55f-cecc-4a72-b3ee-3533cbbd5555/resource/fa730219-fbd2-41b5-9510-ba2b0ff2c1ba/download/actual_cfd_generation_and_avoided_ghg_emissions.csv
+  eur_H2_demand_today: https://observatory.clean-hydrogen.europa.eu/sites/default/files/2025-09/Hydrogen%20demand%202022%20%28Update%202025%29.xlsx # 2022 data
 target_crs: "EPSG:27700"
 
 # Manual region merging configuration
@@ -544,14 +557,6 @@ region_operations:
     B0:
     - bus0: 29
       bus1: 27
-  # These are manually selected spurious lines originating from not removing stubs earlier
-  prune_lines:
-  - bus0: 10
-    bus1: 11
-  - bus0: 26
-    bus1: 29
-  - bus0: 11
-    bus1: 16
 
 # Note: Set ENTSO_E_API_KEY in your .env file or environment variables
 # Register at https://transparency.entsoe.eu/ to get API key
@@ -1054,10 +1059,9 @@ fes:
       iandc_dsr: "baseline_electricity"
       iandc_heat_dsr: "iandc_heat"
       residential_heat_dsr: "residential_heat"
-      H2_demand_annual: "H2"
-      off_grid_electrolysis_electricity_demand: "H2"
-      H2_storage_capacity: "H2"
-      grid_electrolysis_capacities: "H2"
+    # If not NaN, then the unconstrained load shedding generator will be set to have a marginal cost equal to that of the most expensive generator plus this value.
+    # This gives us slightly more realistic European marginal prices when we have load shedding.
+    load_shedding_cost_above_marginal: 1
 
   hydrogen:
     demand:
