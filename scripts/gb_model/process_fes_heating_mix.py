@@ -11,6 +11,7 @@ This script extracts the heating technology mix from FES workbook and calculates
 import logging
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 from scripts._helpers import configure_logging, set_scenario_config
@@ -18,20 +19,11 @@ from scripts._helpers import configure_logging, set_scenario_config
 logger = logging.getLogger(__name__)
 
 
-def _interpolation(x, year):
-    """
-    Interpolates the share of technology for the given year
-    """
-    num = (x["2050"] - x["2020"]) * (2050 - year)
-    den = 2050 - 2020
-    return x["2050"] - (num / den)
-
-
 def process_fes_heatmix(
     fes_data_heatmix_path: str,
-    electrified_heating_technologies: list[str],
+    electrified_heating_technologies: dict[str, list[str]],
     scenario: str,
-    year: int,
+    year_range: list[int],
 ) -> pd.DataFrame:
     """
     Process heating technology mix
@@ -55,24 +47,32 @@ def process_fes_heatmix(
         scenario, case=False
     )
     # Filter the data
-    fes_data_filtered = (
+    fes_scenario_data = (
         fes_data.loc[mask]
         .rename(columns={"data": "2050"})
         .reset_index("2020")
         .reset_index("scenario_2050", drop=True)
-        .loc[electrified_heating_technologies]
+        .replace(regex=r"\s*\-\s*", value=float("nan"))
         .astype(float)
     )
 
-    # Compute the share for the required year by interpolating the shares between 2020 and 2050
-    fes_data_filtered[year] = fes_data_filtered.apply(
-        lambda x: _interpolation(x, year), axis=1
+    fes_data_grouped = pd.DataFrame(
+        float("nan"),
+        index=electrified_heating_technologies.keys(),
+        columns=fes_scenario_data.columns,
     )
+    for tech, to_group in electrified_heating_technologies.items():
+        fes_data_grouped.loc[tech] = fes_scenario_data.loc[to_group].sum()
 
-    # Calculate % of homes supplied by each type of technology
-    fes_data_filtered["share"] = fes_data_filtered[year] / fes_data_filtered[year].sum()
-
-    return fes_data_filtered["share"]
+    fes_data_grouped.columns = fes_data_grouped.columns.astype(int).rename("year")
+    fes_data_all_years = fes_data_grouped.reindex(
+        columns=range(2020, 2051)
+    ).interpolate(axis=1)
+    fes_data_year_range = fes_data_all_years.loc[:, slice(*year_range)].stack()
+    fes_data_share = fes_data_year_range.div(
+        fes_data_year_range.groupby("year").sum(), level="year"
+    ).rename("share")
+    return fes_data_share
 
 
 if __name__ == "__main__":
@@ -84,29 +84,26 @@ if __name__ == "__main__":
     set_scenario_config(snakemake)
 
     electrified_heating_technologies = snakemake.params.electrified_heating_technologies
-    heating_mix = pd.DataFrame(
-        index=electrified_heating_technologies, columns=["residential", "commercial"]
-    )
 
     residential_share = process_fes_heatmix(
         fes_data_heatmix_path=snakemake.input.fes_residential_heatmix,
         electrified_heating_technologies=electrified_heating_technologies,
         scenario=snakemake.params.scenario,
-        year=int(snakemake.params.year),
+        year_range=snakemake.params.year_range,
     )
-    logger.info("Heating technology mix calculated for residential sector")
 
-    commercial_share = process_fes_heatmix(
-        fes_data_heatmix_path=snakemake.input.fes_commercial_heatmix,
+    services_share = process_fes_heatmix(
+        fes_data_heatmix_path=snakemake.input.fes_services_heatmix,
         electrified_heating_technologies=electrified_heating_technologies,
         scenario=snakemake.params.scenario,
-        year=int(snakemake.params.year),
+        year_range=snakemake.params.year_range,
     )
-    logger.info("Heating technology mix calculated for commercial sector")
-
-    heating_mix["residential"] = residential_share.tolist()
-    heating_mix["commercial"] = commercial_share.tolist()
-    heating_mix.index.name = "Technology"
-    # Save the heating technology mix for residential and commercial sectors
+    heating_mix = pd.concat(
+        [residential_share, services_share],
+        keys=["residential", "services"],
+        names=["sector", "technology", "year"],
+    )
+    assert np.allclose(heating_mix.groupby(["sector", "year"]).sum(), 1), (
+        "Heating mix shares do not sum to 1"
+    )
     heating_mix.to_csv(snakemake.output.csv)
-    logger.info(f"Heating technology mix saved to {snakemake.output.csv}")
