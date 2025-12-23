@@ -12,6 +12,7 @@ Release Notes
 Upcoming Release
 ================
 
+* Set bus_id for virtual buses using line_id to ensure stable custom busmap mapping (#166)
 * Enable custom busmap to prevent incorrect clustering of offshore buses (#159) 
 * Fix H2 demands in Europe using TYNDP H2 NT scenario demands (#152)
 * Add bid/offers for generators (#147)
