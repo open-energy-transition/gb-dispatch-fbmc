@@ -13,7 +13,6 @@ import pandas as pd
 import pypsa
 
 from scripts._helpers import configure_logging, set_scenario_config
-from scripts.gb_model._helpers import filter_interconnectors
 
 logger = logging.getLogger(__name__)
 
@@ -39,18 +38,18 @@ def fix_dispatch(
         return p_fix
 
     for comp in unconstrained_result.components:
-        if comp.name not in ["Generator", "StorageUnit","Link"]:
+        if comp.name not in ["Generator", "StorageUnit", "Link"]:
             continue
 
         if comp.name == "Generator":
-            p_max_fix = p_min_fix = _process_p_fix(
-                comp.dynamic.p, comp.static.p_nom
-            )
+            p_max_fix = p_min_fix = _process_p_fix(comp.dynamic.p, comp.static.p_nom)
         elif comp.name == "Link":
             # Dispatch of intra gb DC links are not be fixed
-            mask = comp.static.bus0.str.startswith("GB") & comp.static.bus1.str.startswith("GB")
+            mask = comp.static.bus0.str.startswith(
+                "GB"
+            ) & comp.static.bus1.str.startswith("GB")
             intra_gb_dc_links = comp.static[mask].query("carrier == 'DC'").index
-            
+
             p_max_fix = p_min_fix = _process_p_fix(
                 comp.dynamic.p0, comp.static.p_nom
             ).drop(intra_gb_dc_links, axis=1)
@@ -58,12 +57,8 @@ def fix_dispatch(
             # For storage units: the decision variables are `p_dispatch` and `p_store`.
             # p = p_dispatch - p_store
             # Refer https://docs.pypsa.org/latest/user-guide/optimization/storage/#storage-units
-            p_max_fix = _process_p_fix(
-                comp.dynamic.p_dispatch, comp.static.p_nom
-            )
-            p_min_fix = _process_p_fix(
-                -1 * comp.dynamic.p_store, comp.static.p_nom
-            )
+            p_max_fix = _process_p_fix(comp.dynamic.p_dispatch, comp.static.p_nom)
+            p_min_fix = _process_p_fix(-1 * comp.dynamic.p_store, comp.static.p_nom)
 
         constrained_network.components[comp.name].dynamic.p_max_pu = p_max_fix
         constrained_network.components[comp.name].dynamic.p_min_pu = p_min_fix

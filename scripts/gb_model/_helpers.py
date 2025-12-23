@@ -12,7 +12,6 @@ import pandas as pd
 import pypsa
 import pytz
 from pytz import country_timezones
-import pypsa
 
 logger = logging.getLogger(__name__)
 
