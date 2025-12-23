@@ -1070,9 +1070,6 @@ rule calc_interconnector_bid_offer_profile:
         bids_and_offers=config_provider("redispatch"),
     input:
         unconstrained_result=RESULTS + "networks/unconstrained_clustered/{year}.nc",
-        renewable_payment_profile=resources(
-            "gb-model/renewable_payment_profile/{year}.csv"
-        ),
     output:
         bid_offer_profile=resources(
             "gb-model/bids_and_offers/{year}/interconnector_bid_offer_profile.csv"
