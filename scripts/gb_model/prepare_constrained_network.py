@@ -151,19 +151,14 @@ def create_up_down_plants(
             else result_component.dynamic.p
         )
 
+        up_limit = (
+            unconstrained_result.get_switchable_as_dense(comp.name, "p_max_pu")
+            * result_component.static.p_nom
+            - dynamic_p
+        ).clip(0) / result_component.static.p_nom
         if comp.name == "Generator":
-            up_limit = (
-                unconstrained_result.get_switchable_as_dense(comp.name, "p_max_pu")
-                * result_component.static.p_nom
-                - dynamic_p
-            ).clip(0) / result_component.static.p_nom
             down_limit = -dynamic_p / result_component.static.p_nom
         else:
-            up_limit = (
-                unconstrained_result.get_switchable_as_dense(comp.name, "p_max_pu")
-                * result_component.static.p_nom
-                - dynamic_p
-            ) / result_component.static.p_nom
             down_limit = (
                 unconstrained_result.get_switchable_as_dense(comp.name, "p_min_pu")
                 * result_component.static.p_nom
