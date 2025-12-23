@@ -656,10 +656,9 @@ def _create_station_seeds(
     buses_to_rename = buses_to_rename.sort_values(
         by=["country", "lat", "lon"], ascending=[True, False, True]
     )
-    buses_to_rename["bus_id"] = buses_to_rename.groupby("country").cumcount() + 1
-    buses_to_rename["bus_id"] = buses_to_rename["country"] + buses_to_rename[
-        "bus_id"
-    ].astype(str)
+    buses_to_rename["bus_id"] = buses_to_rename[
+        "country"
+    ] + buses_to_rename.index.str.replace("virtual", "")
 
     # Dict to rename virtual buses
     dict_rename = buses_to_rename["bus_id"].to_dict()
