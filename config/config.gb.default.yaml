@@ -844,6 +844,16 @@ fes-sheet-config:
       rename:
         columns: Parameter
 
+    # Het pump uptake trend
+    CV.14:
+      usecols: "K:AP"
+      skiprows: 7
+      index_col: 0
+      header: 0
+      rename:
+        columns: year
+        index: scenario
+
     # Overall heating technology mix in homes (residential) in 2050
     CV.16:
       usecols: "K:P"

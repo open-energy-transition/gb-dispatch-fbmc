@@ -554,6 +554,7 @@ rule process_fes_heating_mix:
     input:
         fes_residential_heatmix=resources("gb-model/fes/2021/CV.16.csv"),
         fes_services_heatmix=resources("gb-model/fes/2021/CV.55.csv"),
+        fes_hp_uptake_trend=resources("gb-model/fes/2021/CV.14.csv"),
     output:
         csv=resources("gb-model/fes_heating_mix.csv"),
     log:
