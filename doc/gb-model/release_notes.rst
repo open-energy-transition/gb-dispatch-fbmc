@@ -12,6 +12,9 @@ Release Notes
 Upcoming Release
 ================
 
+* Use heat pump uptake trend to define shape of heating mix technological change (#130).
+* Avoid double counting the impact of heat demand on both baseline electricity and heat demand profile shapes.
+* Move resistive heating profile impact to baseline electricity (since FES heating demand only covers heat pump electricity consumption).
 * Calculate interconnector bids and offers (#151)
 * Add config option to unconstrain `p_nom` for each EUR country's most expensive powerplant, instead of using load shedding.
 * Enable custom busmap to prevent incorrect clustering of offshore buses (#159)
