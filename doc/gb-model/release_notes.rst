@@ -12,6 +12,7 @@ Release Notes
 Upcoming Release
 ================
 
+* Add interconnector bids and offers to constrained network (#153)
 * Calculate interconnector bids and offers (#151)
 * Add config option to unconstrain `p_nom` for each EUR country's most expensive powerplant, instead of using load shedding.
 * Enable custom busmap to prevent incorrect clustering of offshore buses (#159)
