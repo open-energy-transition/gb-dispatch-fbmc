@@ -148,26 +148,23 @@ def _add_line_endings(buses, lines, add=0, name="line-end"):
     -------
         - pd.DataFrame: DataFrame containing the virtual bus endpoints with columns 'bus_id', 'voltage', 'geometry', and 'contains'.
     """
-    endpoints0 = lines[["voltage", "geometry"]].copy()
+    endpoints0 = lines[["voltage", "geometry", "line_id"]].copy()
     endpoints0["geometry"] = endpoints0["geometry"].apply(lambda x: x.boundary.geoms[0])
+    endpoints0["endpoint"] = 0
 
-    endpoints1 = lines[["voltage", "geometry"]].copy()
+    endpoints1 = lines[["voltage", "geometry", "line_id"]].copy()
     endpoints1["geometry"] = endpoints1["geometry"].apply(lambda x: x.boundary.geoms[1])
+    endpoints1["endpoint"] = 1
 
     endpoints = pd.concat([endpoints0, endpoints1], ignore_index=True)
     endpoints.drop_duplicates(subset=["geometry", "voltage"], inplace=True)
     endpoints.reset_index(drop=True, inplace=True)
 
-    # Create deterministic ID from rounded coordinates
-    def create_virtual_id(row):
-        lat = row.geometry.y
-        lon = row.geometry.x
-        voltage_kv = int(row["voltage"] / 1000)
-
-        # Format: virtual-lat-lon-voltage
-        return f"virtual_{lat}_{lon}_{voltage_kv}"
-
-    endpoints["bus_id"] = endpoints.apply(create_virtual_id, axis=1)
+    # Create deterministic ID from line_id and endpoint
+    endpoints["bus_id"] = (
+        "virtual_" + endpoints["line_id"] + "_" + endpoints["endpoint"].astype(str)
+    )
+    endpoints.drop(columns=["line_id", "endpoint"], inplace=True)
 
     endpoints["contains"] = name
 
