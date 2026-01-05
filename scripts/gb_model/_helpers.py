@@ -199,7 +199,6 @@ def filter_interconnectors(df: pd.DataFrame) -> pd.DataFrame:
     df: pd.DataFrame
         Dataframe of Links components in PyPSA model
     """
-
     m1 = df["bus0"].str.startswith("GB")
     m2 = df["bus1"].str.startswith("GB")
 
