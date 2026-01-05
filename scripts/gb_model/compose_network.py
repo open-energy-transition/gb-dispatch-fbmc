@@ -982,6 +982,7 @@ def add_battery_storage(
         all_data_battery.index,
         bus=all_data_battery.bus,
         carrier="Battery Storage",
+        p_nom=all_data_battery.p_nom,
         p_nom_extendable=False,
         marginal_cost=all_data_battery.marginal_cost,
         capital_cost=0,
