@@ -1016,7 +1016,14 @@ def add_H2(
 
     n.add("Carrier", "H2")
     all_nodes = n.buses[n.buses.carrier == "AC"].index
-    n.add("Bus", all_nodes, suffix=" H2", carrier="H2", unit="MWh_LHV", country=n.buses.loc[all_nodes].country)
+    n.add(
+        "Bus",
+        all_nodes,
+        suffix=" H2",
+        carrier="H2",
+        unit="MWh_LHV",
+        country=n.buses.loc[all_nodes].country,
+    )
 
     n.add(
         "Load",

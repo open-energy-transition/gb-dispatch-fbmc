@@ -9,12 +9,11 @@ Prepare network for constrained optimization.
 import logging
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 import pypsa
 
 from scripts._helpers import configure_logging, set_scenario_config
-from scripts.gb_model._helpers import filter_interconnectors, marginal_costs_bus
+from scripts.gb_model._helpers import filter_interconnectors
 
 logger = logging.getLogger(__name__)
 
@@ -233,25 +232,24 @@ def drop_existing_eur_buses(network: pypsa.Network):
     eur_buses = network.buses.query("country != 'GB'").index
     network.remove("Bus", eur_buses)
 
-    for comp in network.components[['Generator', 'StorageUnit', 'Store', 'Load']]:
-        network.remove(comp.name, comp.static.query("bus in @eur_buses").index) 
+    for comp in network.components[["Generator", "StorageUnit", "Store", "Load"]]:
+        network.remove(comp.name, comp.static.query("bus in @eur_buses").index)
 
     # Drop all eur links except HVDC links
     network.remove(
-                "Link",
-                network.links.query("carrier != 'DC'")
-                .query("bus0 in @eur_buses or bus1 in @eur_buses")
-                .index,
-            )
-            
-    for comp in network.components[['Link', 'Line']]:
-            # Drop HVDC links / AC lines that connect two eur buses
-            network.remove(
-                comp.name,
-                comp.static.query("bus0 in @eur_buses and bus1 in @eur_buses")
-                .index,
-            )
-        
+        "Link",
+        network.links.query("carrier != 'DC'")
+        .query("bus0 in @eur_buses or bus1 in @eur_buses")
+        .index,
+    )
+
+    for comp in network.components[["Link", "Line"]]:
+        # Drop HVDC links / AC lines that connect two eur buses
+        network.remove(
+            comp.name,
+            comp.static.query("bus0 in @eur_buses and bus1 in @eur_buses").index,
+        )
+
     logger.info(
         f"Dropped generators, storage units, links and loads connected to {eur_buses} from the network"
     )
