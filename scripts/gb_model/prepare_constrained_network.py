@@ -234,34 +234,35 @@ def drop_existing_eur_buses(network: pypsa.Network):
 
     network.remove("Bus", eur_buses)
 
-    network.remove("Generator", network.generators.query("bus in @eur_buses").index)
+    for comp in network.components:
+        if comp.name not in ['Generator', 'StorageUnit', 'Store', 'Link', 'Line', 'Load']:
+            continue
+        
+        if comp.name in ['Generator', 'StorageUnit', 'Store', 'Load']:
+            network.remove(comp.name, comp.static.query("bus in @eur_buses").index)
 
-    network.remove(
-        "StorageUnit", network.storage_units.query("bus in @eur_buses").index
-    )
+        elif comp.name == 'Link':
+                # Drop all eur links except HVDC links
+            network.remove(
+                "Link",
+                comp.static.query("carrier != 'DC'")
+                .query("bus0 in @eur_buses or bus1 in @eur_buses")
+                .index,
+            )
 
-    network.remove("Store", network.stores.query("bus in @eur_buses").index)
-
-    # Drop all eur links except HVDC links
-    network.remove(
-        "Link",
-        network.links.query("carrier != 'DC'")
-        .query("bus0 in @eur_buses or bus1 in @eur_buses")
-        .index,
-    )
-
-    # Drop HVDC links / AC lines that connect two eur buses
-    network.remove(
-        "Link",
-        network.links.query("carrier == 'DC'")
-        .query("bus0 in @eur_buses and bus1 in @eur_buses")
-        .index,
-    )
-    network.remove(
-        "Line", network.lines.query("bus0 in @eur_buses and bus1 in @eur_buses").index
-    )
-
-    network.remove("Load", network.loads.query("bus in @eur_buses").index)
+            # Drop HVDC links / AC lines that connect two eur buses
+            network.remove(
+                "Link",
+                comp.static.query("carrier == 'DC'")
+                .query("bus0 in @eur_buses and bus1 in @eur_buses")
+                .index,
+            )
+        
+        elif comp.name == 'Line':
+            # Remove AC lines that connect two eur buses
+            network.remove(
+                "Line", comp.static.query("bus0 in @eur_buses and bus1 in @eur_buses").index
+            )
 
     logger.info(
         f"Dropped generators, storage units, links and loads connected to {eur_buses} from the network"
