@@ -16,6 +16,8 @@ from scripts._helpers import configure_logging, set_scenario_config
 
 logger = logging.getLogger(__name__)
 
+LOAD_SHEDDING_REGEX = "Load Shedding"
+
 
 def fix_dispatch(
     constrained_network: pypsa.Network, unconstrained_result: pypsa.Network
@@ -33,7 +35,7 @@ def fix_dispatch(
 
     def _process_p_fix(dispatch_t: pd.DataFrame, p_nom: pd.DataFrame):
         p_fix = (dispatch_t / p_nom).round(5).fillna(0)
-        p_fix = p_fix.drop(columns=p_fix.filter(like="load").columns)
+        p_fix = p_fix.loc[:, ~p_fix.columns.str.contains(LOAD_SHEDDING_REGEX)]
 
         return p_fix
 
@@ -130,8 +132,8 @@ def create_up_down_plants(
         if comp.name not in ["Generator", "StorageUnit", "Link"]:
             continue
 
-        g_up = comp.static.copy()
-        g_down = comp.static.copy()
+        g_up = comp.static.loc[~comp.static.index.str.contains(LOAD_SHEDDING_REGEX)]
+        g_down = comp.static.loc[~comp.static.index.str.contains(LOAD_SHEDDING_REGEX)]
 
         if comp.name != "Link":
             # Filter GB plants

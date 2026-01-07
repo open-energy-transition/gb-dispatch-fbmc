@@ -10,7 +10,7 @@ import pypsa
 import pytest
 import xarray as xr
 
-from scripts.gb_model.create_chp_p_min_pu_profile import (
+from scripts.gb_model.generators.create_chp_p_min_pu_profile import (
     calculate_chp_minimum_operation,
     identify_chp_powerplants,
 )
