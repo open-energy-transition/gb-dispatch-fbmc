@@ -9,10 +9,12 @@ Prepare network for constrained optimization.
 import logging
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import pypsa
 
 from scripts._helpers import configure_logging, set_scenario_config
+from scripts.gb_model._helpers import filter_interconnectors, marginal_costs_bus
 
 logger = logging.getLogger(__name__)
 
@@ -218,6 +220,103 @@ def read_csv(filepath):
     return pd.read_csv(filepath, index_col="snapshot", parse_dates=True)
 
 
+def drop_existing_eur_buses(network: pypsa.Network):
+    """
+    Drop existing eur buses from the network
+
+    Parameters
+    ----------
+    network: pypsa.Network
+        Network to finalize
+    """
+
+    eur_buses = network.buses.query("country != 'GB'").index
+
+    network.remove("Bus", eur_buses)
+
+    network.remove("Generator", network.generators.query("bus in @eur_buses").index)
+
+    network.remove(
+        "StorageUnit", network.storage_units.query("bus in @eur_buses").index
+    )
+
+    network.remove("Store", network.stores.query("bus in @eur_buses").index)
+
+    # Drop all eur links except HVDC links
+    network.remove(
+        "Link",
+        network.links.query("carrier != 'DC'")
+        .query("bus0 in @eur_buses or bus1 in @eur_buses")
+        .index,
+    )
+
+    # Drop HVDC links / AC lines that connect two eur buses
+    network.remove(
+        "Link",
+        network.links.query("carrier == 'DC'")
+        .query("bus0 in @eur_buses and bus1 in @eur_buses")
+        .index,
+    )
+    network.remove(
+        "Line", network.lines.query("bus0 in @eur_buses and bus1 in @eur_buses").index
+    )
+
+    network.remove("Load", network.loads.query("bus in @eur_buses").index)
+
+    logger.info(
+        f"Dropped generators, storage units, links and loads connected to {eur_buses} from the network"
+    )
+
+
+def add_single_eur_bus(network: pypsa.Network, unconstrained_result: pypsa.Network):
+    """
+    Add a single EUR bus to simplify the network structure
+
+    Parameters
+    ----------
+    network: pypsa.Network
+        Network to finalize
+    unconstrained_result: pypsa.Network
+        Result of the unconstrained optimization
+    """
+
+    eur_buses = unconstrained_result.buses.query(
+        "country != 'GB' and carrier == 'AC'"
+    ).index
+
+    # Maximum marginal price across all eur buses
+    bus_marginal_price = unconstrained_result.buses_t.marginal_price[eur_buses].max(
+        axis=1
+    )
+    # Marginal costs of generators and storage units connected to eur buses
+    marginal_costs = pd.concat(
+        [marginal_costs_bus(bus, unconstrained_result) for bus in eur_buses]
+    )
+
+    # For each snapshot, EUR store marginal cost is set to the marginal generator in entire EUR region
+    eur_store_marginal_cost = bus_marginal_price.apply(
+        lambda x: marginal_costs[np.abs(marginal_costs - x).argmin()]
+    )
+
+    network.add("Bus", "EUR", country="EUR")
+
+    network.add(
+        "Store",
+        "EUR store",
+        bus="EUR",
+        e_nom=1e9,  # Large capacity to avoid energy constraints,
+        marginal_cost=eur_store_marginal_cost,
+    )
+
+    # Change bus1 of all interconnectors to EUR
+    interconnectors = filter_interconnectors(network.links)
+    network.links.loc[interconnectors.index, "bus1"] = "EUR"
+
+    logger.info(
+        "Added single EUR bus with a store and connected all interconnectors to it"
+    )
+
+
 if __name__ == "__main__":
     if "snakemake" not in globals():
         from scripts._helpers import mock_snakemake
@@ -245,6 +344,10 @@ if __name__ == "__main__":
         renewable_payment_profile,
         interconnector_bid_offer_profile,
     )
+
+    drop_existing_eur_buses(network)
+
+    add_single_eur_bus(network, unconstrained_result)
 
     network.export_to_netcdf(snakemake.output.network)
     logger.info(f"Exported network to {snakemake.output.network}")
