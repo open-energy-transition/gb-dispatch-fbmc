@@ -13,6 +13,7 @@ import pandas as pd
 import pypsa
 
 from scripts._helpers import configure_logging, set_scenario_config
+from scripts.gb_model._helpers import filter_interconnectors
 
 logger = logging.getLogger(__name__)
 
@@ -220,6 +221,64 @@ def read_csv(filepath):
     return pd.read_csv(filepath, index_col="snapshot", parse_dates=True)
 
 
+def drop_existing_eur_buses(network: pypsa.Network):
+    """
+    Drop existing eur buses from the network
+
+    Parameters
+    ----------
+    network: pypsa.Network
+        Network to finalize
+    """
+
+    eur_buses = network.buses.query("country != 'GB'").index
+    network.remove("Bus", eur_buses)
+
+    for comp in network.components[["Generator", "StorageUnit", "Store", "Load"]]:
+        network.remove(comp.name, comp.static.query("bus in @eur_buses").index)
+
+    for comp in network.components[["Link", "Line"]]:
+        # Drop HVDC links / AC lines that connect two eur buses
+        network.remove(
+            comp.name,
+            comp.static.query("bus0 in @eur_buses and bus1 in @eur_buses").index,
+        )
+
+    logger.info(
+        f"Dropped generators, storage units, links and loads connected to {eur_buses} from the network"
+    )
+
+
+def add_single_eur_bus(network: pypsa.Network, unconstrained_result: pypsa.Network):
+    """
+    Add a single EUR bus to simplify the network structure
+
+    Parameters
+    ----------
+    network: pypsa.Network
+        Network to finalize
+    unconstrained_result: pypsa.Network
+        Result of the unconstrained optimization
+    """
+
+    network.add("Bus", "EUR", country="EUR")
+
+    network.add(
+        "Store",
+        "EUR store",
+        bus="EUR",
+        e_nom=1e9,  # Large capacity to avoid energy constraints,
+    )
+
+    # Change bus1 of all interconnectors to EUR
+    interconnectors = filter_interconnectors(network.links)
+    network.links.loc[interconnectors.index, "bus1"] = "EUR"
+
+    logger.info(
+        "Added single EUR bus with a store and connected all interconnectors to it"
+    )
+
+
 if __name__ == "__main__":
     if "snakemake" not in globals():
         from scripts._helpers import mock_snakemake
@@ -247,6 +306,10 @@ if __name__ == "__main__":
         renewable_payment_profile,
         interconnector_bid_offer_profile,
     )
+
+    drop_existing_eur_buses(network)
+
+    add_single_eur_bus(network, unconstrained_result)
 
     network.export_to_netcdf(snakemake.output.network)
     logger.info(f"Exported network to {snakemake.output.network}")
