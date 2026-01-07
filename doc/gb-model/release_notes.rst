@@ -12,6 +12,7 @@ Release Notes
 Upcoming Release
 ================
 
+* Replaced EUR buses with a single EUR bus for faster re-dispatch solve (#174)
 * Set bus_id for virtual buses using line_id to ensure stable custom busmap mapping (#166)
 * Enable custom busmap to prevent incorrect clustering of offshore buses (#159) 
 * Add interconnector bids and offers to constrained network (#153)
