@@ -231,39 +231,27 @@ def drop_existing_eur_buses(network: pypsa.Network):
     """
 
     eur_buses = network.buses.query("country != 'GB'").index
-
     network.remove("Bus", eur_buses)
 
-    for comp in network.components:
-        if comp.name not in ['Generator', 'StorageUnit', 'Store', 'Link', 'Line', 'Load']:
-            continue
-        
-        if comp.name in ['Generator', 'StorageUnit', 'Store', 'Load']:
-            network.remove(comp.name, comp.static.query("bus in @eur_buses").index)
+    for comp in network.components[['Generator', 'StorageUnit', 'Store', 'Load']]:
+        network.remove(comp.name, comp.static.query("bus in @eur_buses").index) 
 
-        elif comp.name == 'Link':
-                # Drop all eur links except HVDC links
-            network.remove(
+    # Drop all eur links except HVDC links
+    network.remove(
                 "Link",
-                comp.static.query("carrier != 'DC'")
+                network.links.query("carrier != 'DC'")
                 .query("bus0 in @eur_buses or bus1 in @eur_buses")
                 .index,
             )
-
+            
+    for comp in network.components[['Link', 'Line']]:
             # Drop HVDC links / AC lines that connect two eur buses
             network.remove(
-                "Link",
-                comp.static.query("carrier == 'DC'")
-                .query("bus0 in @eur_buses and bus1 in @eur_buses")
+                comp.name,
+                comp.static.query("bus0 in @eur_buses and bus1 in @eur_buses")
                 .index,
             )
         
-        elif comp.name == 'Line':
-            # Remove AC lines that connect two eur buses
-            network.remove(
-                "Line", comp.static.query("bus0 in @eur_buses and bus1 in @eur_buses").index
-            )
-
     logger.info(
         f"Dropped generators, storage units, links and loads connected to {eur_buses} from the network"
     )
@@ -281,24 +269,6 @@ def add_single_eur_bus(network: pypsa.Network, unconstrained_result: pypsa.Netwo
         Result of the unconstrained optimization
     """
 
-    eur_buses = unconstrained_result.buses.query(
-        "country != 'GB' and carrier == 'AC'"
-    ).index
-
-    # Maximum marginal price across all eur buses
-    bus_marginal_price = unconstrained_result.buses_t.marginal_price[eur_buses].max(
-        axis=1
-    )
-    # Marginal costs of generators and storage units connected to eur buses
-    marginal_costs = pd.concat(
-        [marginal_costs_bus(bus, unconstrained_result) for bus in eur_buses]
-    )
-
-    # For each snapshot, EUR store marginal cost is set to the marginal generator in entire EUR region
-    eur_store_marginal_cost = bus_marginal_price.apply(
-        lambda x: marginal_costs[np.abs(marginal_costs - x).argmin()]
-    )
-
     network.add("Bus", "EUR", country="EUR")
 
     network.add(
@@ -306,7 +276,6 @@ def add_single_eur_bus(network: pypsa.Network, unconstrained_result: pypsa.Netwo
         "EUR store",
         bus="EUR",
         e_nom=1e9,  # Large capacity to avoid energy constraints,
-        marginal_cost=eur_store_marginal_cost,
     )
 
     # Change bus1 of all interconnectors to EUR
