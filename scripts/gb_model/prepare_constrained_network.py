@@ -235,14 +235,6 @@ def drop_existing_eur_buses(network: pypsa.Network):
     for comp in network.components[["Generator", "StorageUnit", "Store", "Load"]]:
         network.remove(comp.name, comp.static.query("bus in @eur_buses").index)
 
-    # Drop all eur links except HVDC links
-    network.remove(
-        "Link",
-        network.links.query("carrier != 'DC'")
-        .query("bus0 in @eur_buses or bus1 in @eur_buses")
-        .index,
-    )
-
     for comp in network.components[["Link", "Line"]]:
         # Drop HVDC links / AC lines that connect two eur buses
         network.remove(
