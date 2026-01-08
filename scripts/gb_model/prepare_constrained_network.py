@@ -21,7 +21,9 @@ LOAD_SHEDDING_REGEX = "Load Shedding"
 
 
 def fix_dispatch(
-    constrained_network: pypsa.Network, unconstrained_result: pypsa.Network
+    constrained_network: pypsa.Network,
+    unconstrained_result: pypsa.Network,
+    gb_buses: pd.Index,
 ):
     """
     Fix dispatch of generators and storage units based on the result of unconstrained optimization
@@ -32,6 +34,8 @@ def fix_dispatch(
         Constrained network to finalize
     unconstrained_result: pypsa.Network
         Result of the unconstrained optimization
+    gb_buses: pd.Index
+        Index of GB buses
     """
 
     def _process_p_fix(dispatch_t: pd.DataFrame, p_nom: pd.DataFrame):
@@ -47,15 +51,14 @@ def fix_dispatch(
         if comp.name == "Generator":
             p_max_fix = p_min_fix = _process_p_fix(comp.dynamic.p, comp.static.p_nom)
         elif comp.name == "Link":
-            # Dispatch of intra gb DC links are not be fixed
-            mask = comp.static.bus0.str.startswith(
-                "GB"
-            ) & comp.static.bus1.str.startswith("GB")
-            intra_gb_dc_links = comp.static[mask].query("carrier == 'DC'").index
+            # Only dispatch of interconnector links are to be fixed
+            interconnector_links = comp.static.query(
+                "carrier == 'DC' and bus0 in @gb_buses and bus1 not in @gb_buses"
+            ).index
 
-            p_max_fix = p_min_fix = _process_p_fix(
-                comp.dynamic.p0, comp.static.p_nom
-            ).drop(intra_gb_dc_links, axis=1)
+            p_max_fix = p_min_fix = _process_p_fix(comp.dynamic.p0, comp.static.p_nom)[
+                interconnector_links
+            ]
         elif comp.name == "StorageUnit":
             # For storage units: the decision variables are `p_dispatch` and `p_store`.
             # p = p_dispatch - p_store
@@ -110,6 +113,7 @@ def create_up_down_plants(
     bids_and_offers: dict[str, float],
     renewable_payment_profile: pd.DataFrame,
     interconnector_bid_offer_profile: pd.DataFrame,
+    gb_buses: pd.Index,
 ):
     """
     Add generators and storage units components that mimic increase / decrease in dispatch
@@ -126,8 +130,9 @@ def create_up_down_plants(
         Dataframe of the renewable price profile
     interconnector_bid_offer_profile: pd.DataFrame
         Interconnectors bid/offer profile for each interconnector
+    gb_buses: pd.Index
+        Index of GB buses
     """
-    gb_buses = unconstrained_result.buses.query("country == 'GB'").index  # noqa: F841
 
     for comp in constrained_network.components:
         if comp.name not in ["Generator", "StorageUnit", "Link"]:
@@ -140,6 +145,13 @@ def create_up_down_plants(
             # Filter GB plants
             g_up = g_up.query("bus in @gb_buses and p_nom != 0")
             g_down = g_down.query("bus in @gb_buses and p_nom != 0")
+        else:
+            g_up = g_up.query(
+                "bus0 in @gb_buses and bus1 not in @gb_buses and p_nom != 0"
+            )
+            g_down = g_down.query(
+                "bus0 in @gb_buses and bus1 not in @gb_buses and p_nom != 0"
+            )
 
         # Compute dispatch limits for the up and down generators
         result_component = unconstrained_result.components[comp.name]
@@ -177,8 +189,9 @@ def create_up_down_plants(
             comp.name,
             g_up.index,
             suffix=" ramp up",
+            p_min_pu=0,
             p_max_pu=up_limit.loc[:, g_up.index],
-            **g_up.drop("p_max_pu", axis=1),
+            **g_up.drop(["p_max_pu", "p_min_pu"], axis=1),
         )
 
         # Add generators that can decrease dispatch
@@ -207,7 +220,7 @@ def create_up_down_plants(
                 ].dynamic.marginal_cost = pd.concat(
                     [
                         marginal_cost_up.add_suffix(" ramp up"),
-                        marginal_cost_down.add_suffix(" ramp down"),
+                        -1 * marginal_cost_down.add_suffix(" ramp down"),
                     ],
                     axis=1,
                 )
@@ -296,8 +309,9 @@ if __name__ == "__main__":
     interconnector_bid_offer_profile = read_csv(
         snakemake.input.interconnector_bid_offer
     )
+    gb_buses = network.buses.query("country == 'GB'").index
 
-    fix_dispatch(network, unconstrained_result)
+    fix_dispatch(network, unconstrained_result, gb_buses)
 
     create_up_down_plants(
         network,
@@ -305,6 +319,7 @@ if __name__ == "__main__":
         bids_and_offers,
         renewable_payment_profile,
         interconnector_bid_offer_profile,
+        gb_buses,
     )
 
     drop_existing_eur_buses(network)
