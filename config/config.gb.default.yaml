@@ -248,7 +248,8 @@ solving:
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#electricity
 electricity:
   voltages: [132, 220., 275., 300., 330., 380., 400., 500., 750.]
-  base_network: osm-raw
+  base_network: osm-prebuilt
+  osm-prebuilt-version: 0.7
   powerplants_filter: (DateOut >= 2020 or DateOut != DateOut) and not (Country == 'Germany' and Fueltype == 'Nuclear')
   extendable_carriers:
     Generator: []
