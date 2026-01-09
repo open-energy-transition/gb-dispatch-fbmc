@@ -135,7 +135,8 @@ def get_eur_marginal_generator(
 
     # Filter EUR countries with direct links to GB
     gb_neighbours = unconstrained_result.links.query(
-        "carrier == 'DC' and bus0 in @gb_buses and bus1 not in @gb_buses"
+        "carrier == 'DC' and bus0 in @buses_gb and bus1 not in @buses_gb",
+        local_dict={"buses_gb": gb_buses},
     ).bus1.unique()
 
     columns = [f"{x} bid" for x in gb_neighbours] + [
