@@ -73,7 +73,6 @@ def get_gen_marginal_carrier(
         (generator_marginal_prices - gb_marginal_electricity_price).abs().sort_values()
     )
     marginal_carrier = price_spread.index[0]
-
     return marginal_carrier
 
 
@@ -111,12 +110,12 @@ def calc_bid_offer_multiplier(
 
     return bid_cost, offer_cost
 
-
 def get_eur_marginal_generator(
     marginal_price_profile: pd.DataFrame,
     unconstrained_result: pypsa.Network,
     bids_and_offers_multipliers: dict[dict[str, float]],
 ) -> pd.DataFrame:
+    
     """
     Obtain the marginal generator at eur node at each timestamp
 
@@ -130,20 +129,27 @@ def get_eur_marginal_generator(
         Bid and offer multiplier to be applied for conventional generation
     """
 
-    # Filter AC buses at eur nodes
-    eur_buses = unconstrained_result.buses.query(
-        "country!= 'GB' and carrier == 'AC'"
-    ).index
+    gb_buses = unconstrained_result.buses.query("carrier == 'AC' and country == 'GB'").index
 
-    columns = [f"{x} bid" for x in eur_buses] + [f"{x} offer" for x in eur_buses]
+    # Filter EUR countries with direct links to GB
+    gb_neighbours = unconstrained_result.links.query("carrier == 'DC' and bus0 in @gb_buses and bus1 not in @gb_buses").bus1.unique()
+
+    columns = [f"{x} bid" for x in gb_neighbours] + [f"{x} offer" for x in gb_neighbours]
     eur_marginal_gen_profile = pd.DataFrame(
         index=unconstrained_result.snapshots, columns=columns
     )
 
-    # Calculate bid and offer profile for the marginal generator at each eur node
-    for eur_bus in eur_buses:
-        # Get marginal cost of generators present at the eur bus
-        generator_marginal_prices = marginal_costs_bus(eur_bus, unconstrained_result)
+    for eur_bus in gb_neighbours:
+        # Get list of interconnectors at eur_bus
+        eur_interconnectors = unconstrained_result.links.query("carrier == 'DC'").query("bus0 == @e_bus or bus1 == @e_bus", local_dict={'e_bus': eur_bus}).query("bus0 not in @gb_buses")
+
+        # Get list of countries other than GB connected to the eur_bus (including eur_bus itself)
+        linked_countries =  pd.concat([eur_interconnectors['bus0'],eur_interconnectors['bus1']]).unique()
+
+        # Get marginal cost of generators at each of the linked countries
+        generator_marginal_prices = pd.concat([marginal_costs_bus(bus, unconstrained_result) for bus in linked_countries])
+
+        # Calculate bid and offer profile for the marginal generator at each eur node
         eur_marginal_gen_profile[[f"{eur_bus} bid", f"{eur_bus} offer"]] = (
             marginal_price_profile.apply(
                 lambda row: calc_bid_offer_multiplier(
@@ -155,6 +161,8 @@ def get_eur_marginal_generator(
                 axis=1,
             ).tolist()
         )
+
+    logger.info("Calculated the marginal generator profile at each EUR bus")
     return eur_marginal_gen_profile
 
 
