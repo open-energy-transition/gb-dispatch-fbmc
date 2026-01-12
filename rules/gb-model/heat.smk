@@ -7,7 +7,7 @@ Building heat demand and demand-side response rules.
 """
 
 
-rule create_heat_flexibility_table:
+rule create_heat_flexibility_table:  # TODO: use FLX1 sheet in 2024
     message:
         "Process residential heat demand flexibility from FES workbook"
     params:
@@ -15,7 +15,7 @@ rule create_heat_flexibility_table:
         year_range=config["fes"]["year_range_incl"],
         flex_level=config["fes"]["gb"]["flexibility"]["residential_heat_flex_level"],
     input:
-        flexibility_sheet=resources("gb-model/fes/2021/FL.10.csv"),
+        flexibility_sheet=resources(f"gb-model/fes/{config['fes_year']}/FL.10.csv"),
     output:
         csv=resources("gb-model/residential_heat_dsr_flexibility.csv"),
     log:
@@ -42,7 +42,7 @@ rule process_cop_profiles:
         "../../scripts/gb_model/heat/process_cop_profiles.py"
 
 
-rule process_fes_heating_mix:
+rule process_fes_heating_mix:  # TODO: update using new 2024 table that has uptake per technology directly
     message:
         "Process the share of electrified heating technologies from FES workbook"
     params:
@@ -52,9 +52,11 @@ rule process_fes_heating_mix:
         ],
         scenario=config["fes"]["gb"]["scenario"],
     input:
-        fes_residential_heatmix=resources("gb-model/fes/2021/CV.16.csv"),
-        fes_services_heatmix=resources("gb-model/fes/2021/CV.55.csv"),
-        fes_hp_uptake_trend=resources("gb-model/fes/2021/CV.14.csv"),
+        fes_residential_heatmix=resources(
+            f"gb-model/fes/{config['fes_year']}/CV.16.csv"
+        ),
+        fes_services_heatmix=resources(f"gb-model/fes/{config['fes_year']}/CV.55.csv"),
+        fes_hp_uptake_trend=resources(f"gb-model/fes/{config['fes_year']}/CV.14.csv"),
     output:
         csv=resources("gb-model/fes_heating_mix.csv"),
     log:

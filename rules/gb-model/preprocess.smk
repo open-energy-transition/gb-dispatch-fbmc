@@ -165,8 +165,8 @@ rule process_fes_gsp_data:
         target_crs=config["target_crs"],
         fill_gsp_lat_lons=config["fill-gsp-lat-lons"],
     input:
-        bb1_sheet=resources("gb-model/fes/2021/BB1.csv"),
-        bb2_sheet=resources("gb-model/fes/2021/BB2.csv"),
+        bb1_sheet=resources(f"gb-model/fes/{config['fes_year']}/BB1.csv"),
+        bb2_sheet=resources(f"gb-model/fes/{config['fes_year']}/BB2.csv"),
         gsp_coordinates="data/gb-model/downloaded/gsp-coordinates.csv",
         regions=resources("gb-model/merged_shapes.geojson"),
     output:

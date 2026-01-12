@@ -17,11 +17,14 @@ rule create_hydrogen_demand_table:
         other_sectors_list=config["fes"]["hydrogen"]["demand"]["other_sectors_list"],
     input:
         demand_sheets=lambda wildcards: [
-            resources(f"gb-model/fes/{year}/{sheet}.csv")
-            for year, sheets in config["fes"]["hydrogen"]["demand"][
-                "annual_demand_sheets"
-            ].items()
-            for sheet in sheets.values()
+            (
+                resources(f"gb-model/fes/{config['fes-year']}/{sheet}.csv")
+                if sheet != "other" or config["fes-year"] >= 2023
+                else resources(f"gb-model/fes/2023/{sheet}.csv")
+            )
+            for sheet in config["fes"]["hydrogen"]["demand"]["annual_demand_sheets"][
+                config["fes-year"]
+            ]
         ],
     output:
         hydrogen_demand=resources("gb-model/fes_hydrogen_demand.csv"),

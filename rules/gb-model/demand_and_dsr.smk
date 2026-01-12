@@ -70,7 +70,7 @@ rule create_flexibility_table:
             "carrier_mapping"
         ][wildcards.flexibility_type],
     input:
-        flexibility_sheet=resources("gb-model/fes/2021/FLX1.csv"),
+        flexibility_sheet=resources(f"gb-model/fes/{config['fes_year']}/FLX1.csv"),
     output:
         flexibility=resources("gb-model/{flexibility_type}_flexibility.csv"),
     log:

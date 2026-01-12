@@ -90,6 +90,8 @@ clustering:
     remove_stubs: false
     remove_stubs_across_borders: false
 
+fes_year: 2024
+
 costs:
   GBP_to_EUR: 1.1632 # average in 2021: https://www.exchangerates.org.uk/GBP-EUR-spot-exchange-rates-history-2021.html#:~:text=This%20is%20the%20British%20Pound,rate%20in%202021%3A%201.1632%20EUR.
   GBP_to_USD: 1.3757 # average in 2021: https://www.exchangerates.org.uk/GBP-USD-spot-exchange-rates-history-2021.html#:~:text=Average%20exchange%20rate%20in%202021,USD%20on%2008%20Dec%202021.
@@ -240,7 +242,7 @@ solving:
     noisy_costs: true
     skip_iterations: true
     rolling_horizon: false
-    transmission_losses: 0
+    custom_extra_functionality: "../scripts/gb_model/custom_constraints.py"
   solver:
     name: gurobi
     options: gurobi-default
@@ -275,14 +277,15 @@ urls:
   transmission-availability-2020: https://www.neso.energy/document/177156/download
   transmission-availability-2021: https://www.neso.energy/document/211021/download
   transmission-availability-2022: https://www.neso.energy/document/267701/download
-  fes-2021-workbook: https://www.neso.energy/document/199971/download # FES 2021 workbook
-  fes-2023-workbook: https://www.neso.energy/document/283061/download # FES 2023 workbook
-  fes-costing-workbook: https://www.neso.energy/document/181961/download
+  transmission-availability-2023: https://www.neso.energy/document/289196/download
+  transmission-availability-2024: https://www.neso.energy/document/324226/download
+  fes-2024-workbook: https://www.neso.energy/document/321051/download # FES 2024 workbook
+  fes-costing-workbook: https://www.nationalgrideso.com/document/181961/download
   dukes-5.11: https://assets.publishing.service.gov.uk/media/688cb64ee8ba9507fc1b0953/DUKES_5.11.xlsx
-  gsp-coordinates: https://api.neso.energy/dataset/963525d6-5d83-4448-a99c-663f1c76330a/resource/41fb4ca1-7b59-4fce-b480-b46682f346c9/download/fes2021_regional_breakdown_gsp_info.csv
-  eur-supply-table: https://api.neso.energy/dataset/bd83ce0b-7b1e-4ff2-89e8-12d524c34d99/resource/6563801b-6da4-46e7-b147-3d81c0237779/download/fes2023_es2_v001.csv
-  etys: https://www.neso.energy/document/223046/download # ETYS November 2021
-  low-carbon-contracts: https://dp.lowcarboncontracts.uk/dataset/8e8ca0d5-c774-4dc8-a079-347f1c180c0f/resource/5279a55d-4996-4b1e-ba07-f411d8fd31f0/download/actual_cfd_generation_and_avoided_ghg_emissions.csv
+  gsp-coordinates: https://api.neso.energy/dataset/963525d6-5d83-4448-a99c-663f1c76330a/resource/21c2b09c-24ff-4837-a3b1-b6aea88f8124/download/fes2024_regional_breakdown_gsp_info.csv
+  eur-supply-table: https://api.neso.energy/dataset/bd83ce0b-7b1e-4ff2-89e8-12d524c34d99/resource/7902b197-ada0-47ae-bd2e-db566a8d0fab/download/fes2024_es2_v001.csv
+  etys: https://www.neso.energy/document/286591/download # ETYS November 2023
+  low-carbon-contracts: https://dp.lowcarboncontracts.uk/dataset/5427b55f-cecc-4a72-b3ee-3533cbbd5555/resource/fa730219-fbd2-41b5-9510-ba2b0ff2c1ba/download/actual_cfd_generation_and_avoided_ghg_emissions.csv
   eur_H2_demand_today: https://observatory.clean-hydrogen.europa.eu/sites/default/files/2025-09/Hydrogen%20demand%202022%20%28Update%202025%29.xlsx # 2022 data
 target_crs: "EPSG:27700"
 
@@ -628,7 +631,7 @@ entsoe_unavailability:
     # B24: "Transformer"
 
 transmission_availability:
-  years: [2020, 2021, 2022]
+  years: [2020, 2021, 2022, 2023, 2024]
   intra_gb:
     zones:
     - NGET
@@ -703,186 +706,58 @@ fill-gsp-lat-lons:
     Longitude: -2.518
 
 fes-sheet-config:
-  2021:
-    SV.34:
-      usecols: "I:AN"
-      skiprows: 5
-      index_col: 0
-      header: 0
-      rename:
-        index: scenario
-        columns: year
+  BB1:
+    usecols: "A:C,E,H:AK" # Ignore columns: "Baseline (2020)", "Share of GSP" (empty), "DNO License Area"
+    skiprows: 0
+    index_col: [0, 1, 2, 3]
+    header: 0
+    rename:
+      columns: year
 
-    BB1:
-      usecols: "A:C,E,H:AK" # Ignore columns: "Baseline (2020)", "Share of GSP" (empty), "DNO License Area"
-      skiprows: 0
-      index_col: [0, 1, 2, 3]
-      header: 0
-      rename:
-        columns: year
+  # Annual H2 demand, production & storage across all sectors
+  WS1:
+    usecols: "M:AO"
+    skiprows: 7
+    index_col: 0
+    header: 0
+    rename:
+      index: scenario
+      columns: year
 
-    # Annual H2 demand for industrial sector in GWh between 2021-2050
-    CV.53:
-      usecols: "O:BD"
-      skiprows: 6
-      index_col: 0
-      header: 0
-      rename:
-        index: scenario
-        columns: year
+  # Annual flexibility data for 2021-2050
+  FLX1:
+    usecols: "E:AM"
+    skiprows: 6
+    index_col: [0, 1, 2, 3, 4]
+    header: 0
+    rename:
+      columns: year
 
-    # Annual H2 demand for commercial sector in GWh between 2021-2050
-    CV.54:
-      usecols: "O:BD"
-      skiprows: 6
-      index_col: 0
-      header: 0
-      rename:
-        index: scenario
-        columns: year
+  # Annual unmanaged EV charging demand peak 2020-2050
+  ED5:
+    usecols: "C:AM"
+    skiprows: 4
+    index_col: [0, 1, 2, 3, 4]
+    header: 0
+    rename:
+      columns: year
 
-    # Annual H2 demand for home heating in TWh between 2021-2050
-    CV.10:
-      usecols: "M:AR"
-      skiprows: 5
-      index_col: 0
-      header: 0
-      rename:
-        index: scenario
-        columns: year
+  BB2:
+    usecols: "A:E"
+    skiprows: 2
+    index_col: [0, 1, 3]
+    header: 0
+    rename:
+      columns: Parameter
 
-    # Annual road transport demand in TWh between 2021-2050
-    CV.33:
-      usecols: "M:AW"
-      skiprows: 7
-      index_col: 0
-      header: 0
-      rename:
-        index: carrier
-        columns: year
-
-    # Annual H2 production in TWh between 2021-2050
-    SV.20:
-      usecols: "M:AW"
-      skiprows: 5
-      index_col: 0
-      header: 0
-      rename:
-        index: carrier
-        columns: year
-
-    # Annual electricity demand in TWh for non-grid connected electrolysis between 2021-2050
-    ED1:
-      usecols: "B:E,G:BA"
-      skiprows: 4
-      index_col: [0, 1, 2, 3]
-      header: 0
-      rename:
-        columns: year
-
-    # Annual hydrogen storage capacity in tonnes for 2020-2050
-    FL.6:
-      usecols: "K:O"
-      skiprows: 9
-      index_col: 0
-      header: 0
-      rename:
-        index: year
-        columns: scenario
-
-    # Annual flexibility data for 2020-2050
-    FLX1:
-      usecols: "C:AL"
-      skiprows: 9
-      index_col: [0, 1, 2, 3, 4]
-      header: 0
-      rename:
-        columns: year
-
-    FL.10:
-    - usecols: "L:AV"
-      skiprows: 60
-      nrows: 5
-      index_col: 0
-      header: 0
-      rename:
-        columns: year
-        index: flex_source
-      add_index:
-        scenario: leading the way
-
-    # Annual storage data for 2030 and 2050
-    # SHeet contains multiple tables, one for each scenario
-    FL.14:
-    - usecols: "P,R,U,X"
-      skiprows: 58
-      nrows: 6
-      index_col: 0
-      header: [0, 1]
-      rename:
-        columns: [year, parameter]
-        index: name
-      add_index:
-        scenario: leading the way
-
-    # Annual unmanaged EV charging demand profile shape for 2015-2050
-    # Sheet contains multiple tables, one for each scenario
-    FL.11:
-    - usecols: "L:AV"
-      skiprows: 58
-      nrows: 3
-      index_col: 0
-      header: 0
-      rename:
-        columns: year
-        index: demand type
-      add_index:
-        scenario: leading the way
-
-    BB2:
-      usecols: "A:E"
-      skiprows: 2
-      index_col: [0, 1, 3]
-      header: 0
-      rename:
-        columns: Parameter
-
-    # Heat pump uptake trend
-    CV.14:
-      usecols: "K:AP"
-      skiprows: 7
-      index_col: 0
-      header: 0
-      rename:
-        columns: year
-        index: scenario
-
-    # Overall heating technology mix in homes (residential) in 2050
-    CV.16:
-      usecols: "K:P"
-      skiprows: 3
-      index_col: [0, 1]
-      header: 0
-      rename:
-        columns: "scenario_2050"
-        index: ["type", "2020"]
-
-    CV.55:
-      usecols: "K:P"
-      skiprows: 3
-      index_col: [0, 1]
-      header: 0
-      rename:
-        columns: "scenario_2050"
-        index: ["type", "2020"]
-  2023:
-    WS1:
-      usecols: "A:D,H:AM" # Ignore columns: "Baseline (2022)", "Share of GSP" (empty), "DNO License Area"
-      skiprows: 7
-      index_col: [0, 1, 2, 3, 4]
-      header: 0
-      rename:
-        columns: year
+  # heat technology uptake trends
+  ED3:
+    usecols: "C:AM"
+    skiprows: 4
+    index_col: [0, 1, 2, 3, 4, 5]
+    header: 0
+    rename:
+      columns: year
 
 fes-costing-sheet-config:
 
@@ -903,7 +778,8 @@ fes-costing-sheet-config:
       columns: year
 
 fes:
-  year_range_incl: [2022, 2041] # 20-year period over which we will run the simulation
+  fes_year: 2024
+  year_range_incl: [2025, 2045] # 20-year period over which we will run the simulation
   default_set: PP
   gb:
     scenario: leading the way   # fes workbook
@@ -1015,62 +891,37 @@ fes:
 
 
   eur:
-    scenario: CT & LW    # "Leading the Way" equivalent in the NESO european supply table
+    scenario: EU Green  # Choice between EU Green and EU Blue for from FES 2024 onwards; EU CT for FES 2023
     carrier_mapping:
       # Mapping undertaken in different columns for different carriers
-      Type:
-        Biomass: biomass
-        Marine: marine
-        Nuclear: nuclear
-        Offshore Wind: offwind-dc
-        Onshore Wind: onwind
-        Waste: waste
       SubType:
-        CCS Biomass: biomass
-        CCS Gas: CCGT
-        CCGT: CCGT
-        OCGT: OCGT
-        GT CHP: OCGT
-        Gas Reciprocating Engines: engine
-        Hydrogen: hydrogen turbine # hydrogen-fueled turbine
-        Hydrogen CHP: hydrogen turbine # hydrogen-fueled turbine
-        Fuel Oil: oil
         Battery: battery
+        Biomass: biomass
+        Biomass CCS: biomass
+        Fossil Gas: CCGT
+        Fossil Oil: oil
+        GT Hydrogen: hydrogen turbine
+        # Other RES:
         Pumped Hydro: PHS
-      SubSubType:
-        Coal: coal
-        Coal CHP: coal
-        IGCC: coal
-        Lignite: lignite
-        Lignite CHP: lignite
-        Peat CHP: lignite
-        CCGT CHP: CCGT
-        GT CHP: OCGT
-        Hydro: hydro
-        Reservoir Hydro: hydro
-        Reservoir Hydro with pumping: hydro
         Run-of-river Hydro: ror
-        Small-Scale-Hydro: ror
-        Geothermal: geothermal
         Solar PV: solar
-        Solar CSP: csp
-
-      ## unmapped
-      # Other Renewables
+        Wind Onshore: onwind
+        Nuclear: nuclear
+        Waste: waste
+        Wind Offshore: offwind-dc
+        Coal: coal
+        CCGT CHP: CCGT
+        Marine: marine
+        Geothermal: geothermal
 
     set_mapping:
       SubType:
+        CCGT CHP: CHP
+        Battery: Store
+        Pumped Hydro: Store
         Biomass CHP: CHP
         Gas CHP: CHP
         Hydrogen CHP: CHP
-        Battery: Store
-        Pumped Hydro: Store
-      SubSubType:
-        Coal CHP: CHP
-        Lignite CHP: CHP
-        Peat CHP: CHP
-        Engine CHP: CHP
-        Reservoir Hydro with pumping: Store
 
     totals_to_demand_groups:
       ev: [total road]

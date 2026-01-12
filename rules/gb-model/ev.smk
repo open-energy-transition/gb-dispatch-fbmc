@@ -26,7 +26,7 @@ rule process_ev_demand_shape:
         "../../scripts/gb_model/ev/process_ev_demand_shape.py"
 
 
-rule create_ev_v2g_storage_table:
+rule create_ev_v2g_storage_table:  # TODO: find alternative to this for 2024 (no V2G storage data)
     message:
         "Process EV V2G storage data from FES workbook into CSV format"
     params:
@@ -34,8 +34,8 @@ rule create_ev_v2g_storage_table:
         year_range=config["fes"]["year_range_incl"],
         carrier_mapping=config["fes"]["gb"]["flexibility"]["carrier_mapping"]["ev_v2g"],
     input:
-        storage_sheet=resources("gb-model/fes/2021/FL.14.csv"),
-        flexibility_sheet=resources("gb-model/fes/2021/FLX1.csv"),
+        storage_sheet=resources(f"gb-model/fes/{config['fes_year']}/FL.14.csv"),
+        flexibility_sheet=resources(f"gb-model/fes/{config['fes_year']}/FLX1.csv"),
     output:
         storage_table=resources("gb-model/ev_v2g_storage.csv"),
     log:
@@ -44,14 +44,16 @@ rule create_ev_v2g_storage_table:
         "../../scripts/gb_model/ev/create_ev_v2g_storage_table.py"
 
 
-rule create_ev_peak_charging_table:
+rule create_ev_peak_charging_table:  # TODO: update from different table structure for 2024
     message:
         "Process EV unmanaged charging demand from FES workbook into CSV format"
     params:
         scenario=config["fes"]["gb"]["scenario"],
         year_range=config["fes"]["year_range_incl"],
     input:
-        unmanaged_charging_sheet=resources("gb-model/fes/2021/FL.11.csv"),
+        unmanaged_charging_sheet=resources(
+            f"gb-model/fes/{config['fes_year']}/FL.11.csv"
+        ),
     output:
         csv=resources("gb-model/ev_peak.csv"),
     log:
