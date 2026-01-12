@@ -846,7 +846,7 @@ fes-sheet-config:
       rename:
         columns: Parameter
 
-    # Het pump uptake trend
+    # Heat pump uptake trend
     CV.14:
       usecols: "K:AP"
       skiprows: 7
