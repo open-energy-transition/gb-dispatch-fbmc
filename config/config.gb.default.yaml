@@ -847,6 +847,16 @@ fes-sheet-config:
       rename:
         columns: Parameter
 
+    # Heat pump uptake trend
+    CV.14:
+      usecols: "K:AP"
+      skiprows: 7
+      index_col: 0
+      header: 0
+      rename:
+        columns: year
+        index: scenario
+
     # Overall heating technology mix in homes (residential) in 2050
     CV.16:
       usecols: "K:P"
@@ -945,7 +955,19 @@ fes:
         residential_heat: ["residential hp demand"]
         iandc_heat: ["i&c hp demand"]
       heat:
-        electrified_heating_technologies: ["Electric resistive", "ASHP", "GSHP"]
+        electrified_heating_technologies:
+          resistive:
+          - Electric resistive
+          - Electric storage
+          - Hybrid (ASHP + Electric resistive)
+          ASHP:
+          - ASHP
+          - District Heating
+          - Hybrid (ASHP + Hydrogen boiler)
+          - Hybrid (ASHP + BioLPG/BioLiquid)
+          - Hybrid (ASHP + Electric resistive)
+          GSHP:
+          - GSHP
       bus_suffix:
         baseline_electricity: " Baseline Electricity"
         residential: " Baseline Electricity"
