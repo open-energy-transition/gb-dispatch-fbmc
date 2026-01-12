@@ -14,7 +14,11 @@ import pandas as pd
 import pypsa
 
 from scripts._helpers import configure_logging, set_scenario_config
-from scripts.gb_model._helpers import filter_interconnectors, marginal_costs_bus
+from scripts.gb_model._helpers import (
+    filter_interconnectors,
+    get_neighbour_countries,
+    marginal_costs_bus,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -53,105 +57,29 @@ def compute_interconnector_fee(
     return fee_profile
 
 
-def get_gen_marginal_carrier(
+def get_price_spread(
     generator_marginal_prices: pd.DataFrame,
-    gb_marginal_electricity_price: float,
+    marginal_electricity_price: float,
 ) -> str:
     """
-    To identify marginal carrier at the EUR bus
+    To obtain price spread between generators at the eur node and it's marginal electricity price
 
     Parameters
     ----------
     generator_marginal_prices: pd.DataFrame
         Dataframe of marginal costs for each carrier at the eur node
-    gb_marginal_electricity_price: float
-        Marginal cost of electricity at the GB node for the interconnector
+    marginal_electricity_price: float
+        Marginal cost of electricity at the EUR node for the interconnector
     """
 
     # Calculate price difference between generator marginal costs and GB marginal electricity price
     price_spread = (
-        (generator_marginal_prices - gb_marginal_electricity_price).abs().sort_values()
+        (generator_marginal_prices - marginal_electricity_price).abs().sort_values()
     )
-    marginal_carrier = price_spread.index[0]
+
+    least_spread_carrier = price_spread.index[0]
     least_spread = price_spread.iloc[0]
-    return least_spread, marginal_carrier
-
-
-def calc_bid_offer_multiplier(
-    gb_marginal_electricity_price: float,
-    generator_marginal_prices: pd.DataFrame,
-    bid_multiplier: dict[str, list],
-    offer_multiplier: dict[str, list],
-) -> tuple[float]:
-    """
-    Calculate bid/offer multiplier profile based on the marginal generator at each eur node for every time step
-
-    Parameters
-    ----------
-    gb_marginal_electricity_price: float
-        Marginal cost of electricity at the GB node for the interconnector
-    generator_marginal_prices: pd.DataFrame
-        Dataframe of marginal costs for each carrier at the eur node
-    bid_multiplier: dict[str, list]
-        Multiplier for bids for conventional carriers
-    offer_multiplier: dict[str, list]
-        Multiplier for offers for conventional carriers
-    """
-
-    marginal_carrier = get_gen_marginal_carrier(
-        generator_marginal_prices, gb_marginal_electricity_price
-    )
-
-    # Adjust marginal cost for both offer and bid
-    if marginal_carrier in bid_multiplier.keys():
-        bid_cost = gb_marginal_electricity_price * bid_multiplier[marginal_carrier]
-        offer_cost = gb_marginal_electricity_price * offer_multiplier[marginal_carrier]
-    else:
-        bid_cost = offer_cost = gb_marginal_electricity_price
-
-    return bid_cost, offer_cost
-
-
-def _eur_neighbours(network: pypsa.Network) -> np.ndarray:
-    """
-    To obtain a dictionary of eur buses and their neighbouring countries
-
-    Parameters
-    ----------
-    network: pypsa.Network
-        PyPSA network object
-    """
-    gb_buses = network.buses.query("carrier == 'AC' and country == 'GB'").index
-
-    country_list = network.buses.country.unique().tolist()
-
-    dict_neighbours = {}
-    for country in country_list:
-        dc_links = network.links.query("carrier == 'DC'")
-
-        if country == "GB":
-            eur_interconnectors = dc_links.query(
-                "bus0 in @gb_buses and bus1 not in @gb_buses",
-                local_dict={"gb_buses": gb_buses},
-            )
-
-        else:
-            eur_interconnectors = dc_links.query(
-                "bus0 == @eur_bus or bus1 == @eur_bus", local_dict={"eur_bus": country}
-            ).query("bus0 not in @gb_buses")
-
-        if eur_interconnectors.empty:
-            countries = []
-        else:
-            countries = (
-                pd.concat([eur_interconnectors.bus0, eur_interconnectors.bus1])
-                .unique()
-                .tolist()
-            )
-            countries = [x for x in countries if country not in x]
-
-        dict_neighbours[country] = countries
-    return dict_neighbours
+    return least_spread, least_spread_carrier
 
 
 def get_eur_marginal_generator(
@@ -172,7 +100,7 @@ def get_eur_marginal_generator(
         Bid and offer multiplier to be applied for conventional generation
     """
 
-    neighbours_dict = _eur_neighbours(unconstrained_result)
+    neighbours_dict = get_neighbour_countries(unconstrained_result)
     gb_neighbours = neighbours_dict["GB"]
     columns = [f"{x} bid" for x in gb_neighbours] + [
         f"{x} offer" for x in gb_neighbours
@@ -184,14 +112,14 @@ def get_eur_marginal_generator(
     bid_multiplier = bids_and_offers_multipliers["bid_multiplier"]
     offer_multiplier = bids_and_offers_multipliers["offer_multiplier"]
 
-    def identify_marginal_carrier(electricity_price, nodes_to_check):
+    def _identify_marginal_carrier(electricity_price, nodes_to_check):
         price_spread = 100  # initial large value
         tolerance = 2  # tolerance to identify marginal carrier
 
         visited_nodes = []
         price_spread_tuple = []
         while nodes_to_check != []:
-            # Get marginal cost of generators at each of the linked countries
+            # Get marginal cost of all generators at each of the linked countries
             generator_marginal_prices = pd.concat(
                 [
                     marginal_costs_bus(bus, unconstrained_result)
@@ -199,15 +127,18 @@ def get_eur_marginal_generator(
                 ]
             )
 
-            price_spread, carrier = get_gen_marginal_carrier(
+            # Calculate price spread between generator marginal costs and the marginal electricity price at the EUR bus
+            price_spread, carrier = get_price_spread(
                 generator_marginal_prices, electricity_price
             )
             price_spread_tuple.append((price_spread, carrier))
 
+            # Break the loop if price spread is within tolerance
             if price_spread <= tolerance:
                 break
 
             visited_nodes += nodes_to_check
+            # Find the next set of neighbouring countries to check
             next_nodes = set(
                 sum([neighbours_dict[x] for x in nodes_to_check], [])
             ) - set(visited_nodes)
@@ -231,7 +162,7 @@ def get_eur_marginal_generator(
         # eur_marginal_gen_profile[[f"{eur_bus} bid", f"{eur_bus} offer"]] = marginal_electricity_price.apply(lambda x: identify_marginal_carrier(x, nodes_to_check)).tolist()
         eur_marginal_gen_profile[[f"{eur_bus} bid", f"{eur_bus} offer"]] = (
             marginal_electricity_price.swifter.apply(
-                lambda x: identify_marginal_carrier(x, nodes_to_check)
+                lambda x: _identify_marginal_carrier(x, nodes_to_check)
             ).tolist()
         )
 
