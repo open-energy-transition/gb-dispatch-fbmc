@@ -198,7 +198,7 @@ Dispatchable carbon emitting generators
 
 We represent several conventional, carbon-emitting generators that can dispatch without constraints: coal (``coal``), gas (``CCGT`` / ``OCGT`` / ``engine``), and oil (``oil``) fired power stations.
 Where information on the type of plant is available, we define technology subsets.
-This is the case for natural gas plants, for which we define closed- and open-cycle gas turbines and reciprocating engines.
+This is the case for natural gas plants, for which we define combined- and open-cycle gas turbines and reciprocating engines.
 
 As with the other low carbon generators, these plants are fully dispatchable.
 In addition, we apply a cost of carbon to the fuel they consume, which is included in their total marginal cost.
