@@ -161,7 +161,6 @@ gb-test = """
 curl = ">=8.17.0"
 python-dotenv = ">=1.2.1"
 gurobi = "<13.0"
-pypsa = "<1"
 shapely = ">=2.1"
 
 [feature.gb-model.pypi-dependencies]

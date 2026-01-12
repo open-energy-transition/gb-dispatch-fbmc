@@ -28,7 +28,7 @@
 "osm","archive","0.4","['deprecated', 'not-supported']","https://zenodo.org/records/13759222",""
 "osm","archive","0.5","['deprecated', 'not-supported']","https://zenodo.org/records/13981528",""
 "osm","archive","0.6","['deprecated', 'supported']","https://zenodo.org/records/14144752",""
-"osm","archive","2026-01-06","['latest', 'supported']","https://zenodo.org/records/18161054","GB model specific archive"
+"osm","archive","0.7","['latest', 'supported']","https://zenodo.org/records/18161054","GB model specific archive"
 "osm","build","unknown","['latest', 'supported']","","Latest dataset built using OSM data. No single URL available to access the data. See the related scripts and documentation for details."
 "wdpa","archive","Jul2025","['latest', 'supported']","https://web.archive.org/web/20250715071823if_/https://d1gam3xoknrgr2.cloudfront.net/current/WDPA_Jul2025_Public_shp.zip","We are legally not allowed to redistribute this dataset, luckily the web archive is keeping copies of it."
 "wdpa","primary","unknown","['latest', 'supported']","https://d1gam3xoknrgr2.cloudfront.net/current/WDPA_{bYYYY}_Public_shp.zip","WDPA changes its URL every month, the URL here is used as a template and {bYYYY} is replaced inside the retrieve.smk."
