@@ -12,6 +12,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pypsa
+import swifter
 
 from scripts._helpers import configure_logging, set_scenario_config
 from scripts.gb_model._helpers import (
@@ -81,6 +82,75 @@ def get_price_spread(
     least_spread = price_spread.iloc[0]
     return least_spread, least_spread_carrier
 
+def get_eur_marginal_generator(
+    marginal_price_profile: pd.DataFrame,
+    unconstrained_result: pypsa.Network,
+    bids_and_offers_multipliers: dict[dict[str, float]],
+) -> pd.DataFrame:
+    """
+    Obtain the marginal generator at eur node at each timestamp
+
+    Parameters
+    ----------
+    marginal_price_profile: pd.DataFrame
+        Bus shadow price profile indexed by time for each eur bus
+    unconstrained_result: pypsa.Network
+        Unconstrained optimization model result
+    bids_and_offers_multipliers: dict[dict[str, float]]
+        Bid and offer multiplier to be applied for conventional generation
+    """
+        
+    neighbours_dict = get_neighbour_countries(unconstrained_result)
+    gb_neighbours = neighbours_dict["GB"]
+    columns = [f"{x} bid" for x in gb_neighbours] + [
+        f"{x} offer" for x in gb_neighbours
+    ]
+    eur_marginal_gen_profile = pd.DataFrame(
+        index=unconstrained_result.snapshots, columns=columns
+    )
+
+    bid_multiplier = bids_and_offers_multipliers["bid_multiplier"]
+    offer_multiplier = bids_and_offers_multipliers["offer_multiplier"]
+    eur_buses = unconstrained_result.buses.query("country != 'GB' and carrier == 'AC'").index
+    generator_marginal_prices = pd.concat(
+                [
+                    marginal_costs_bus(bus, unconstrained_result)
+                    for bus in eur_buses
+                ]
+            
+            )
+    marginal_price_range = generator_marginal_prices.groupby("carrier").agg(['min','max']).sort_values(by='min')
+
+    def _identify_marginal_carrier_updated(electricity_price):
+        marginal_carrier_rows = marginal_price_range.loc[(electricity_price > marginal_price_range['min']) & (electricity_price <= marginal_price_range['max'])]
+        
+        # If electricity price does not match any of the generator marginal price ranges
+        if marginal_carrier_rows.empty:
+            marginal_carrier_rows = pd.concat([ marginal_price_range[(marginal_price_range['max'] < electricity_price)].iloc[-1], marginal_price_range[(marginal_price_range['min'] > electricity_price)].iloc[0]],axis=1).T
+            if electricity_price - marginal_carrier_rows.iloc[0]['max'] > marginal_carrier_rows.iloc[1]['min'] - electricity_price:
+                marginal_carrier_row = marginal_carrier_rows.iloc[1]
+            else:
+                marginal_carrier_row = marginal_carrier_rows.iloc[0]  
+        else:
+            marginal_carrier_row = marginal_carrier_rows.iloc[0]
+
+        marginal_carrier = marginal_carrier_row.name
+        if marginal_carrier in bid_multiplier.keys():
+            bid_cost = electricity_price * bid_multiplier[marginal_carrier]
+            offer_cost = electricity_price * offer_multiplier[marginal_carrier]
+        else:
+            bid_cost = offer_cost = electricity_price
+
+        return bid_cost, offer_cost
+    
+    for bus in gb_neighbours:
+        marginal_electricity_price = marginal_price_profile[bus]
+        eur_marginal_gen_profile[[f"{bus} bid", f"{bus} offer"]] = marginal_electricity_price.apply(lambda x: _identify_marginal_carrier_updated(x)).tolist()
+        logger.info(
+            f"Calculated marginal generator profile and it's associate bid/offer at {bus}"
+        )
+    
+    return eur_marginal_gen_profile
 
 def get_eur_marginal_generator(
     marginal_price_profile: pd.DataFrame,
@@ -114,7 +184,7 @@ def get_eur_marginal_generator(
 
     def _identify_marginal_carrier(electricity_price, nodes_to_check):
         price_spread = 100  # initial large value
-        tolerance = 2  # tolerance to identify marginal carrier
+        tolerance = 0.02  # tolerance to identify marginal carrier
 
         visited_nodes = []
         price_spread_tuple = []
@@ -131,6 +201,7 @@ def get_eur_marginal_generator(
             price_spread, carrier = get_price_spread(
                 generator_marginal_prices, electricity_price
             )
+            breakpoint()
             price_spread_tuple.append((price_spread, carrier))
 
             # Break the loop if price spread is within tolerance
@@ -143,10 +214,9 @@ def get_eur_marginal_generator(
                 sum([neighbours_dict[x] for x in nodes_to_check], [])
             ) - set(visited_nodes)
             nodes_to_check = [*next_nodes]
-
+        breakpoint()
         # Select the marginal carrier with the least price spread
         marginal_carrier = min(price_spread_tuple, key=lambda x: x[0])[1]
-
         if marginal_carrier in bid_multiplier.keys():
             bid_cost = electricity_price * bid_multiplier[marginal_carrier]
             offer_cost = electricity_price * offer_multiplier[marginal_carrier]
@@ -155,20 +225,27 @@ def get_eur_marginal_generator(
 
         return bid_cost, offer_cost
 
+    gb_neighbours=["NO"]
     for eur_bus in gb_neighbours:
         nodes_to_check = neighbours_dict[eur_bus] + [eur_bus]
         marginal_electricity_price = marginal_price_profile[eur_bus]
 
         # eur_marginal_gen_profile[[f"{eur_bus} bid", f"{eur_bus} offer"]] = marginal_electricity_price.apply(lambda x: identify_marginal_carrier(x, nodes_to_check)).tolist()
+        # eur_marginal_gen_profile[[f"{eur_bus} bid", f"{eur_bus} offer"]] = (
+        #     marginal_electricity_price.swifter.progress_bar(False).apply(
+        #         lambda x: _identify_marginal_carrier(x, nodes_to_check)
+        #     ).tolist()
+        # )
         eur_marginal_gen_profile[[f"{eur_bus} bid", f"{eur_bus} offer"]] = (
-            marginal_electricity_price.swifter.apply(
+            marginal_electricity_price.apply(
                 lambda x: _identify_marginal_carrier(x, nodes_to_check)
             ).tolist()
         )
-
         logger.info(
             f"Calculated marginal generator profile and it's associate bid/offer at {eur_bus}"
         )
+        breakpoint()
+
 
     return eur_marginal_gen_profile
 
