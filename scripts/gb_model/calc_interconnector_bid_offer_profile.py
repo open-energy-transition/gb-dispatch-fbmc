@@ -134,7 +134,7 @@ def get_eur_marginal_generator(
             marginal_carrier_rows = pd.concat(
                 [
                     marginal_price_range[
-                        (marginal_price_range["max"] < electricity_price)
+                        (marginal_price_range["max"] < electricity_price) 
                     ].iloc[-1],
                     marginal_price_range[
                         (marginal_price_range["min"] > electricity_price)
