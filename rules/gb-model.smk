@@ -627,7 +627,7 @@ rule process_ev_demand_shape:
         charging_duration=config["ev"]["charging_duration"],
     input:
         clustered_pop_layout=resources("pop_layout_base_s_clustered.csv"),
-        traffic_data_KFZ="data/bundle/emobility/KFZ__count",
+        traffic_data_KFZ=Path(MOBILITY_PROFILES_DATASET["folder"]) / "kfz.csv",
     output:
         demand_shape=resources("gb-model/ev_demand_shape.csv"),
     log:
@@ -894,9 +894,7 @@ rule assign_costs:
         costs_config=config["costs"],
         fes_scenario=config["fes"]["gb"]["scenario"],
     input:
-        tech_costs=lambda w: resources(
-            f"costs_{config_provider('costs', 'year')(w)}.csv"
-        ),
+        tech_costs=Path(COSTS_DATASET["folder"]) / "costs_2040.csv",
         fes_power_costs=resources("gb-model/fes-costing/AS.1 (Power Gen).csv"),
         fes_carbon_costs=resources("gb-model/fes-costing/AS.7 (Carbon Cost).csv"),
         fes_powerplants=resources("gb-model/{data_file}.csv"),
@@ -938,9 +936,7 @@ rule compose_network:
         + [resources("avail_profile_s_clustered.csv")],
         network=resources("networks/base_s_clustered.nc"),
         powerplants=resources("gb-model/fes_powerplants_inc_tech_data.csv"),
-        tech_costs=lambda w: resources(
-            f"costs_{config_provider('costs', 'year')(w)}.csv"
-        ),
+        tech_costs=Path(COSTS_DATASET["folder"]) / "costs_2040.csv",
         hydro_capacities=ancient("data/hydro_capacities.csv"),
         chp_p_min_pu=resources("gb-model/chp_p_min_pu.csv"),
         interconnectors_p_nom=resources("gb-model/interconnectors_p_nom.csv"),
