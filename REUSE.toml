@@ -6,8 +6,19 @@ SPDX-PackageDownloadLocation = "https://github.com/open-energy-transition/gb-dis
 [[annotations]]
 path = [
     "doc/gb-model/**",
+    "data/gb-model/custom_busmap.csv"
 ]
 SPDX-FileCopyrightText = "gb-dispatch-model contributors"
+SPDX-License-Identifier = "CC-BY-4.0"
+
+[[annotations]]
+path = [
+    "data/gb-model/tyndp_h2_demand.csv",
+]
+SPDX-FileCopyrightText = [
+    "European Network of Transmission System Operators for Electricity (ENTSO-E)",
+    "European Network of Transmission System Operators for Gas (ENTSOG)",
+]
 SPDX-License-Identifier = "CC-BY-4.0"
 
 [[annotations]]
