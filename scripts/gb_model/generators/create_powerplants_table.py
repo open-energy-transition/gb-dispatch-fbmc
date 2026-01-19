@@ -193,10 +193,16 @@ if __name__ == "__main__":
     configure_logging(snakemake)
     set_scenario_config(snakemake)
 
-    # Load the file paths
-    df_gsp = pd.read_csv(snakemake.input.gsp_data).query(
-        "Template in ['Generation', 'Storage & Flexibility']"
-    )
+    df_gsp = pd.read_csv(snakemake.input.gsp_data)
+    # We to query column with merged cells in the original Excel sheet, so ffill the resulting gaps in the df
+    df_gsp["Template"] = df_gsp["Template"].ffill()
+    df_gsp["Technology"] = df_gsp.groupby(
+        "Template", group_keys=False
+    ).Technology.ffill()
+    df_gsp_gen_store = df_gsp[
+        df_gsp.Template.isin(["Generation", "Storage & Flexibility"])
+    ]
+
     df_dukes = pd.read_csv(snakemake.input.dukes_data)
 
     df_eur = pd.read_csv(snakemake.input.eur_data).query("Variable == 'Capacity (MW)'")
@@ -208,19 +214,22 @@ if __name__ == "__main__":
     default_set = snakemake.params.default_set
 
     df_capacity_gb_gsp = capacity_table(
-        df_gsp[df_gsp.bus.notnull()], gb_config, default_set
+        df_gsp_gen_store[df_gsp_gen_store.bus.notnull()], gb_config, default_set
     )
     logger.info("Tabulated the capacities into a table in PyPSA-Eur format")
 
     df_capacity_gb_TO = capacity_table(
-        df_gsp[df_gsp.bus.isnull()], gb_config, default_set, "TO_region"
+        df_gsp_gen_store[df_gsp_gen_store.bus.isnull()],
+        gb_config,
+        default_set,
+        "TO_region",
     ).set_index(["carrier", "set", "TO_region", "year"])
 
     df_capacity_gb_dukes = capacity_table(df_dukes, dukes_config, default_set)
     bus_to_TO = df_dukes.groupby("bus").TO_region.first()
 
     df_capacity_gb_expected = (
-        capacity_table(df_gsp, gb_config, default_set, "Unit")
+        capacity_table(df_gsp_gen_store, gb_config, default_set, "Unit")
         .set_index(["carrier", "set", "year"])
         .p_nom
     )
