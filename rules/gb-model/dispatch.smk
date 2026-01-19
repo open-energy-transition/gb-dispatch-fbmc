@@ -7,7 +7,6 @@ Unconstrained dispatch run rules.
 """
 
 
-
 rule prepare_unconstrained:
     message:
         "Prepare network for unconstrained optimization"

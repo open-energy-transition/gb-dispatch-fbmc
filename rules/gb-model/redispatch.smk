@@ -23,7 +23,6 @@ rule process_CfD_strike_prices:
         "../../scripts/gb_model/redispatch/process_CfD_strike_prices.py"
 
 
-
 rule calc_interconnector_bid_offer_profile:
     message:
         "Calculate interconnector bid/offer profiles"
