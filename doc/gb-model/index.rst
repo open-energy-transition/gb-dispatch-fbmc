@@ -46,6 +46,7 @@ The gb-dispatch-model workflow is continuously tested for Linux, macOS and Windo
    :maxdepth: 2
    :caption: Development
 
+   system
    implementation
 
 .. toctree::
