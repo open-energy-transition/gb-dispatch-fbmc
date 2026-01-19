@@ -56,7 +56,7 @@ def map_points_to_regions(
     return regions
 
 
-def strip_srt(series: pd.Series) -> pd.Series:
+def strip_str(series: pd.Series) -> pd.Series:
     """Strip whitespace from strings in a pandas Series."""
     return series.str.strip() if series.dtype == "object" else series
 
@@ -80,7 +80,7 @@ def standardize_year(series: pd.Series) -> pd.Series:
 
 def pre_format(df: pd.DataFrame) -> pd.DataFrame:
     """Pre-format dataframe by stripping string, converting numerics, and standardizing year."""
-    df = df.apply(strip_srt)
+    df = df.apply(strip_str)
     df["year"] = standardize_year(df["year"])
     df["data"] = to_numeric(df["data"])
     return df
@@ -90,7 +90,7 @@ def parse_flexibility_data(
     df_flexibility: pd.DataFrame,
     fes_scenario: str,
     year_range: list[int],
-    slice: dict[str, str],
+    slice: dict[str, str | list[str]],
 ) -> pd.Series:
     """
     Parse the FES FLX workbook to obtain storage capacity in the required format.
@@ -102,7 +102,7 @@ def parse_flexibility_data(
             FES scenario name to filter the data for
         year_range (list[int]):
             List of years to filter the data for
-        slice (dict[str, str]):
+        slice (dict[str, str | list[str]]):
             Dictionary to filter the data for (e.g., {'Detail': "V2G impact at peak"})
 
     Returns:
@@ -115,21 +115,25 @@ def parse_flexibility_data(
 
     # Select scenario
     df_flexibility = df_flexibility[
-        df_flexibility["Scenario"].str.lower() == fes_scenario.lower()
+        df_flexibility["Pathway"].str.lower() == fes_scenario.lower()
     ]
 
     detail_data = df_flexibility.copy()
     for key, value in slice.items():
-        detail_data = detail_data[detail_data[key].str.lower() == value.lower()]
+        if not isinstance(value, list):
+            value = [value]
+        detail_data = detail_data[
+            detail_data[key].str.lower().isin([v.lower() for v in value])
+        ]
 
     # Select year range
     df_flexibility = df_flexibility[
         df_flexibility["year"].between(year_range[0], year_range[1])
     ]
     # Select only required columns
-    detail_data = detail_data[["year", "data"]].set_index("year").data
+    detail_data_agg = detail_data.groupby("year").data.sum()
 
-    return detail_data
+    return detail_data_agg
 
 
 def get_regional_distribution(df: pd.Series) -> pd.Series:

@@ -510,7 +510,7 @@ def add_EV_V2G(
         ev_v2g_df.index,
         suffix=" EV V2G store",
         bus=ev_v2g_df.index + " EV V2G bus",
-        e_nom=ev_v2g_storage_capacity.MWh,
+        e_nom=ev_v2g_storage_capacity.e_nom,
         e_cyclic=True,
         carrier="ev V2G",
     )
@@ -999,13 +999,13 @@ def add_H2(
     ppl: pd.DataFrame,
     year: int,
     regional_H2_demand_annual_inc_eur: str,
-    regional_off_grid_electrolysis_electricity_demand_inc_eur: str,
+    regional_non_networked_electrolysis_demand_annual_inc_eur: str,
     regional_H2_storage_capacity_inc_eur_inc_tech_data: str,
     regional_grid_electrolysis_capacities_inc_eur_inc_tech_data: str,
 ) -> None:
     demand = _load_regional_data(regional_H2_demand_annual_inc_eur, year)
     demand_fixed = _load_regional_data(
-        regional_off_grid_electrolysis_electricity_demand_inc_eur, year
+        regional_non_networked_electrolysis_demand_annual_inc_eur, year
     )
     storage_caps = _load_powerplants(
         regional_H2_storage_capacity_inc_eur_inc_tech_data, year

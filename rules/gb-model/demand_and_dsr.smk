@@ -51,7 +51,7 @@ rule process_baseline_demand_shape:
         ),
         energy_totals=resources("pop_weighted_energy_totals_s_clustered.csv"),
         heat_demand_shape=resources("hourly_heat_demand_total_base_s_clustered.nc"),
-        resistive_heat_demand=resources("gb-model/resistive_heat_demand.csv"),
+        resistive_heater_demand=resources("gb-model/resistive_heater_demand/{year}.csv"),
     output:
         demand_shape=resources("gb-model/baseline_electricity_demand_shape/{year}.csv"),
     log:
@@ -64,39 +64,41 @@ rule create_flexibility_table:
     message:
         "Process {wildcards.flexibility_type} flexibility from FES workbook into CSV format"
     params:
-        scenario=config["fes"]["gb"]["scenario"],
+        scenario=config["fes"]["scenario"],
         year_range=config["fes"]["year_range_incl"],
         carrier_mapping=lambda wildcards: config["fes"]["gb"]["flexibility"][
             "carrier_mapping"
         ][wildcards.flexibility_type],
     input:
-        flexibility_sheet=resources(f"gb-model/fes/{config['fes_year']}/FLX1.csv"),
+        flexibility_sheet=resources(f"gb-model/fes/FLX1.csv"),
     output:
-        flexibility=resources("gb-model/{flexibility_type}_flexibility.csv"),
+        flexibility=resources("gb-model/{flexibility_type}.csv"),
     log:
-        logs("create_{flexibility_type}_flexibility_table.log"),
+        logs("create_flexibility_table_{flexibility_type}.log"),
     wildcard_constraints:
         flexibility_type="|".join(config["fes"]["gb"]["flexibility"]["carrier_mapping"]),
     script:
         "../../scripts/gb_model/demand_and_dsr/create_flexibility_table.py"
 
 
-rule process_regional_flexibility_table:
+rule synthesise_gb_regional_data:
     message:
-        "Process regional {wildcards.flexibility_type} flexibility from FES workbook into CSV format"
+        "Process regional {wildcards.data} data from FES workbook into CSV format"
     params:
-        regional_distribution_reference=config["fes"]["gb"]["flexibility"][
+        regional_distribution_reference=lambda wildcards: config["fes"]["gb"][
             "regional_distribution_reference"
-        ],
+        ][wildcards.data],
     input:
-        flexibility=resources("gb-model/{flexibility_type}_flexibility.csv"),
+        national_gb_data=resources("gb-model/{data}.csv"),
         regional_gb_data=resources("gb-model/regional_gb_data.csv"),
     output:
-        regional_flexibility=resources("gb-model/regional_{flexibility_type}.csv"),
+        csv=resources("gb-model/regional_{data}.csv"),
+    wildcard_constraints:
+        data="|".join(config["fes"]["gb"]["regional_distribution_reference"].keys()),
     log:
-        logs("process_regional_{flexibility_type}_flexibility_table.log"),
+        logs("synthesise_gb_regional_data_{data}.log"),
     script:
-        "../../scripts/gb_model/demand_and_dsr/process_regional_flexibility_table.py"
+        "../../scripts/gb_model/demand_and_dsr/synthesise_gb_regional_data.py"
 
 
 rule distribute_eur_demands:

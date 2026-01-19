@@ -18,6 +18,8 @@ from scripts._helpers import configure_logging, set_scenario_config
 
 logger = logging.getLogger(__name__)
 
+COST_NAME_MAPPING = {"Fuel Cost": "fuel", "Variable Other Work Costs": "VOM"}
+
 
 def _ensure_column_with_default(
     df: pd.DataFrame, col: str, default: float, units: str = ""
@@ -89,37 +91,29 @@ def _load_fes_power_costs(
     # Load FES power costs
     fes_power_costs = pd.read_csv(fes_power_costs_path)
 
-    # Filter for the selected FES scenario
-    fes_power_costs = fes_power_costs[
-        (fes_power_costs["Scenario"].str.lower().isin([fes_scenario, "all scenarios"]))
-    ]
-
-    # Keep relevant cost types
-    fes_power_costs = fes_power_costs[
-        fes_power_costs["Cost Type"]
-        .str.lower()
-        .isin(["variable other work costs", "fuel cost"])
-    ]
-
-    # Pivot to create multi-index with Cost Type as columns
-    fes_power_costs.loc[:, "technology"] = (
-        fes_power_costs["Type"] + "-" + fes_power_costs["Sub Type"]
-    )
-    fes_power_costs_pivoted = fes_power_costs.pivot_table(
-        index=["technology", "year"],
-        columns="Cost Type",
-        values="data",
+    # Take the average across all scenarios since the scenario names change between FES2023 and FES2024
+    # And therefore the scenario filtering cannot be reliably done here.
+    # Only battery storage is affected by this (having up to ~10% difference in VOM costs in different scenarios),
+    fes_power_costs_mean = (
+        fes_power_costs.groupby(["Type", "Sub Type", "Cost Type", "year"])
+        .data.mean()
+        .reset_index()
     )
 
-    # Rename columns to match expected names
-    fes_power_costs_pivoted = fes_power_costs_pivoted.rename(
-        columns={
-            "Fuel Cost": "fuel",
-            "Variable Other Work Costs": "VOM",
-        }
+    fes_power_costs_pivoted = (
+        fes_power_costs_mean.assign(
+            technology=fes_power_costs_mean["Type"]
+            + "-"
+            + fes_power_costs_mean["Sub Type"]
+        )
+        .pivot_table(
+            index=["technology", "year"],
+            columns="Cost Type",
+            values="data",
+        )
+        .rename(columns=COST_NAME_MAPPING)
     )
-
-    return fes_power_costs_pivoted
+    return fes_power_costs_pivoted[COST_NAME_MAPPING.values()]
 
 
 def _load_fes_carbon_costs(
@@ -145,18 +139,11 @@ def _load_fes_carbon_costs(
     # Load FES carbon costs
     fes_carbon_costs = pd.read_csv(fes_carbon_costs_path)
 
-    # Filter for the selected FES scenario
-    fes_carbon_costs = fes_carbon_costs[
-        fes_carbon_costs["Scenario"].str.lower() == fes_scenario
-    ]
+    # We take the average across all scenarios since the scenario names change between FES2023 and FES2024
+    # And therefore the scenario filtering cannot be reliably done here.
+    fes_carbon_costs_mean = fes_carbon_costs.groupby("year").data.mean()
 
-    # Select relevant columns
-    fes_carbon_costs = fes_carbon_costs[["year", "data"]].set_index("year")
-
-    # Rename columns to match expected names
-    fes_carbon_costs.rename(columns={"data": "carbon_cost"}, inplace=True)
-
-    return fes_carbon_costs
+    return fes_carbon_costs_mean.to_frame("carbon_cost")
 
 
 def _integrate_fes_power_costs(
@@ -282,7 +269,6 @@ def assign_technical_and_costs_defaults(
         + df["fuel"] / df["efficiency"]
         + df["CO2 intensity"] * df["carbon_cost"] / df["efficiency"]
     )
-
     # Fill gaps in all remaining columns
     for col in costs_config["relevant_cost_columns"]:
         df = _ensure_column_with_default(
@@ -307,7 +293,6 @@ def assign_technical_and_costs_defaults(
 
     # PyPSA-Eur expects 'capital_cost' column name even though source technology data uses 'investment'
     df = df.rename(columns={"investment": "capital_cost"})
-
     return df
 
 

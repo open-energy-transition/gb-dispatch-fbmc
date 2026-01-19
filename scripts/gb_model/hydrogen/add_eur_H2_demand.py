@@ -70,6 +70,7 @@ if __name__ == "__main__":
         skiprows=6,
         usecols="B:H",
     )
+    today_year = eur_demand_today["Year"].drop_duplicates().item()
     # get annual demand in MWh per country
     eur_demand_today = (
         eur_demand_today.groupby("Country")["Clean consumption T/Y"]
@@ -79,7 +80,9 @@ if __name__ == "__main__":
     eur_demand_today.index = eur_demand_today.index.map(
         lambda x: coco.convert(x, to="ISO2")
     )
-    eur_demand = pd.concat([eur_demand_today.to_frame(2022), eur_demand_future], axis=1)
+    eur_demand = pd.concat(
+        [eur_demand_today.to_frame(today_year), eur_demand_future], axis=1
+    )
     all_demand = add_eur_demand(gb_demand, eur_demand, snakemake.params.countries)
 
     all_demand.to_csv(snakemake.output.csv)

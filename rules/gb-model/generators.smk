@@ -90,7 +90,7 @@ rule assign_costs:
         "Prepares costs file from technology-data of PyPSA-Eur and FES and assigns to {wildcards.data_file}"
     params:
         costs_config=config["costs"],
-        fes_scenario=config["fes"]["gb"]["scenario"],
+        fes_scenario=config["fes"]["scenario"],
     input:
         tech_costs=lambda w: resources(
             f"costs_{config_provider('costs', 'year')(w)}.csv"

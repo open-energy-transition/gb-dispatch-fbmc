@@ -65,7 +65,7 @@ rule compose_network:
         H2_data=[
             resources("gb-model/regional_H2_demand_annual_inc_eur.csv"),
             resources(
-                "gb-model/regional_off_grid_electrolysis_electricity_demand_inc_eur.csv"
+                "gb-model/regional_non_networked_electrolysis_demand_annual_inc_eur.csv"
             ),
             resources(
                 "gb-model/regional_H2_storage_capacity_inc_eur_inc_tech_data.csv"
