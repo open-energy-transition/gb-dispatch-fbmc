@@ -515,7 +515,9 @@ rule cluster_baseline_electricity_demand_timeseries:
         load=resources("electricity_demand_base_s.nc"),
         busmap=resources("busmap_base_s_clustered.csv"),
     output:
-        csv_file=resources("baseline_electricity_demand_s_clustered.csv"),
+        csv_file=resources(
+            "gb-model/historical_baseline_electricity_demand_profile.csv"
+        ),
     log:
         logs("cluster_baseline_electricity_demand_timeseries.log"),
     script:
@@ -533,7 +535,7 @@ rule process_cop_profiles:
         clustered_pop_layout=resources("pop_layout_base_s_clustered.csv"),
         district_heat_share=resources("district_heat_share.csv"),
     output:
-        csv=resources("cop_base_s_clustered_{year}.csv"),
+        csv=resources("gb-model/cop/{year}.csv"),
     log:
         logs("process_cop_profiles_clustered_{year}.log"),
     script:
@@ -544,18 +546,19 @@ rule process_fes_heating_mix:
     message:
         "Process the share of electrified heating technologies from FES workbook"
     params:
-        year=lambda wildcards: wildcards.year,
+        year_range=config["fes"]["year_range_incl"],
         electrified_heating_technologies=config["fes"]["gb"]["demand"]["heat"][
             "electrified_heating_technologies"
         ],
         scenario=config["fes"]["gb"]["scenario"],
     input:
         fes_residential_heatmix=resources("gb-model/fes/2021/CV.16.csv"),
-        fes_commercial_heatmix=resources("gb-model/fes/2021/CV.55.csv"),
+        fes_services_heatmix=resources("gb-model/fes/2021/CV.55.csv"),
+        fes_hp_uptake_trend=resources("gb-model/fes/2021/CV.14.csv"),
     output:
-        csv=resources("gb-model/fes_heating_mix/{year}.csv"),
+        csv=resources("gb-model/fes_heating_mix.csv"),
     log:
-        logs("process_fes_heating_mix_{year}.log"),
+        logs("process_fes_heating_mix.log"),
     script:
         "../scripts/gb_model/process_fes_heating_mix.py"
 
@@ -563,35 +566,55 @@ rule process_fes_heating_mix:
 rule process_heat_demand_shape:
     message:
         "Cluster default PyPSA-Eur heat demand shape by bus"
-    params:
-        year=lambda wildcards: wildcards.year,
     input:
         demand=resources("hourly_heat_demand_total_base_s_clustered.nc"),
-        cop_profile=resources("cop_base_s_clustered_{year}.csv"),
-        heating_mix=resources("gb-model/fes_heating_mix/{year}.csv"),
+        cop_profile=resources("gb-model/cop/{year}.csv"),
+        heating_mix=resources("gb-model/fes_heating_mix.csv"),
+        energy_totals=resources("pop_weighted_energy_totals_s_clustered.csv"),
     output:
-        residential_csv_file=resources(
-            "gb-model/residential_heat_demand_shape/{year}.csv"
-        ),
+        residential_csv=resources("gb-model/residential_heat_demand_shape/{year}.csv"),
         #Industry load is not generated in PyPSA-Eur, hence the same profile as services is considered to be applicable for c&i
-        commercial_csv_file=resources("gb-model/iandc_heat_demand_shape/{year}.csv"),
+        services_csv=resources("gb-model/iandc_heat_demand_shape/{year}.csv"),
     log:
         logs("heat_demand_s_clustered_{year}.log"),
     script:
         "../scripts/gb_model/process_heat_demand_shape.py"
 
 
-rule process_demand_shape:
+rule resistive_heat_demand:
     message:
-        "Process {wildcards.demand_sector} demand profile shape into CSV format"
+        "Get resistive electrical annual heat supply."
     input:
-        pypsa_eur_demand_timeseries=resources("{demand_sector}_demand_s_clustered.csv"),
+        gb_residential_heat_annual=resources(
+            "gb-model/regional_residential_heat_demand_annual.csv"
+        ),
+        gb_iandc_heat_annual=resources("gb-model/regional_iandc_heat_demand_annual.csv"),
+        eur_demand_annual=resources("gb-model/eur_demand_annual.csv"),
+        heating_mix=resources("gb-model/fes_heating_mix.csv"),
     output:
-        demand_shape=resources("gb-model/{demand_sector}_demand_shape.csv"),
+        csv=resources("gb-model/resistive_heat_demand.csv"),
     log:
-        logs("process_demand_shape_{demand_sector}.log"),
+        logs("resistive_heat_demand.log"),
     script:
-        "../scripts/gb_model/process_demand_shape.py"
+        "../scripts/gb_model/resistive_heat_demand.py"
+
+
+rule process_baseline_demand_shape:
+    message:
+        "Process baseline electricity demand profile shape into CSV format for {wildcards.year}"
+    input:
+        historical_profile=resources(
+            "gb-model/historical_baseline_electricity_demand_profile.csv"
+        ),
+        energy_totals=resources("pop_weighted_energy_totals_s_clustered.csv"),
+        heat_demand_shape=resources("hourly_heat_demand_total_base_s_clustered.nc"),
+        resistive_heat_demand=resources("gb-model/resistive_heat_demand.csv"),
+    output:
+        demand_shape=resources("gb-model/baseline_electricity_demand_shape/{year}.csv"),
+    log:
+        logs("process_baseline_demand_shape_{year}.log"),
+    script:
+        "../scripts/gb_model/process_baseline_demand_shape.py"
 
 
 rule process_ev_demand_shape:
@@ -807,24 +830,15 @@ rule scaled_demand_profile:
     input:
         gb_demand_annual=resources("gb-model/regional_{demand_type}_demand_annual.csv"),
         eur_demand_annual=resources("gb-model/eur_demand_annual.csv"),
-        demand_shape=resources("gb-model/{demand_type}_demand_shape.csv"),
+        demand_shape=resources("gb-model/{demand_type}_demand_shape/{year}.csv"),
     output:
         csv=resources("gb-model/{demand_type}_demand/{year}.csv"),
     log:
         logs("scaled_demand_profile_{demand_type}_{year}.log"),
     wildcard_constraints:
-        demand_type="baseline_electricity",
+        demand_type="baseline_electricity|residential_heat|iandc_heat",
     script:
         "../scripts/gb_model/scaled_demand_profile.py"
-
-
-use rule scaled_demand_profile as scaled_heat_demand_profile with:
-    input:
-        gb_demand_annual=resources("gb-model/regional_{demand_type}_demand_annual.csv"),
-        eur_demand_annual=resources("gb-model/eur_demand_annual.csv"),
-        demand_shape=resources("gb-model/{demand_type}_demand_shape/{year}.csv"),
-    wildcard_constraints:
-        demand_type="residential_heat|iandc_heat",
 
 
 use rule scaled_demand_profile as scaled_ev_demand_profile with:
@@ -1071,9 +1085,7 @@ rule prepare_constrained_network:
     input:
         network=resources("networks/composed_clustered/{year}.nc"),
         unconstrained_result=RESULTS + "networks/unconstrained_clustered/{year}.nc",
-        renewable_payment_profile=resources(
-            "gb-model/renewable_payment_profile/{year}.csv"
-        ),
+        renewable_strike_prices=resources("gb-model/CfD_strike_prices.csv"),
         interconnector_bid_offer=resources(
             "gb-model/bids_and_offers/{year}/interconnector_bid_offer_profile.csv"
         ),
@@ -1083,20 +1095,6 @@ rule prepare_constrained_network:
         logs("prepare_constrained_network/{year}.log"),
     script:
         "../scripts/gb_model/prepare_constrained_network.py"
-
-
-rule get_renewable_payment_profile:
-    message:
-        "Compute the difference in market rate and strike prices as a profile for renewable generators"
-    input:
-        unconstrained_result=RESULTS + "networks/unconstrained_clustered/{year}.nc",
-        strike_prices=resources("gb-model/CfD_strike_prices.csv"),
-    output:
-        csv=resources("gb-model/renewable_payment_profile/{year}.csv"),
-    log:
-        logs("get_renewable_payment_profile/{year}.log"),
-    script:
-        "../scripts/gb_model/get_renewable_payment_profile.py"
 
 
 rule calc_interconnector_bid_offer_profile:
