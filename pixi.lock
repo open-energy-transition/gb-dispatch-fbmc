@@ -4054,7 +4054,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/pyopenssl-25.3.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pyparsing-3.2.5-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pyproj-3.7.2-py312h9b6a7d9_2.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/pypsa-1.0.6-pyhd8ed1ab_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/pypsa-1.0.7-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pyscipopt-5.6.0-py312h1289d80_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pyshp-3.0.2-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pyside6-6.9.2-py312h9da60e5_2.conda
@@ -4603,7 +4603,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/pyopenssl-25.3.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pyparsing-3.2.5-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/pyproj-3.7.2-py312hfea2d77_2.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/pypsa-1.0.6-pyhd8ed1ab_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/pypsa-1.0.7-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/pyscipopt-5.6.0-py312h462f358_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pyshp-3.0.2-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pysocks-1.7.1-pyha55dd90_7.conda
@@ -5123,7 +5123,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/pyopenssl-25.3.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pyparsing-3.2.5-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/pyproj-3.7.2-py312h66ed876_2.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/pypsa-1.0.6-pyhd8ed1ab_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/pypsa-1.0.7-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/pyscipopt-5.6.0-py312h6b01ec3_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pyshp-3.0.2-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pysocks-1.7.1-pyha55dd90_7.conda
@@ -5621,7 +5621,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/pyopenssl-25.3.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pyparsing-3.2.5-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/pyproj-3.7.2-py312habbd053_2.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/pypsa-1.0.6-pyhd8ed1ab_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/pypsa-1.0.7-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/pyreadline3-3.5.4-py312h2e8e312_2.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/pyscipopt-5.6.0-py312hbb81ca0_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pyshp-3.0.2-pyhd8ed1ab_0.conda
@@ -28149,9 +28149,9 @@ packages:
   license_family: MIT
   size: 220834
   timestamp: 1762426425913
-- conda: https://conda.anaconda.org/conda-forge/noarch/pypsa-1.0.6-pyhd8ed1ab_1.conda
-  sha256: faa8fe50ec5fa7c6df075ea1939085456941446f7f0bf3023a7045ab767f7943
-  md5: 1cfa64a0a8211bafbb05e9b8f7e472c8
+- conda: https://conda.anaconda.org/conda-forge/noarch/pypsa-1.0.7-pyhd8ed1ab_0.conda
+  sha256: 6174a3b8fc5ff409e5b0f88eef9ba2b089f2fd9a8ba2d425b19c8ff546042e43
+  md5: e451a3c0ab3ad6fbe7bf83c59f0e2f9b
   depends:
   - deprecation
   - geopandas >=0.9
@@ -28159,7 +28159,7 @@ packages:
   - levenshtein >=0.27.1
   - linopy >=0.5.5
   - matplotlib-base
-  - netcdf4
+  - netcdf4 !=1.7.4
   - networkx >=2
   - numpy
   - pandas >=0.24
@@ -28175,9 +28175,9 @@ packages:
   license: MIT
   license_family: MIT
   purls:
-  - pkg:pypi/pypsa?source=compressed-mapping
-  size: 222448
-  timestamp: 1767789300342
+  - pkg:pypi/pypsa?source=hash-mapping
+  size: 222295
+  timestamp: 1768392650051
 - conda: https://conda.anaconda.org/conda-forge/win-64/pyreadline3-3.5.4-py312h2e8e312_2.conda
   sha256: 34dc1bd52ea27ddb9ee3dbdf5edbfe0ec8fce613b7328b983c11893ef7d7cd7b
   md5: 13c17a25c72912ca7f86ea48f964ddac
