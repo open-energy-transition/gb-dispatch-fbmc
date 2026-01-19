@@ -1019,7 +1019,9 @@ rule solve_unconstrained:
         co2_sequestration_potential=config_provider(
             "sector", "co2_sequestration_potential", default=200
         ),
-        custom_extra_functionality=lambda wildcards: input_custom_extra_functionality(wildcards, "unconstrained"),
+        custom_extra_functionality=lambda wildcards: input_custom_extra_functionality(
+            wildcards, "unconstrained"
+        ),
     input:
         network=resources("networks/unconstrained_clustered/{year}.nc"),
     output:
@@ -1050,7 +1052,9 @@ rule solve_constrained:
         co2_sequestration_potential=config_provider(
             "sector", "co2_sequestration_potential", default=200
         ),
-        custom_extra_functionality=lambda wildcards: input_custom_extra_functionality(wildcards, "constrained"),
+        custom_extra_functionality=lambda wildcards: input_custom_extra_functionality(
+            wildcards, "constrained"
+        ),
         etys_boundaries_to_lines=config["region_operations"]["etys_boundaries_lines"],
         etys_boundaries_to_links=config["region_operations"]["etys_boundaries_links"],
     input:
