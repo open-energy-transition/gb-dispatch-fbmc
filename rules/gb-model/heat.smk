@@ -97,12 +97,3 @@ rule resistive_heat_demand:
         logs("resistive_heat_demand.log"),
     script:
         "../../scripts/gb_model/heat/resistive_heat_demand.py"
-
-
-use rule scaled_demand_profile as scaled_heat_demand_profile with:
-    input:
-        gb_demand_annual=resources("gb-model/{demand_type}_demand_annual.csv"),
-        eur_demand_annual=resources("gb-model/eur_demand_annual.csv"),
-        demand_shape=resources("gb-model/{demand_type}_demand_shape/{year}.csv"),
-    wildcard_constraints:
-        demand_type="residential_heat|iandc_heat",

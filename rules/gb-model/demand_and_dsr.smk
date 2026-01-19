@@ -150,14 +150,14 @@ rule scaled_demand_profile:
     message:
         "Generate {wildcards.demand_type} demand profile for model year {wildcards.year}"
     input:
-        gb_demand_annual=resources("gb-model/{demand_type}_demand_annual.csv"),
+        gb_demand_annual=resources("gb-model/regional_{demand_type}_demand_annual.csv"),
         eur_demand_annual=resources("gb-model/eur_demand_annual.csv"),
-        demand_shape=resources("gb-model/{demand_type}_demand_shape.csv"),
+        demand_shape=resources("gb-model/{demand_type}_demand_shape/{year}.csv"),
     output:
         csv=resources("gb-model/{demand_type}_demand/{year}.csv"),
     log:
         logs("scaled_demand_profile_{demand_type}_{year}.log"),
     wildcard_constraints:
-        demand_type="baseline_electricity",
+        demand_type="baseline_electricity|residential_heat|iandc_heat",
     script:
         "../../scripts/gb_model/demand_and_dsr/scaled_demand_profile.py"

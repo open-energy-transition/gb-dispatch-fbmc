@@ -81,7 +81,7 @@ rule process_regional_ev_data:
 
 use rule scaled_demand_profile as scaled_ev_demand_profile with:
     input:
-        gb_demand_annual=resources("gb-model/{demand_type}_demand_annual.csv"),
+        gb_demand_annual=resources("gb-model/regional_{demand_type}_demand_annual.csv"),
         eur_demand_annual=resources("gb-model/eur_demand_annual.csv"),
         demand_shape=resources("gb-model/{demand_type}_demand_shape.csv"),
         gb_demand_peak=resources("gb-model/regional_{demand_type}_peak.csv"),
