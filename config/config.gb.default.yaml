@@ -136,14 +136,14 @@ costs:
     "CO2 intensity":
       CCGT: gas
       OCGT: gas
+      engine: gas
       coal: coal
-      gas: gas
       oil: oil
     fuel:
       CCGT: gas
       OCGT: gas
+      engine: gas
       coal: coal
-      gas: gas
       oil: oil
       biomass: biomass
       waste: biomass
@@ -158,8 +158,8 @@ costs:
       biomass CHP: biomass CHP
       coal PP: coal
       coal CHP: central coal CHP
-      gas PP: direct firing gas
-      gas CHP: central gas CHP
+      engine PP: central gas CHP # `direct firing gas` is a better fit but the data is spurious
+      engine CHP: central gas CHP
       geothermal PP: geothermal
       hydrogen turbine PP: central hydrogen CHP
       hydrogen turbine CHP: central hydrogen CHP
@@ -182,17 +182,18 @@ costs:
     biomass PP: Biomass-Biomass
     biomass CHP: Biomass-Biomass CHP
     CCGT PP: Gas-CCGT
-    CCGT CHP: Gas-CCGT # there is no CCGT CHP VOM costs in FES
+    CCGT CHP: Gas-Gas CHP
     coal PP: Coal-Coal
     coal CHP: Coal-Coal CHP
-    gas CHP: Gas-Gas CHP
-    gas PP: Gas-Gas Reciprocating Engines
+    engine CHP: Gas-Gas CHP
+    engine PP: Gas-Gas Reciprocating Engines
     hydro PP: Hydro-Hydro
     hydrogen turbine PP: Low Carbon-Hydrogen
     hydrogen fuel cell PP: Storage-Fuel Cells
     hydrogen turbine CHP: Gas-Gas CHP # there is no hydrogen CHP costs in FES
     marine PP: Marine-Marine
     OCGT PP: Gas-OCGT
+    OCGT CHP: Gas-Gas CHP
     offwind-dc PP: Offshore Wind-Offshore Wind
     oil PP: Other Thermal-Fuel Oil
     onwind PP: Onshore Wind-Onshore Wind
@@ -209,13 +210,14 @@ costs:
     CCGT CHP: Gas-CCGT CHP
     coal PP: Coal-Coal
     coal CHP: Coal-Coal CHP
-    gas CHP: Gas-GT CHP
-    gas PP: Gas-Gas Reciprocating Engines
+    engine PP: Gas-Gas Reciprocating Engines
+    engine CHP: Gas-Engine CHP
+    OCGT PP: Gas-OCGT
+    OCGT CHP: Gas-GT CHP
     hydrogen turbine PP: Low Carbon-Hydrogen
     hydrogen fuel cell PP: Storage-Fuel Cells
     hydrogen turbine CHP: Gas-Gas CHP # there is no hydrogen CHP costs in FES
-    OCGT PP: Gas-OCGT
-    oil PP: Other Thermal-Fuel Oil
+    oil PP: Gasoil-Steam Oil
     waste PP: WoodPellets-Waste
     waste CHP: Gas-Waste CHP
   voll: 6000 #£/MWh - based on `value_of_lost_load` from (https://www.nationalgrid.com/sites/default/files/documents/Long-term%20Market%20and%20Network%20Constraint%20Modelling.pdf)
@@ -246,12 +248,13 @@ solving:
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#electricity
 electricity:
   voltages: [132, 220., 275., 300., 330., 380., 400., 500., 750.]
-  base_network: osm-raw
+  base_network: osm-prebuilt
+  osm-prebuilt-version: 0.7
   powerplants_filter: (DateOut >= 2020 or DateOut != DateOut) and not (Country == 'Germany' and Fueltype == 'Nuclear')
   extendable_carriers:
     Generator: []
     Store: []
-  conventional_carriers: [nuclear, oil, OCGT, CCGT, gas, coal, waste, geothermal, biomass]
+  conventional_carriers: [nuclear, oil, OCGT, CCGT, engine, coal, waste, geothermal, biomass]
   renewable_carriers: [solar, onwind, offwind-dc, hydro]
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#electricity
@@ -279,7 +282,7 @@ urls:
   gsp-coordinates: https://api.neso.energy/dataset/963525d6-5d83-4448-a99c-663f1c76330a/resource/41fb4ca1-7b59-4fce-b480-b46682f346c9/download/fes2021_regional_breakdown_gsp_info.csv
   eur-supply-table: https://api.neso.energy/dataset/bd83ce0b-7b1e-4ff2-89e8-12d524c34d99/resource/6563801b-6da4-46e7-b147-3d81c0237779/download/fes2023_es2_v001.csv
   etys: https://www.neso.energy/document/223046/download # ETYS November 2021
-  low-carbon-contracts: https://dp.lowcarboncontracts.uk/dataset/5427b55f-cecc-4a72-b3ee-3533cbbd5555/resource/fa730219-fbd2-41b5-9510-ba2b0ff2c1ba/download/actual_cfd_generation_and_avoided_ghg_emissions.csv
+  low-carbon-contracts: https://dp.lowcarboncontracts.uk/dataset/8e8ca0d5-c774-4dc8-a079-347f1c180c0f/resource/5279a55d-4996-4b1e-ba07-f411d8fd31f0/download/actual_cfd_generation_and_avoided_ghg_emissions.csv
   eur_H2_demand_today: https://observatory.clean-hydrogen.europa.eu/sites/default/files/2025-09/Hydrogen%20demand%202022%20%28Update%202025%29.xlsx # 2022 data
 target_crs: "EPSG:27700"
 
@@ -844,6 +847,16 @@ fes-sheet-config:
       rename:
         columns: Parameter
 
+    # Heat pump uptake trend
+    CV.14:
+      usecols: "K:AP"
+      skiprows: 7
+      index_col: 0
+      header: 0
+      rename:
+        columns: year
+        index: scenario
+
     # Overall heating technology mix in homes (residential) in 2050
     CV.16:
       usecols: "K:P"
@@ -910,9 +923,9 @@ fes:
         Hydrogen fuelled generation: hydrogen turbine  # FIXME: something else here?
         Fuel Cells: hydrogen fuel cell
         Marine: marine
-        Non-renewable Engines (Diesel) (non CHP): oil
-        Non-renewable Engines (Gas) (non CHP): gas
-        Non-renewable CHP: gas
+        Non-renewable Engines (Diesel) (non CHP): engine
+        Non-renewable Engines (Gas) (non CHP): engine
+        Non-renewable CHP: CCGT
         Nuclear: nuclear
         OCGTs (non CHP): OCGT
         Offshore-Wind (off-Grid): offwind-dc
@@ -942,7 +955,19 @@ fes:
         residential_heat: ["residential hp demand"]
         iandc_heat: ["i&c hp demand"]
       heat:
-        electrified_heating_technologies: ["Electric resistive", "ASHP", "GSHP"]
+        electrified_heating_technologies:
+          resistive:
+          - Electric resistive
+          - Electric storage
+          - Hybrid (ASHP + Electric resistive)
+          ASHP:
+          - ASHP
+          - District Heating
+          - Hybrid (ASHP + Hydrogen boiler)
+          - Hybrid (ASHP + BioLPG/BioLiquid)
+          - Hybrid (ASHP + Electric resistive)
+          GSHP:
+          - GSHP
       bus_suffix:
         baseline_electricity: " Baseline Electricity"
         residential: " Baseline Electricity"
@@ -1002,11 +1027,11 @@ fes:
         Waste: waste
       SubType:
         CCS Biomass: biomass
-        CCS Gas: gas
-        CCGT: OCGT
-        Gas CHP: CCGT
+        CCS Gas: CCGT
+        CCGT: CCGT
         OCGT: OCGT
-        Gas Reciprocating Engines: gas
+        GT CHP: OCGT
+        Gas Reciprocating Engines: engine
         Hydrogen: hydrogen turbine # hydrogen-fueled turbine
         Hydrogen CHP: hydrogen turbine # hydrogen-fueled turbine
         Fuel Oil: oil
@@ -1019,6 +1044,8 @@ fes:
         Lignite: lignite
         Lignite CHP: lignite
         Peat CHP: lignite
+        CCGT CHP: CCGT
+        GT CHP: OCGT
         Hydro: hydro
         Reservoir Hydro: hydro
         Reservoir Hydro with pumping: hydro
@@ -1042,6 +1069,7 @@ fes:
         Coal CHP: CHP
         Lignite CHP: CHP
         Peat CHP: CHP
+        Engine CHP: CHP
         Reservoir Hydro with pumping: Store
 
     totals_to_demand_groups:

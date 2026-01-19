@@ -13,11 +13,15 @@ Upcoming Release
 ================
 
 * Add system representation graphic and details to the documentation (#157).
+* Use heat pump uptake trend to define shape of heating mix technological change (#130).
+* Avoid double counting the impact of heat demand on both baseline electricity and heat demand profile shapes.
+* Move resistive heating profile impact to baseline electricity (since FES heating demand only covers heat pump electricity consumption).
+* Replaced EUR buses with a single EUR bus for faster re-dispatch solve (#174)
 * Set bus_id for virtual buses using line_id to ensure stable custom busmap mapping (#166)
-* Enable custom busmap to prevent incorrect clustering of offshore buses (#159) 
+* Enable custom busmap to prevent incorrect clustering of offshore buses (#159)
 * Add interconnector bids and offers to constrained network (#153)
 * Calculate interconnector bids and offers (#151)
-* Add config option to unconstrain `p_nom` for each EUR country's most expensive powerplant, instead of using load shedding.
+* Add config option to set load shedding to the most expensive powerplant plus a small delta.
 * Enable custom busmap to prevent incorrect clustering of offshore buses (#159)
 * Fix H2 demands in Europe using TYNDP H2 NT scenario demands (#152)
 * Add bid/offers for generators (#147)
