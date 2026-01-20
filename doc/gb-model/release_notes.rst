@@ -12,6 +12,7 @@ Release Notes
 Upcoming Release
 ================
 
+* Identify marginal generator in Europe when non-neighbouring countries are part of the network (#179)
 * Add system representation graphic and details to the documentation (#157).
 * Use heat pump uptake trend to define shape of heating mix technological change (#130).
 * Avoid double counting the impact of heat demand on both baseline electricity and heat demand profile shapes.
