@@ -2,7 +2,9 @@
 #
 # SPDX-License-Identifier: MIT
 import logging
+
 logger = logging.getLogger(__name__)
+
 
 def remove_KVL_constraints(n, snapshots, snakemake):
     """
