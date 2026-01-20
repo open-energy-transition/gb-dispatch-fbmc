@@ -240,7 +240,7 @@ solving:
     noisy_costs: true
     skip_iterations: true
     rolling_horizon: false
-    custom_extra_functionality: "../scripts/gb_model/custom_constraints.py"
+    transmission_losses: 0
   solver:
     name: gurobi
     options: gurobi-default
