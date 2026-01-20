@@ -127,16 +127,14 @@ def get_eur_marginal_generator(
             # i.e., exceeds the maximum of one row and lesser than the minimum of next row
             marginal_carrier_rows = pd.concat(
                 [
+                    # last row where marginal electricity price exceeds maximum of generator price range
                     marginal_price_range[
                         (marginal_price_range["max"] < electricity_price)
-                    ].iloc[
-                        -1
-                    ],  # last row where marginal electricity price exceeds maximum of generator price range
+                    ].iloc[-1],
+                    # first row where marginal electricity price is lesser than minimum of generator price range
                     marginal_price_range[
                         (marginal_price_range["min"] > electricity_price)
-                    ].iloc[
-                        0
-                    ],  # first row where marginal electricity price is lesser than minimum of generator price range
+                    ].iloc[0],
                 ],
                 axis=1,
             ).T
@@ -147,18 +145,14 @@ def get_eur_marginal_generator(
                 electricity_price - marginal_carrier_rows.iloc[0]["max"]
                 > marginal_carrier_rows.iloc[1]["min"] - electricity_price
             ):
-                marginal_carrier_row = marginal_carrier_rows.iloc[
-                    1
-                ]  # Minimum of generator marginal price range is closer to marginal electricity price
+                # Minimum of generator marginal price range is closer to marginal electricity price
+                marginal_carrier_row = marginal_carrier_rows.iloc[1]
             else:
-                marginal_carrier_row = marginal_carrier_rows.iloc[
-                    0
-                ]  # Maximum of generator marginal price range in closer to marginal electricity price
+                # Maximum of generator marginal price range in closer to marginal electricity price
+                marginal_carrier_row = marginal_carrier_rows.iloc[0]
         else:
-            marginal_carrier_row = marginal_carrier_rows.iloc[
-                0
-            ]  # Row where marginal electricity price is within generator marginal price range
-
+            # Row where marginal electricity price is within generator marginal price range
+            marginal_carrier_row = marginal_carrier_rows.iloc[0]
         # Get the marginal carrier name
         marginal_carrier = marginal_carrier_row.name
         if marginal_carrier in bid_multiplier.keys():
