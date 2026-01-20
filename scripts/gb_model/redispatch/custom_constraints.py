@@ -98,10 +98,12 @@ def set_boundary_constraints(
 
         # Add bidirectional constraint: total flow ≤ boundary capability
         n.model.add_constraints(
-            lhs <= capacity_mw, name=f"etys_boundary_{boundary}_forward"
+            lhs <= capacity_mw,
+            name=f"GlobalConstraint-etys_boundary_{boundary}_forward",
         )
         n.model.add_constraints(
-            lhs >= -capacity_mw, name=f"etys_boundary_{boundary}_backward"
+            lhs >= -capacity_mw,
+            name=f"GlobalConstraint-etys_boundary_{boundary}_backward",
         )
 
         logger.info(
