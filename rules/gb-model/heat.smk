@@ -67,35 +67,15 @@ rule resistive_heater_demand_profile:
 
 rule process_heat_demand_shape:
     message:
-        "Cluster default PyPSA-Eur heat demand shape by bus"
+        "Cluster default PyPSA-Eur {wildcards.sector} heat demand shape by bus for future year {wildcards.year}"
     input:
         demand=resources("hourly_heat_demand_total_base_s_clustered.nc"),
         cop_profile=resources("gb-model/cop/{year}.csv"),
-        heating_mix=resources("gb-model/fes_heat_techs_consumption.csv"),
+        heating_mix=resources("gb-model/{sector}_heat_techs_consumption.csv"),
         energy_totals=resources("pop_weighted_energy_totals_s_clustered.csv"),
     output:
-        residential_csv=resources("gb-model/residential_heat_demand_shape/{year}.csv"),
-        #Industry load is not generated in PyPSA-Eur, hence the same profile as services is considered to be applicable for c&i
-        services_csv=resources("gb-model/iandc_heat_demand_shape/{year}.csv"),
+        csv=resources("gb-model/{sector}_heat_demand_shape/{year}.csv"),
     log:
-        logs("heat_demand_s_clustered_{year}.log"),
+        logs("heat_demand_s_clustered_{sector}_{year}.log"),
     script:
         "../../scripts/gb_model/heat/process_heat_demand_shape.py"
-
-
-rule resistive_heat_demand:
-    message:
-        "Get resistive electrical annual heat supply."
-    input:
-        gb_residential_heat_annual=resources(
-            "gb-model/regional_residential_heat_demand_annual.csv"
-        ),
-        gb_iandc_heat_annual=resources("gb-model/regional_iandc_heat_demand_annual.csv"),
-        eur_demand_annual=resources("gb-model/eur_demand_annual.csv"),
-        heating_mix=resources("gb-model/fes_heating_mix.csv"),
-    output:
-        csv=resources("gb-model/resistive_heat_demand.csv"),
-    log:
-        logs("resistive_heat_demand.log"),
-    script:
-        "../../scripts/gb_model/heat/resistive_heat_demand.py"
