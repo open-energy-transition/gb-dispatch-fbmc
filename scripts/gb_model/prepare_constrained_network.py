@@ -8,6 +8,7 @@ Prepare network for constrained optimization.
 
 import logging
 from pathlib import Path
+from typing import Literal
 
 import pandas as pd
 import pypsa
@@ -75,7 +76,8 @@ def fix_dispatch(
 def _apply_multiplier(
     df: pd.DataFrame,
     multiplier: dict[str, float],
-    renewable_payment_profile: pd.DataFrame,
+    renewable_strike_prices: pd.Series,
+    direction: Literal["bid", "offer"],
 ) -> pd.DataFrame:
     """
     Apply bid/offer multiplier and strike prices
@@ -86,32 +88,38 @@ def _apply_multiplier(
         Generator dataframe
     multiplier: dict[str, float]
         Mapping of conventional carrier to multiplier
-    renewable_payment_profile: pd.DataFrame
-        Renewable payment profile for each renewable generator
+    renewable_strike_prices: pd.Series
+        Renewable CfD strike prices for each renewable generator
+    direction: Literal["bid", "offer"]
+        Direction of the multiplier, either "bid" or "offer"
     """
-    df = df.assign(multiplier=df["carrier"].map(multiplier)).fillna(1)
-
-    df["marginal_cost"] *= df["multiplier"]
-
-    intersecting_columns = renewable_payment_profile.columns.intersection(df.index)
-    marginal_cost_profile = renewable_payment_profile[intersecting_columns]
-    renewable_carriers = df.loc[intersecting_columns].carrier.unique()
+    new_marginal_costs = (
+        (df["carrier"].map(renewable_strike_prices) - df["marginal_cost"])
+        # if strike price is lower than marginal cost, then we apply zero charge for bids/offers
+        .clip(lower=0)
+        .mul(-1 if direction == "bid" else 1)
+        .fillna(df["marginal_cost"] * df["carrier"].map(multiplier).fillna(1))
+    )
+    assert not (isna := new_marginal_costs.isna()).any(), (
+        f"Some marginal costs are NaN after applying multipliers and strike prices: {new_marginal_costs[isna].index.tolist()}"
+    )
+    df["marginal_cost"] = new_marginal_costs
 
     undefined_multipliers = set(df["carrier"].unique()) - (
-        set(multiplier.keys()) | set(renewable_carriers)
+        set(multiplier.keys()) | set(renewable_strike_prices.index)
     )
     logger.warning(
         f"Neither bid/offer multiplier nor strike price provided for the carriers: {undefined_multipliers}"
     )
 
-    return df, marginal_cost_profile
+    return df
 
 
 def create_up_down_plants(
     constrained_network: pypsa.Network,
     unconstrained_result: pypsa.Network,
     bids_and_offers: dict[str, float],
-    renewable_payment_profile: pd.DataFrame,
+    renewable_strike_prices: pd.Series,
     interconnector_bid_offer_profile: pd.DataFrame,
     gb_buses: pd.Index,
 ):
@@ -126,8 +134,8 @@ def create_up_down_plants(
         Result of the unconstrained optimization
     bids_and_offers: dict[str, float]
         Bid and offer multipliers for conventional carriers
-    renewable_payment_profile: pd.DataFrame
-        Dataframe of the renewable price profile
+    renewable_strike_prices: pd.DataFrame
+        Dataframe of the renewable CfD strike prices
     interconnector_bid_offer_profile: pd.DataFrame
         Interconnectors bid/offer profile for each interconnector
     gb_buses: pd.Index
@@ -177,11 +185,17 @@ def create_up_down_plants(
 
         if comp.name != "Link":
             # Add bid/offer multipliers for conventional generators
-            g_up, marginal_cost_up = _apply_multiplier(
-                g_up, bids_and_offers["offer_multiplier"], renewable_payment_profile
+            g_up = _apply_multiplier(
+                g_up,
+                bids_and_offers["offer_multiplier"],
+                renewable_strike_prices,
+                "offer",
             )
-            g_down, marginal_cost_down = _apply_multiplier(
-                g_down, bids_and_offers["bid_multiplier"], renewable_payment_profile
+            g_down = _apply_multiplier(
+                g_down,
+                bids_and_offers["bid_multiplier"],
+                renewable_strike_prices,
+                "bid",
             )
 
         # Add generators that can increase dispatch
@@ -213,25 +227,10 @@ def create_up_down_plants(
             constrained_network.components[
                 comp.name
             ].dynamic.marginal_cost = interconnector_bid_offer_profile
-        else:
-            if not marginal_cost_down.empty:
-                constrained_network.components[
-                    comp.name
-                ].dynamic.marginal_cost = pd.concat(
-                    [
-                        marginal_cost_up.add_suffix(" ramp up"),
-                        -1 * marginal_cost_down.add_suffix(" ramp down"),
-                    ],
-                    axis=1,
-                )
 
         logger.info(
             f"Added {comp.name} that can mimic increase and decrease in dispatch"
         )
-
-
-def read_csv(filepath):
-    return pd.read_csv(filepath, index_col="snapshot", parse_dates=True)
 
 
 def drop_existing_eur_buses(network: pypsa.Network):
@@ -305,9 +304,11 @@ if __name__ == "__main__":
     network = pypsa.Network(snakemake.input.network)
     unconstrained_result = pypsa.Network(snakemake.input.unconstrained_result)
     bids_and_offers = snakemake.params.bids_and_offers
-    renewable_payment_profile = read_csv(snakemake.input.renewable_payment_profile)
-    interconnector_bid_offer_profile = read_csv(
-        snakemake.input.interconnector_bid_offer
+    renewable_strike_prices = pd.read_csv(
+        snakemake.input.renewable_strike_prices, index_col="carrier"
+    ).squeeze()
+    interconnector_bid_offer_profile = pd.read_csv(
+        snakemake.input.interconnector_bid_offer, index_col="snapshot", parse_dates=True
     )
     gb_buses = network.buses.query("country == 'GB'").index
 
@@ -317,7 +318,7 @@ if __name__ == "__main__":
         network,
         unconstrained_result,
         bids_and_offers,
-        renewable_payment_profile,
+        renewable_strike_prices,
         interconnector_bid_offer_profile,
         gb_buses,
     )
