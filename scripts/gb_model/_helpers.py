@@ -228,9 +228,9 @@ def marginal_costs_bus(bus: str, network: pypsa.Network) -> pd.DataFrame:
     )
 
 
-def get_neighbour_countries(network: pypsa.Network) -> np.ndarray:
+def get_gb_neighbour_countries(network: pypsa.Network) -> np.ndarray:
     """
-    To obtain a dictionary of eur buses and their neighbouring countries
+    To obtain a list of neighbouring countries of GB
 
     Parameters
     ----------
@@ -239,32 +239,21 @@ def get_neighbour_countries(network: pypsa.Network) -> np.ndarray:
     """
     gb_buses = network.buses.query("carrier == 'AC' and country == 'GB'").index
 
-    country_list = network.buses.country.unique().tolist()
+    dc_links = network.links.query("carrier == 'DC'")
 
-    dict_neighbours = {}
-    for country in country_list:
-        dc_links = network.links.query("carrier == 'DC'")
+    eur_interconnectors = dc_links.query(
+        "bus0 in @gb_buses and bus1 not in @gb_buses",
+        local_dict={"gb_buses": gb_buses},
+    )
 
-        if country == "GB":
-            eur_interconnectors = dc_links.query(
-                "bus0 in @gb_buses and bus1 not in @gb_buses",
-                local_dict={"gb_buses": gb_buses},
-            )
+    if eur_interconnectors.empty:
+        countries = []
+    else:
+        countries = (
+            pd.concat([eur_interconnectors.bus0, eur_interconnectors.bus1])
+            .unique()
+            .tolist()
+        )
+        countries = [x for x in countries if "GB" not in x]
 
-        else:
-            eur_interconnectors = dc_links.query(
-                "bus0 == @eur_bus or bus1 == @eur_bus", local_dict={"eur_bus": country}
-            ).query("bus0 not in @gb_buses")
-
-        if eur_interconnectors.empty:
-            countries = []
-        else:
-            countries = (
-                pd.concat([eur_interconnectors.bus0, eur_interconnectors.bus1])
-                .unique()
-                .tolist()
-            )
-            countries = [x for x in countries if country not in x]
-
-        dict_neighbours[country] = countries
-    return dict_neighbours
+    return countries
