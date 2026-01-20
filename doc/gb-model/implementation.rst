@@ -94,7 +94,7 @@ Default Values
 
 When cost data is unavailable for specific carriers, defaults are applied:
 
-- ``efficiency``: 0.4 (40% conversion efficiency)
+- ``efficiency``: 1 (100% conversion efficiency)
 - ``capital_cost``: 0.0 €/MW
 - ``lifetime``: 25.0 years
 - ``marginal_cost``: 0.0 €/MWh
