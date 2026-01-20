@@ -31,7 +31,8 @@ rule solve_unconstrained:
         co2_sequestration_potential=config_provider(
             "sector", "co2_sequestration_potential", default=200
         ),
-        custom_extra_functionality=[],
+        custom_extra_functionality=Path(workflow.snakefile).parent
+        / "../../scripts/gb_model/dispatch/custom_constraints.py",
     input:
         network=resources("networks/unconstrained_clustered/{year}.nc"),
     output:
