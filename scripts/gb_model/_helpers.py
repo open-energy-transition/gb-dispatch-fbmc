@@ -226,3 +226,34 @@ def marginal_costs_bus(bus: str, network: pypsa.Network) -> pd.DataFrame:
             for x in network.components[["Generator", "StorageUnit"]]
         ]
     )
+
+
+def get_gb_neighbour_countries(network: pypsa.Network) -> np.ndarray:
+    """
+    To obtain a list of neighbouring countries of GB
+
+    Parameters
+    ----------
+    network: pypsa.Network
+        PyPSA network object
+    """
+    gb_buses = network.buses.query("carrier == 'AC' and country == 'GB'").index
+
+    dc_links = network.links.query("carrier == 'DC'")
+
+    eur_interconnectors = dc_links.query(
+        "bus0 in @gb_buses and bus1 not in @gb_buses",
+        local_dict={"gb_buses": gb_buses},
+    )
+
+    if eur_interconnectors.empty:
+        countries = []
+    else:
+        countries = (
+            pd.concat([eur_interconnectors.bus0, eur_interconnectors.bus1])
+            .unique()
+            .tolist()
+        )
+        countries = [x for x in countries if "GB" not in x]
+
+    return countries
