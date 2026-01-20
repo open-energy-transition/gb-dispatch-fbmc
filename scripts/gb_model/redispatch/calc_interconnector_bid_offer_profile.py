@@ -14,7 +14,11 @@ import pandas as pd
 import pypsa
 
 from scripts._helpers import configure_logging, set_scenario_config
-from scripts.gb_model._helpers import filter_interconnectors, marginal_costs_bus
+from scripts.gb_model._helpers import (
+    filter_interconnectors,
+    get_gb_neighbour_countries,
+    marginal_costs_bus,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -53,63 +57,29 @@ def compute_interconnector_fee(
     return fee_profile
 
 
-def get_gen_marginal_carrier(
+def get_price_spread(
     generator_marginal_prices: pd.DataFrame,
-    gb_marginal_electricity_price: float,
+    marginal_electricity_price: float,
 ) -> str:
     """
-    To identify marginal carrier at the EUR bus
+    To obtain price spread between generators at the eur node and it's marginal electricity price
 
     Parameters
     ----------
     generator_marginal_prices: pd.DataFrame
         Dataframe of marginal costs for each carrier at the eur node
-    gb_marginal_electricity_price: float
-        Marginal cost of electricity at the GB node for the interconnector
+    marginal_electricity_price: float
+        Marginal cost of electricity at the EUR node for the interconnector
     """
 
     # Calculate price difference between generator marginal costs and GB marginal electricity price
     price_spread = (
-        (generator_marginal_prices - gb_marginal_electricity_price).abs().sort_values()
-    )
-    marginal_carrier = price_spread.index[0]
-
-    return marginal_carrier
-
-
-def calc_bid_offer_multiplier(
-    gb_marginal_electricity_price: float,
-    generator_marginal_prices: pd.DataFrame,
-    bid_multiplier: dict[str, list],
-    offer_multiplier: dict[str, list],
-) -> tuple[float]:
-    """
-    Calculate bid/offer multiplier profile based on the marginal generator at each eur node for every time step
-
-    Parameters
-    ----------
-    gb_marginal_electricity_price: float
-        Marginal cost of electricity at the GB node for the interconnector
-    generator_marginal_prices: pd.DataFrame
-        Dataframe of marginal costs for each carrier at the eur node
-    bid_multiplier: dict[str, list]
-        Multiplier for bids for conventional carriers
-    offer_multiplier: dict[str, list]
-        Multiplier for offers for conventional carriers
-    """
-
-    marginal_carrier = get_gen_marginal_carrier(
-        generator_marginal_prices, gb_marginal_electricity_price
+        (generator_marginal_prices - marginal_electricity_price).abs().sort_values()
     )
 
-    # Adjust marginal cost for both offer and bid
-    if marginal_carrier in bid_multiplier.keys():
-        bid_cost = gb_marginal_electricity_price * bid_multiplier[marginal_carrier]
-        offer_cost = gb_marginal_electricity_price * offer_multiplier[marginal_carrier]
-    else:
-        bid_cost = offer_cost = gb_marginal_electricity_price
-
-    return bid_cost, offer_cost
+    least_spread_carrier = price_spread.index[0]
+    least_spread = price_spread.iloc[0]
+    return least_spread, least_spread_carrier
 
 
 def get_eur_marginal_generator(
@@ -129,32 +99,93 @@ def get_eur_marginal_generator(
     bids_and_offers_multipliers: dict[dict[str, float]]
         Bid and offer multiplier to be applied for conventional generation
     """
-
-    # Filter AC buses at eur nodes
-    eur_buses = unconstrained_result.buses.query(
-        "country!= 'GB' and carrier == 'AC'"
-    ).index
-
-    columns = [f"{x} bid" for x in eur_buses] + [f"{x} offer" for x in eur_buses]
+    gb_neighbours = get_gb_neighbour_countries(unconstrained_result)
+    columns = [f"{x} bid" for x in gb_neighbours] + [
+        f"{x} offer" for x in gb_neighbours
+    ]
     eur_marginal_gen_profile = pd.DataFrame(
         index=unconstrained_result.snapshots, columns=columns
     )
 
-    # Calculate bid and offer profile for the marginal generator at each eur node
-    for eur_bus in eur_buses:
-        # Get marginal cost of generators present at the eur bus
-        generator_marginal_prices = marginal_costs_bus(eur_bus, unconstrained_result)
-        eur_marginal_gen_profile[[f"{eur_bus} bid", f"{eur_bus} offer"]] = (
-            marginal_price_profile.apply(
-                lambda row: calc_bid_offer_multiplier(
-                    np.round(row[eur_bus], 3),
-                    generator_marginal_prices,
-                    bids_and_offers_multipliers["bid_multiplier"],
-                    bids_and_offers_multipliers["offer_multiplier"],
-                ),
+    bid_multiplier = bids_and_offers_multipliers["bid_multiplier"]
+    offer_multiplier = bids_and_offers_multipliers["offer_multiplier"]
+    eur_buses = unconstrained_result.buses.query(
+        "country != 'GB' and carrier == 'AC'"
+    ).index
+
+    # Function to identify marginal carrier
+    def _identify_marginal_carrier(electricity_price):
+        # Check if electricity price falls in marginal price range of any of the generators
+        marginal_carrier_rows = marginal_price_range.loc[
+            (electricity_price >= marginal_price_range["min"])
+            & (electricity_price <= marginal_price_range["max"])
+        ]
+
+        # If electricity price does not match any of the generator marginal price ranges
+        if marginal_carrier_rows.empty:
+            # Get rows where electricity price lies in between the marginal price ranges of two generators
+            # i.e., exceeds the maximum of one row and lesser than the minimum of next row
+            marginal_carrier_rows = pd.concat(
+                [
+                    # last row where marginal electricity price exceeds maximum of generator price range
+                    marginal_price_range[
+                        (marginal_price_range["max"] < electricity_price)
+                    ].iloc[-1],
+                    # first row where marginal electricity price is lesser than minimum of generator price range
+                    marginal_price_range[
+                        (marginal_price_range["min"] > electricity_price)
+                    ].iloc[0],
+                ],
                 axis=1,
+            ).T
+
+            # The marginal generator is set as the generator which has the least deviation from
+            # the extremities of the two rows selected in the previous step
+            if (
+                electricity_price - marginal_carrier_rows.iloc[0]["max"]
+                > marginal_carrier_rows.iloc[1]["min"] - electricity_price
+            ):
+                # Minimum of generator marginal price range is closer to marginal electricity price
+                marginal_carrier_row = marginal_carrier_rows.iloc[1]
+            else:
+                # Maximum of generator marginal price range in closer to marginal electricity price
+                marginal_carrier_row = marginal_carrier_rows.iloc[0]
+        else:
+            # Row where marginal electricity price is within generator marginal price range
+            marginal_carrier_row = marginal_carrier_rows.iloc[0]
+        # Get the marginal carrier name
+        marginal_carrier = marginal_carrier_row.name
+        if marginal_carrier in bid_multiplier.keys():
+            bid_cost = electricity_price * bid_multiplier[marginal_carrier]
+            offer_cost = electricity_price * offer_multiplier[marginal_carrier]
+        else:
+            bid_cost = offer_cost = electricity_price
+
+        return bid_cost, offer_cost
+
+    for bus in gb_neighbours:
+        generator_marginal_prices = pd.concat(
+            [marginal_costs_bus(b, unconstrained_result) for b in eur_buses]
+        )
+
+        # Price range of each carrier in EUR (min and max values)
+        marginal_price_range = (
+            generator_marginal_prices.round(3)
+            .groupby("carrier")
+            .agg(["min", "max"])
+            .sort_values(by="min")
+        )
+
+        marginal_electricity_price = marginal_price_profile[bus].round(3)
+        eur_marginal_gen_profile[[f"{bus} bid", f"{bus} offer"]] = (
+            marginal_electricity_price.apply(
+                lambda x: _identify_marginal_carrier(x)
             ).tolist()
         )
+        logger.info(
+            f"Calculated marginal generator profile and it's associate bid/offer at {bus}"
+        )
+
     return eur_marginal_gen_profile
 
 
