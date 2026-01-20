@@ -240,9 +240,6 @@ solving:
     noisy_costs: true
     skip_iterations: true
     rolling_horizon: false
-    custom_extra_functionality:
-      unconstrained: "../scripts/gb_model/remove_KVL_constraints.py"
-      constrained: "../scripts/gb_model/custom_constraints.py"
     transmission_losses: 0
   solver:
     name: gurobi
