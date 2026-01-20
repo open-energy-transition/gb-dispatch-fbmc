@@ -12,6 +12,7 @@ Release Notes
 Upcoming Release
 ================
 
+* Remove KVL constraints from unconstrained GB-EUR model and set transmission losses to 0 (#186)
 * Use heat pump uptake trend to define shape of heating mix technological change (#130).
 * Avoid double counting the impact of heat demand on both baseline electricity and heat demand profile shapes.
 * Move resistive heating profile impact to baseline electricity (since FES heating demand only covers heat pump electricity consumption).

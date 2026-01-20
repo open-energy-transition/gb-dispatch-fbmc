@@ -111,9 +111,9 @@ def memory(w):
         return int(factor * (10000 + 195 * int(w.clusters)))
 
 
-def input_custom_extra_functionality(w, solve_rule):
+def input_custom_extra_functionality(w):
     path = config_provider(
-        "solving", "options", "custom_extra_functionality", solve_rule, default=False
+        "solving", "options", "custom_extra_functionality", default=False
     )(w)
     if path:
         return os.path.join(os.path.dirname(workflow.snakefile), path)
