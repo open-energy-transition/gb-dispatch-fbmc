@@ -12,7 +12,7 @@ rule process_CfD_strike_prices:
         "get strike price for low carbon contracts"
     params:
         carrier_mapping=config["low_carbon_register"]["carrier_mapping"],
-        end_year=config["fes"]["year_range_incl"][0],
+        end_year=config["redispatch"]["year_range_incl"][0],
     input:
         register="data/gb-model/downloaded/low-carbon-contracts.csv",
     output:
@@ -93,3 +93,22 @@ rule solve_constrained:
         shadow_config
     script:
         "../../scripts/solve_network.py"
+
+
+rule calculate_constraint_costs:
+    message:
+        "Calculate total constraint cost across all years"
+    params:
+        constraint_cost_extra_years=config["redispatch"]["constraint_cost_extra_years"],
+    input:
+        networks=expand(
+            RESULTS + "networks/constrained_clustered/{year}.nc",
+            year=range(
+                config["redispatch"]["year_range_incl"][0],
+                config["redispatch"]["year_range_incl"][1] + 1,
+            ),
+        ),
+    output:
+        csv=RESULTS + "constraint_cost.csv",
+    script:
+        "../../scripts/gb_model/redispatch/calculate_constraint_costs.py"

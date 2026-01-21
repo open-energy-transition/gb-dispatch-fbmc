@@ -12,7 +12,7 @@ rule create_heat_flexibility_table:
         "Process residential heat demand flexibility from FES workbook"
     params:
         scenario=config["fes"]["gb"]["scenario"],
-        year_range=config["fes"]["year_range_incl"],
+        year_range=config["redispatch"]["year_range_incl"],
         flex_level=config["fes"]["gb"]["flexibility"]["residential_heat_flex_level"],
     input:
         flexibility_sheet=resources("gb-model/fes/2021/FL.10.csv"),
@@ -46,7 +46,7 @@ rule process_fes_heating_mix:
     message:
         "Process the share of electrified heating technologies from FES workbook"
     params:
-        year_range=config["fes"]["year_range_incl"],
+        year_range=config["redispatch"]["year_range_incl"],
         electrified_heating_technologies=config["fes"]["gb"]["demand"]["heat"][
             "electrified_heating_technologies"
         ],

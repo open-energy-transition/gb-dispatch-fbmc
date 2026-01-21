@@ -12,7 +12,7 @@ rule create_hydrogen_demand_table:
         "Process hydrogen demand data from FES workbook into CSV format"
     params:
         scenario=config["fes"]["gb"]["scenario"],
-        year_range=config["fes"]["year_range_incl"],
+        year_range=config["redispatch"]["year_range_incl"],
         fes_demand_sheets=config["fes"]["hydrogen"]["demand"]["annual_demand_sheets"],
         other_sectors_list=config["fes"]["hydrogen"]["demand"]["other_sectors_list"],
     input:
@@ -49,7 +49,7 @@ rule create_hydrogen_supply_table:
         "Process hydrogen supply data from FES workbook into CSV format"
     params:
         scenario=config["fes"]["gb"]["scenario"],
-        year_range=config["fes"]["year_range_incl"],
+        year_range=config["redispatch"]["year_range_incl"],
         fes_supply_sheets=config["fes"]["hydrogen"]["supply"]["supply_sheets"],
         exogeneous_supply_list=config["fes"]["hydrogen"]["supply"][
             "exogeneous_supply_list"
@@ -75,7 +75,7 @@ rule create_off_grid_electrolysis_demand:
         "Process electricity demand of off-grid electrolysis from FES workbook into CSV format"
     params:
         scenario=config["fes"]["gb"]["scenario"],
-        year_range=config["fes"]["year_range_incl"],
+        year_range=config["redispatch"]["year_range_incl"],
         fes_supply_sheets=config["fes"]["hydrogen"]["supply"]["supply_sheets"],
     input:
         supply_sheets=lambda wildcards: [
@@ -103,7 +103,7 @@ rule create_hydrogen_storage_table:
         "Process hydrogen storage data from FES workbook into CSV format"
     params:
         scenario=config["fes"]["gb"]["scenario"],
-        year_range=config["fes"]["year_range_incl"],
+        year_range=config["redispatch"]["year_range_incl"],
         fes_storage_sheets=config["fes"]["hydrogen"]["storage"]["storage_sheets"],
         interpolation_method=config["fes"]["hydrogen"]["storage"][
             "interpolation_method"

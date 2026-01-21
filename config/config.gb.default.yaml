@@ -903,7 +903,6 @@ fes-costing-sheet-config:
       columns: year
 
 fes:
-  year_range_incl: [2022, 2041] # 20-year period over which we will run the simulation
   default_set: PP
   gb:
     scenario: leading the way   # fes workbook
@@ -1393,6 +1392,8 @@ interconnectors:
     2037: [Continental Link]
 
 redispatch:
+  year_range_incl: [2025, 2044] # 20-year period over which we will run the simulation
+  constraint_cost_extra_years: 20  # number of years to extend the constraint cost calculation beyond the final year (using the data from the final year)
   # Source for bid and offers multipliers : https://www.nationalgrid.com/sites/default/files/documents/Long-term%20Market%20and%20Network%20Constraint%20Modelling.pdf
   bid_multiplier:
     gas: 0.8
