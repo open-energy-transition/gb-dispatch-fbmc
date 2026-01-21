@@ -238,6 +238,7 @@ solving:
     skip_iterations: true
     rolling_horizon: false
     transmission_losses: 0
+    custom_extra_functionality: "gb-model/dispatch/custom_constraints.py"
   solver:
     name: gurobi
     options: gurobi-default

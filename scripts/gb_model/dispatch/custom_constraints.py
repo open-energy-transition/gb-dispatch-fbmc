@@ -12,3 +12,10 @@ def remove_KVL_constraints(n, snapshots, snakemake):
     """
     n.model.remove_constraints("Kirchhoff-Voltage-Law")
     logger.info("Remove KVL constraints from the model")
+
+
+def custom_constraints(n, snapshots, snakemake):
+    """
+    Add custom extra functionality constraints.
+    """
+    remove_KVL_constraints(n, snapshots, snakemake)
