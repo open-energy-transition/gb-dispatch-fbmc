@@ -367,7 +367,9 @@ def compose_data(
     """
 
     # Get list of interconnectors between GB and Eur
-    interconnectors = filter_interconnectors(unconstrained_result.links)
+    interconnectors = filter_interconnectors(
+        unconstrained_result.links, "carrier == 'DC' and p_nom != 0"
+    )
 
     # Compute shadow prices at buses
     ac_buses = unconstrained_result.buses.query("carrier == 'AC'").index

@@ -35,38 +35,22 @@ def constraint_cost(networks: list[pypsa.Network], extra_years: int) -> float:
     float
         Total constraint costs across all redispatch years
     """
-    redispatch_components_regex = ".* ramp (up|down)$"
-    load_shedding_regex = ".* Load Shedding$"
+    redispatch_carriers = ["ramp up", "ramp down", "Load Shedding"]
+    components = ["Generator", "Link", "StorageUnit"]
     year_constraint_costs = {}
     for network in networks:
+        opex = network.statistics.opex(comps=components, aggregate_time="sum")
+        constraint_costs = opex.unstack("component").loc[redispatch_carriers].sum()
+
         year = network.meta["wildcards"]["year"]
-        component_constraint_costs = {}
-        for component in ["Generator", "StorageUnit", "Link"]:
-            bid_offer_cost = network.get_switchable_as_dense(
-                component, "marginal_cost"
-            ).filter(regex=redispatch_components_regex)
-            generation = (
-                network.components[component]
-                .dynamic["p0" if component == "Link" else "p"]
-                .filter(regex=redispatch_components_regex)
-            )
-            component_constraint_costs[component] = (
-                (bid_offer_cost * generation).sum().sum()
-            )
-
-        load_shedding_cost = network.get_switchable_as_dense(
-            "Generator", "marginal_cost"
-        ).filter(regex=load_shedding_regex)
-        load_shedding = network.generators_t.p.filter(regex=load_shedding_regex)
-        load_shedding_constraint_cost = (load_shedding_cost * load_shedding).sum().sum()
-        component_constraint_costs["Load Shedding"] = load_shedding_constraint_cost
-
         logger.info(
-            f"Constraint costs for redispatch year {year}: "
-            + ", ".join(f"{k}: {v:,.0f}" for k, v in component_constraint_costs.items())
-            + f", Total: {sum(component_constraint_costs.values()):,.0f}"
+            constraint_costs.to_frame(f"Constraint costs for redispatch year {year}:")
+            .style.format("{:,.0f} GBP")
+            .to_string()
+            + f"\nTotal: {constraint_costs.sum():,.0f} GBP"
         )
-        year_constraint_costs[year] = sum(component_constraint_costs.values())
+        year_constraint_costs[year] = constraint_costs.sum()
+
     final_year = max(int(i) for i in year_constraint_costs.keys())
     total_constraint_cost = (
         sum(year_constraint_costs.values())
@@ -74,7 +58,7 @@ def constraint_cost(networks: list[pypsa.Network], extra_years: int) -> float:
     )
     logger.info(
         "Total constraint costs across all redispatch years "
-        f"(including {extra_years} extra years at year {final_year}): {total_constraint_cost:,.0f}"
+        f"(including {extra_years} extra years at year {final_year}): {total_constraint_cost:,.0f} GBP"
     )
     return total_constraint_cost
 

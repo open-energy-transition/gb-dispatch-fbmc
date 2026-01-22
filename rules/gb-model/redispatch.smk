@@ -32,7 +32,7 @@ rule calc_interconnector_bid_offer_profile:
         unconstrained_result=RESULTS + "networks/unconstrained_clustered/{year}.nc",
     output:
         bid_offer_profile=resources(
-            "gb-model/bids_and_offers/{year}/interconnector_bid_offer_profile.csv"
+            "gb-model/interconnector_bid_offer_profile/{year}.csv"
         ),
     log:
         logs("calc_interconnector_bid_offer_profile/{year}.log"),
@@ -50,7 +50,7 @@ rule prepare_constrained_network:
         unconstrained_result=RESULTS + "networks/unconstrained_clustered/{year}.nc",
         renewable_strike_prices=resources("gb-model/CfD_strike_prices.csv"),
         interconnector_bid_offer=resources(
-            "gb-model/bids_and_offers/{year}/interconnector_bid_offer_profile.csv"
+            "gb-model/interconnector_bid_offer_profile/{year}.csv"
         ),
     output:
         network=resources("networks/constrained_clustered/{year}.nc"),
