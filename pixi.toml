@@ -152,8 +152,8 @@ pytest = ">=8.4.2"
 
 [feature.gb-model.tasks]
 gb-test = """
-	snakemake compose_networks -n &&
-	snakemake compose_networks -n --configfile config/config.gb.etys-subset.yaml &&
+	snakemake gb_all -n &&
+	snakemake gb_all -n --configfile config/config.gb.etys-subset.yaml &&
 	echo "All GB tests completed successfully."
     """
 
