@@ -3,6 +3,10 @@
 # SPDX-License-Identifier: MIT
 import logging
 
+import pandas as pd
+import pypsa
+from snakemake.script import Snakemake
+
 logger = logging.getLogger(__name__)
 
 
@@ -14,8 +18,18 @@ def remove_KVL_constraints(n, snapshots, snakemake):
     logger.info("Remove KVL constraints from the model")
 
 
-def custom_constraints(n, snapshots, snakemake):
+def custom_constraints(
+    n: pypsa.Network,
+    snapshots: pd.Index,
+    snakemake: Snakemake,
+) -> None:
     """
-    Add custom extra functionality constraints.
+    Apply custom constraints to the PyPSA network.
+
+    Args:
+        n (pypsa.Network): The PyPSA network to modify.
+        snapshots (pd.Index): The snapshots of the network.
+        snakemake (snakemake.Snakemake): The snakemake object for parameters and config.
     """
+    # Apply boundary constraints
     remove_KVL_constraints(n, snapshots, snakemake)
