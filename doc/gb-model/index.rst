@@ -22,8 +22,7 @@ Workflow
 
 .. note::
     The graph above was generated using
-    ``snakemake --rulegraph -F | sed -n "/digraph/,/}/p" | dot -Tpng -o workflow.png``
-
+    ``snakemake --rulegraph -F | sed -n "/digraph/,/}/p" | dot -Tpng -o doc/gb-model/img/workflow.png``
 
 
 Operating Systems
@@ -37,8 +36,8 @@ The gb-dispatch-model workflow is continuously tested for Linux, macOS and Windo
    :maxdepth: 2
    :caption: Configuration
 
+   installation
    configuration
-   costs
 
 
 .. toctree::
