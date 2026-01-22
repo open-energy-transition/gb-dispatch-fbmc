@@ -903,6 +903,7 @@ fes-costing-sheet-config:
       columns: year
 
 fes:
+  fes_year: 2021
   default_set: PP
   gb:
     scenario: leading the way   # fes workbook

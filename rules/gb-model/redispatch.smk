@@ -12,7 +12,7 @@ rule process_CfD_strike_prices:
         "get strike price for low carbon contracts"
     params:
         carrier_mapping=config["low_carbon_register"]["carrier_mapping"],
-        end_year=config["redispatch"]["year_range_incl"][0],
+        fes_year=config["fes"]["fes_year"],
     input:
         register="data/gb-model/downloaded/low-carbon-contracts.csv",
     output:

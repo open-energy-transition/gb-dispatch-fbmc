@@ -170,6 +170,7 @@ rule add_eur_H2_demand:
         eur_demand_today="data/gb-model/downloaded/eur_H2_demand_today.xlsx",
     params:
         countries=config["countries"],
+        today_year=config["fes"]["fes_year"],
     output:
         csv=resources("gb-model/regional_H2_demand_annual_inc_eur.csv"),
     log:
