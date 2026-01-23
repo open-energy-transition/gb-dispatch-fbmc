@@ -91,10 +91,4 @@ rule compose_network:
 
 rule gb_all:
     input:
-        expand(
-            RESULTS + "networks/constrained_clustered/{year}.nc",
-            year=range(
-                config["fes"]["year_range_incl"][0],
-                config["fes"]["year_range_incl"][1] + 1,
-            ),
-        ),
+        RESULTS + "constraint_cost.csv",

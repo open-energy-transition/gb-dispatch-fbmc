@@ -31,7 +31,7 @@ rule create_ev_v2g_storage_table:
         "Process EV V2G storage data from FES workbook into CSV format"
     params:
         scenario=config["fes"]["gb"]["scenario"],
-        year_range=config["fes"]["year_range_incl"],
+        year_range=config["redispatch"]["year_range_incl"],
         carrier_mapping=config["fes"]["gb"]["flexibility"]["carrier_mapping"]["ev_v2g"],
     input:
         storage_sheet=resources("gb-model/fes/2021/FL.14.csv"),
@@ -49,7 +49,7 @@ rule create_ev_peak_charging_table:
         "Process EV unmanaged charging demand from FES workbook into CSV format"
     params:
         scenario=config["fes"]["gb"]["scenario"],
-        year_range=config["fes"]["year_range_incl"],
+        year_range=config["redispatch"]["year_range_incl"],
     input:
         unmanaged_charging_sheet=resources("gb-model/fes/2021/FL.11.csv"),
     output:

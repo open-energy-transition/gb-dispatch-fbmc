@@ -51,7 +51,7 @@ rule create_interconnectors_table:
         gsp_data=resources("gb-model/interconnectors_p_nom.csv"),
     params:
         interconnector_config=config["interconnectors"],
-        year_range=config["fes"]["year_range_incl"],
+        year_range=config["redispatch"]["year_range_incl"],
         target_crs=config["target_crs"],
     log:
         logs("create_interconnectors_table.log"),

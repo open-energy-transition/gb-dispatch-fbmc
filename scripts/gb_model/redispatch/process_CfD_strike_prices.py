@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 def process_strike_prices(
-    df: pd.DataFrame, carrier_mapping: dict, end_year: int
+    df: pd.DataFrame, carrier_mapping: dict, fes_year: int
 ) -> pd.DataFrame:
     """
     Process low carbon contract strike prices to obtain strike prices per technology and year.
@@ -26,12 +26,12 @@ def process_strike_prices(
     Args:
         df (pd.DataFrame): Low carbon contracts register data
         carrier_mapping (dict): Mapping of technology names to PyPSA carriers
-        end_year (int): Final year to process
+        fes_year (int): Final year of historical data to process as it is the same year as the FES model
     Returns:
         pd.DataFrame: DataFrame containing average strike prices indexed by carrier
     """
     df_filtered = df[
-        (df.Settlement_Date.dt.year < end_year)
+        (df.Settlement_Date.dt.year <= fes_year)
         & (df.Technology.isin(carrier_mapping.keys()))
     ]
     df_strike_price = (
@@ -56,6 +56,6 @@ if __name__ == "__main__":
     # Load the file paths
     df = pd.read_csv(snakemake.input.register, parse_dates=["Settlement_Date"])
     df_strike_prices = process_strike_prices(
-        df, snakemake.params.carrier_mapping, end_year=int(snakemake.params.end_year)
+        df, snakemake.params.carrier_mapping, fes_year=int(snakemake.params.fes_year)
     )
     df_strike_prices.to_csv(snakemake.output.csv)

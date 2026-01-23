@@ -65,7 +65,7 @@ rule create_flexibility_table:
         "Process {wildcards.flexibility_type} flexibility from FES workbook into CSV format"
     params:
         scenario=config["fes"]["gb"]["scenario"],
-        year_range=config["fes"]["year_range_incl"],
+        year_range=config["redispatch"]["year_range_incl"],
         carrier_mapping=lambda wildcards: config["fes"]["gb"]["flexibility"][
             "carrier_mapping"
         ][wildcards.flexibility_type],
