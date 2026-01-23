@@ -47,9 +47,7 @@ rule compose_network:
         + [resources("avail_profile_s_clustered.csv")],
         network=resources("networks/base_s_clustered.nc"),
         powerplants=resources("gb-model/fes_powerplants_inc_tech_data.csv"),
-        tech_costs=lambda w: resources(
-            f"costs_{config_provider('costs', 'year')(w)}.csv"
-        ),
+        tech_costs=Path(COSTS_DATASET["folder"]) / "costs_2040.csv",
         hydro_capacities=ancient("data/hydro_capacities.csv"),
         chp_p_min_pu=resources("gb-model/chp_p_min_pu.csv"),
         interconnectors_p_nom=resources("gb-model/interconnectors_p_nom.csv"),
@@ -89,3 +87,8 @@ rule compose_network:
         clusters="clustered",
     script:
         "../scripts/gb_model/compose_network.py"
+
+
+rule gb_all:
+    input:
+        RESULTS + "constraint_cost.csv",
