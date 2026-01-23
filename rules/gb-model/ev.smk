@@ -17,7 +17,7 @@ rule process_ev_demand_shape:
         charging_duration=config["ev"]["charging_duration"],
     input:
         clustered_pop_layout=resources("pop_layout_base_s_clustered.csv"),
-        traffic_data_KFZ="data/bundle/emobility/KFZ__count",
+        traffic_data_KFZ=Path(MOBILITY_PROFILES_DATASET["folder"]) / "kfz.csv",
     output:
         demand_shape=resources("gb-model/ev_demand_shape.csv"),
     log:

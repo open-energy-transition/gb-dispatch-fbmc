@@ -70,7 +70,8 @@ powerplantmatching = ">=0.5.15"
 pre-commit = ">=4.3.0"
 proj = ">=9.6.2"
 pylint = ">=4.0.2"
-pypsa = "*"
+pydeck = ">0.6"  # pypsa fails to import with pydeck <0.6, lower bound was only added from pypsa 1.0.6
+pypsa = ">=0.35.2"
 pyscipopt = ">=5.6.0"
 pytables = ">=3.10.2"
 python = ">=3.10"
@@ -151,8 +152,8 @@ pytest = ">=8.4.2"
 
 [feature.gb-model.tasks]
 gb-test = """
-	snakemake compose_networks -n &&
-	snakemake compose_networks -n --configfile config/config.gb.etys-subset.yaml &&
+	snakemake gb_all -n &&
+	snakemake gb_all -n --configfile config/config.gb.etys-subset.yaml &&
 	echo "All GB tests completed successfully."
     """
 
@@ -160,8 +161,8 @@ gb-test = """
 curl = ">=8.17.0"
 python-dotenv = ">=1.2.1"
 gurobi = "<13.0"
-pypsa = "<1"
 shapely = ">=2.1"
+pypsa = ">=1.0.7"
 
 [feature.gb-model.pypi-dependencies]
 pdfplumber = "==0.9.0"

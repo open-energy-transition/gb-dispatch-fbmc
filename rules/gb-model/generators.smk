@@ -92,9 +92,7 @@ rule assign_costs:
         costs_config=config["costs"],
         fes_scenario=config["fes"]["gb"]["scenario"],
     input:
-        tech_costs=lambda w: resources(
-            f"costs_{config_provider('costs', 'year')(w)}.csv"
-        ),
+        tech_costs=Path(COSTS_DATASET["folder"]) / "costs_2040.csv",
         fes_power_costs=resources("gb-model/fes-costing/AS.1 (Power Gen).csv"),
         fes_carbon_costs=resources("gb-model/fes-costing/AS.7 (Carbon Cost).csv"),
         fes_powerplants=resources("gb-model/{data_file}.csv"),
