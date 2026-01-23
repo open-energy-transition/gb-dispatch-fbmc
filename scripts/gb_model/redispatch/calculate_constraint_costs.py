@@ -39,8 +39,13 @@ def constraint_cost(networks: list[pypsa.Network], extra_years: int) -> float:
     components = ["Generator", "Link", "StorageUnit"]
     year_constraint_costs = {}
     for network in networks:
-        opex = network.statistics.opex(comps=components, aggregate_time="sum")
-        constraint_costs = opex.unstack("component").loc[redispatch_carriers].sum()
+        constraint_costs = (
+            network.statistics.opex(
+                comps=components, aggregate_time="sum", carrier=redispatch_carriers
+            )
+            .groupby(level="component")
+            .sum()
+        )
 
         year = network.meta["wildcards"]["year"]
         logger.info(
