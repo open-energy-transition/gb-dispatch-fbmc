@@ -47,7 +47,8 @@ rule compose_network:
         + [resources("avail_profile_s_clustered.csv")],
         network=resources("networks/base_s_clustered.nc"),
         powerplants=resources("gb-model/fes_powerplants_inc_tech_data.csv"),
-        tech_costs=Path(COSTS_DATASET["folder"]) / "costs_2040.csv",
+        tech_costs=Path(COSTS_DATASET["folder"])
+        / f"costs_{config['scenario']['planning_horizons'][0]}.csv",
         hydro_capacities=ancient("data/hydro_capacities.csv"),
         chp_p_min_pu=resources("gb-model/chp_p_min_pu.csv"),
         interconnectors_p_nom=resources("gb-model/interconnectors_p_nom.csv"),

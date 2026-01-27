@@ -17,7 +17,7 @@ scenario:
   sector_opts:
   - ""
   planning_horizons:
-  - 2030
+  - 2035 # approx average of the year range for our runs
 
 snapshots:
   start: "2013-01-01"
@@ -91,8 +91,6 @@ renewable:
   hydro:
     cutout: default
     carriers: [PHS, hydro]
-
-fes_year: 2024
 
 costs:
   GBP_to_EUR: 1.1632 # average in 2021: https://www.exchangerates.org.uk/GBP-EUR-spot-exchange-rates-history-2021.html#:~:text=This%20is%20the%20British%20Pound,rate%20in%202021%3A%201.1632%20EUR.
