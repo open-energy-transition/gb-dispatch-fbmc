@@ -915,7 +915,7 @@ fes:
         ev: " EV DSR"
         residential_heat: " Residential Heat DSR"
         iandc_heat: " I&C Heat DSR"
-      v2g_storage_to_capacity_ratio: 7.14 # based on ratio in FES 2021
+      v2g_storage_to_capacity_ratio: 7.14 # based on ratio in FES 2021. Same value will be applied to all future years.
 
     regional_distribution_reference:
       ev_dsr:
