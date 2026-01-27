@@ -49,8 +49,6 @@ rule process_baseline_demand_shape:
         historical_profile=resources(
             "gb-model/historical_baseline_electricity_demand_profile.csv"
         ),
-        energy_totals=resources("pop_weighted_energy_totals_s_clustered.csv"),
-        heat_demand_shape=resources("hourly_heat_demand_total_base_s_clustered.nc"),
         resistive_heater_demand=resources("gb-model/resistive_heater_demand/{year}.csv"),
     output:
         demand_shape=resources("gb-model/baseline_electricity_demand_shape/{year}.csv"),

@@ -88,7 +88,7 @@ def process_fes_heat_technologies(
         "The total demand after grouping does not match the original demand."
     )
 
-    return final_data
+    return final_data.mul(1e6)  # TWh to MWh
 
 
 if __name__ == "__main__":
