@@ -12,7 +12,7 @@ rule process_regional_battery_storage_capacity:
         "Process national storage data from FES workbook into CSV format"
     params:
         scenario=config["fes"]["scenario"],
-        year_range=config["fes"]["year_range_incl"],
+        year_range=config["redispatch"]["year_range_incl"],
         carrier_mapping=config["fes"]["gb"]["flexibility"]["carrier_mapping"]["battery"],
     input:
         flexibility_sheet=resources(f"gb-model/fes/FLX1.csv"),

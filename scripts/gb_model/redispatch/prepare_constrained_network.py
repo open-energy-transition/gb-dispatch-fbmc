@@ -78,7 +78,7 @@ def _apply_multiplier(
     multiplier: dict[str, float],
     renewable_strike_prices: pd.Series,
     direction: Literal["bid", "offer"],
-) -> pd.DataFrame:
+) -> pd.Series:
     """
     Apply bid/offer multiplier and strike prices
 
@@ -103,7 +103,6 @@ def _apply_multiplier(
     assert not (isna := new_marginal_costs.isna()).any(), (
         f"Some marginal costs are NaN after applying multipliers and strike prices: {new_marginal_costs[isna].index.tolist()}"
     )
-    df["marginal_cost"] = new_marginal_costs
 
     undefined_multipliers = set(df["carrier"].unique()) - (
         set(multiplier.keys()) | set(renewable_strike_prices.index)
@@ -112,13 +111,13 @@ def _apply_multiplier(
         f"Neither bid/offer multiplier nor strike price provided for the carriers: {undefined_multipliers}"
     )
 
-    return df
+    return new_marginal_costs
 
 
 def create_up_down_plants(
     constrained_network: pypsa.Network,
     unconstrained_result: pypsa.Network,
-    bids_and_offers: dict[str, float],
+    bids_and_offers: dict[str, dict[str, float]],
     renewable_strike_prices: pd.Series,
     interconnector_bid_offer_profile: pd.DataFrame,
     gb_buses: pd.Index,
@@ -141,7 +140,7 @@ def create_up_down_plants(
     gb_buses: pd.Index
         Index of GB buses
     """
-
+    constrained_network.add("Carrier", ["ramp up", "ramp down"])
     for comp in constrained_network.components:
         if comp.name not in ["Generator", "StorageUnit", "Link"]:
             continue
@@ -183,29 +182,31 @@ def create_up_down_plants(
                 - dynamic_p
             ) / result_component.static.p_nom
 
-        if comp.name != "Link":
-            # Add bid/offer multipliers for conventional generators
-            g_up = _apply_multiplier(
-                g_up,
-                bids_and_offers["offer_multiplier"],
-                renewable_strike_prices,
-                "offer",
-            )
-            g_down = _apply_multiplier(
-                g_down,
-                bids_and_offers["bid_multiplier"],
-                renewable_strike_prices,
-                "bid",
-            )
+        prices = {}
+        for direction, df in [("offer", g_up), ("bid", g_down)]:
+            if comp.name != "Link":
+                # Add bid/offer multipliers for conventional generators
+                prices[direction] = _apply_multiplier(
+                    df,
+                    bids_and_offers[f"{direction}_multiplier"],
+                    renewable_strike_prices,
+                    direction,
+                )
+            else:
+                prices[direction] = interconnector_bid_offer_profile.filter(
+                    regex=f".* {direction}$"
+                ).rename(columns=lambda x: x.replace(" " + direction, ""))
 
         # Add generators that can increase dispatch
         constrained_network.add(
             comp.name,
             g_up.index,
             suffix=" ramp up",
+            carrier="ramp up",
             p_min_pu=0,
             p_max_pu=up_limit.loc[:, g_up.index],
-            **g_up.drop(["p_max_pu", "p_min_pu"], axis=1),
+            marginal_cost=prices["offer"],
+            **g_up.drop(["p_max_pu", "p_min_pu", "carrier", "marginal_cost"], axis=1),
         )
 
         # Add generators that can decrease dispatch
@@ -213,20 +214,12 @@ def create_up_down_plants(
             comp.name,
             g_down.index,
             suffix=" ramp down",
+            carrier="ramp down",
             p_min_pu=down_limit.loc[:, g_down.index],
             p_max_pu=0,
-            **g_down.drop(["p_max_pu", "p_min_pu"], axis=1),
+            marginal_cost=prices["bid"],
+            **g_down.drop(["p_max_pu", "p_min_pu", "carrier", "marginal_cost"], axis=1),
         )
-
-        if comp.name == "Link":
-            interconnector_bid_offer_profile.columns = (
-                interconnector_bid_offer_profile.columns.str.replace(
-                    "bid", "ramp down"
-                ).str.replace("offer", "ramp up")
-            )
-            constrained_network.components[
-                comp.name
-            ].dynamic.marginal_cost = interconnector_bid_offer_profile
 
         logger.info(
             f"Added {comp.name} that can mimic increase and decrease in dispatch"
@@ -283,7 +276,9 @@ def add_single_eur_bus(network: pypsa.Network, unconstrained_result: pypsa.Netwo
     )
 
     # Change bus1 of all interconnectors to EUR
-    interconnectors = filter_interconnectors(network.links)
+    interconnectors = filter_interconnectors(
+        network.links, "carrier in ['DC', 'ramp up', 'ramp down']"
+    )
     network.links.loc[interconnectors.index, "bus1"] = "EUR"
 
     logger.info(

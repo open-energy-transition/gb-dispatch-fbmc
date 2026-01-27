@@ -29,7 +29,7 @@ rule process_fes_heat_technologies:
     message:
         "Process the share of electrified heating technologies from FES workbook"
     params:
-        year_range=config["fes"]["year_range_incl"],
+        year_range=config["redispatch"]["year_range_incl"],
         electrified_heating_technologies=config["fes"]["gb"]["demand"]["heat"][
             "electrified_heating_technologies"
         ],

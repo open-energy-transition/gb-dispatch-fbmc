@@ -9,11 +9,16 @@
 Release Notes
 ##########################################
 
-Upcoming Release
-================
+v0.1.0 (2026-01-23)
+===================
 
-* Remove KVL constraints from unconstrained GB-EUR model and set transmission losses to 0 (#186)
-* Identify marginal generator in Europe when non-neighbouring countries are part of the network (#179)
+This is the initial release of the GB dispatch model, configured for use with FES2021 data.
+It was synchronised with the upstream PyPSA-Eur repository on 2026-01-12.
+
+* Calculate total constraint costs as a sum of all redispatch runs (#189).
+* * Update to PyPSA ``>=v1`` (#160).
+* Remove KVL constraints from unconstrained GB-EUR model and set transmission losses to 0 (#186).
+* Identify marginal generator in Europe when non-neighbouring countries are part of the network (#179).
 * Add system representation graphic and details to the documentation (#157).
 * Use heat pump uptake trend to define shape of heating mix technological change (#130).
 * Avoid double counting the impact of heat demand on both baseline electricity and heat demand profile shapes.

@@ -40,6 +40,11 @@ atlite:
       # features: []
       # sarah_dir: ""
 
+data:
+  osm:
+    source: archive
+    version: "0.7"
+
 energy:
   energy_totals_year: 2013
 
@@ -64,14 +69,6 @@ countries:
 - PT
 - SE
 - SI
-
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#enable
-enable:
-  retrieve: auto
-  retrieve_databundle: true
-  retrieve_cost_data: true
-  build_cutout: false
-  retrieve_cutout: true
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#clustering
 clustering:
@@ -247,6 +244,7 @@ solving:
     skip_iterations: true
     rolling_horizon: false
     transmission_losses: 0
+    custom_extra_functionality: "../data/custom_extra_functionality.py"
   solver:
     name: gurobi
     options: gurobi-default
@@ -254,8 +252,7 @@ solving:
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#electricity
 electricity:
   voltages: [132, 220., 275., 300., 330., 380., 400., 500., 750.]
-  base_network: osm-prebuilt
-  osm-prebuilt-version: 0.7
+  base_network: osm
   powerplants_filter: (DateOut >= 2020 or DateOut != DateOut) and not (Country == 'Germany' and Fueltype == 'Nuclear')
   extendable_carriers:
     Generator: []
@@ -823,7 +820,6 @@ fes-costing-sheet-config:
 fes:
   fes_year: 2024
   scenario: Holistic Transition   # fes workbook
-  year_range_incl: [2025, 2045] # 20-year period over which we will run the simulation
   default_set: PP
   gb:
     carrier_mapping:
@@ -1319,6 +1315,8 @@ interconnectors:
     2037: [Continental Link]
 
 redispatch:
+  year_range_incl: [2025, 2045] # 20-year period over which we will run the simulation
+  constraint_cost_extra_years: 20  # number of years to extend the constraint cost calculation beyond the final year (using the data from the final year)
   # Source for bid and offers multipliers : https://www.nationalgrid.com/sites/default/files/documents/Long-term%20Market%20and%20Network%20Constraint%20Modelling.pdf
   bid_multiplier:
     gas: 0.8

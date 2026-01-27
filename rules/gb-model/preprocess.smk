@@ -126,7 +126,7 @@ rule process_fes_eur_data:
         "Process FES-compatible European scenario workbook."
     params:
         scenario=config["fes"]["scenario"],
-        year_range=config["fes"]["year_range_incl"],
+        year_range=config["redispatch"]["year_range_incl"],
         countries=config["countries"],
     input:
         eur_data=resources("gb-model/fes/ES2.csv"),
@@ -161,7 +161,7 @@ rule process_fes_gsp_data:
         "Process FES workbook sheet BB1 together with metadata from sheet BB2."
     params:
         scenario=config["fes"]["scenario"],
-        year_range=config["fes"]["year_range_incl"],
+        year_range=config["redispatch"]["year_range_incl"],
         target_crs=config["target_crs"],
         fill_gsp_lat_lons=config["grid_supply_points"]["fill-lat-lons"],
         manual_gsp_mapping=config["grid_supply_points"]["manual_mapping"],

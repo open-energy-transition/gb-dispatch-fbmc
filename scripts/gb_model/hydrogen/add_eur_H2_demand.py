@@ -38,12 +38,19 @@ def add_eur_demand(
         Combined GB and European H2 demand dataframe
     """
     eur_demands.columns = eur_demands.columns.astype(int)
+
+    # We will interpolate/extrapolate to fill in any missing years before filtering to the years being modelled
+    model_years = gb_demands.index.get_level_values("year")
+    max_year = max(model_years.max(), eur_demands.columns.max())
+    min_year = min(model_years.min(), eur_demands.columns.min())
+
     eur_demands_all_years = (
         eur_demands.loc[countries]
         .drop("GB", errors="ignore")
-        .T.reindex(sorted(gb_demands.index.get_level_values("year").unique()))
+        .T.reindex(range(min_year, max_year + 1))
         .interpolate(method="slinear", fill_value="extrapolate", limit_direction="both")
         .clip(lower=0)
+        .loc[sorted(model_years.unique())]
         .stack()
         .rename_axis(index=["year", "bus"])
         .to_frame("p_set")
@@ -70,7 +77,7 @@ if __name__ == "__main__":
         skiprows=6,
         usecols="B:H",
     )
-    today_year = eur_demand_today["Year"].drop_duplicates().item()
+    today_year = int(eur_demand_today.Year.drop_duplicates().item())
     # get annual demand in MWh per country
     eur_demand_today = (
         eur_demand_today.groupby("Country")["Clean consumption T/Y"]

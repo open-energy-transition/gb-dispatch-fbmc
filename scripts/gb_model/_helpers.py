@@ -194,7 +194,7 @@ def time_difference_hours(country):
     return int(diff)
 
 
-def filter_interconnectors(df: pd.DataFrame) -> pd.DataFrame:
+def filter_interconnectors(df: pd.DataFrame, query="carrier == 'DC'") -> pd.DataFrame:
     """
     Filter to obtain links between GB and EU
 
@@ -202,11 +202,19 @@ def filter_interconnectors(df: pd.DataFrame) -> pd.DataFrame:
     ----------
     df: pd.DataFrame
         Dataframe of Links components in PyPSA model
+    query: str
+        Query string to filter the interconnectors further.
+        Defaults to "carrier == 'DC'".
+
+    Returns
+    -------
+    pd.DataFrame
+        Filtered dataframe of interconnectors between GB and Europe
     """
     m1 = df["bus0"].str.startswith("GB")
     m2 = df["bus1"].str.startswith("GB")
 
-    return df[(m1 & ~m2) | (~m1 & m2)].query("carrier == 'DC'")
+    return df[(m1 & ~m2) | (~m1 & m2)].query(query)
 
 
 def marginal_costs_bus(bus: str, network: pypsa.Network) -> pd.DataFrame:

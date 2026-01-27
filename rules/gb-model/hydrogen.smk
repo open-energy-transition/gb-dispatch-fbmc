@@ -12,7 +12,7 @@ rule create_hydrogen_data_tables:
         "Process net hydrogen demand data, off-grid electrolysis electricity demand, and storage demand from FES workbook into CSV format"
     params:
         scenario=config["fes"]["scenario"],
-        year_range=config["fes"]["year_range_incl"],
+        year_range=config["redispatch"]["year_range_incl"],
         data_selection=config["fes"]["hydrogen"]["data_selection"],
         electrolysis_efficiency=config["fes"]["hydrogen"]["electrolysis_efficiency"],
     input:

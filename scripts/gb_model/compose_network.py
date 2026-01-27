@@ -1158,7 +1158,7 @@ def _add_generator_availability(
     gen_availability = (
         carrier_availability.reset_index()
         .merge(n.generators.reset_index(), on="carrier")
-        .pivot(index="month", columns="Generator", values="availability_fraction")
+        .pivot(index="month", columns="name", values="availability_fraction")
     )
     p_max_pu = gen_availability.apply(
         _monthly_to_hourly_profile, hourly_index=n.snapshots
