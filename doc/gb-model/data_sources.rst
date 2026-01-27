@@ -107,7 +107,7 @@ European Hydrogen data
 No hydrogen subsystem data is provided for European countries except for Hydrogen → Electricity conversion technology capacities.
 
 We use a data dump of the `ENTSO-E TYNDP <https://zenodo.org/records/14230568>`_ to define the future hydrogen demands in non-GB countries.
-To reduce intermediate data processing requirements in this workflow, we have pre-prepared the data using the `Open-TYNDP project <https://github.com/open-energy-transition/open-tyndp>`_ workflow, and stored outputs for the NT scenario here as ``data/gb-model/tyndp_h2_demand.csv``.
+To reduce intermediate data processing requirements in this workflow, we have separately prepared the corresponding input data using the `Open-TYNDP project <https://github.com/open-energy-transition/open-tyndp>`_ workflow, and stored outputs for the NT scenario here as ``data/gb-model/tyndp_h2_demand.csv``.
 To interpolate to 2030, we use historical "clean" hydrogen demand from the `European clean hydrogen observatory <https://observatory.clean-hydrogen.europa.eu/hydrogen-landscape/end-use/hydrogen-demand>`_.
 
 For the remainder (e.g. electrolyser capacity, storage capacity), we synthesise data based on trends seen in GB.
