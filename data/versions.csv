@@ -89,8 +89,7 @@ nitrogen_statistics,2022,archive,latest supported,2026-01-13,,https://data.pypsa
 nuts3_population,13-03-2025,primary,latest supported,2025-12-02,,https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/nama_10r_3popgdp?format=TSV&compressed=true
 nuts3_population,13-03-2025,archive,latest supported,2026-01-13,earlier part of zenodo bundle,https://data.pypsa.org/workflows/eur/nuts3_population/13-03-2025/nama_10r_3popgdp.tsv.gz
 osm,unknown,build,latest supported,2025-12-02,Latest dataset built using OSM data. No single URL available to access the data. See the related scripts and documentation for details.,
-osm,0.7,primary,latest supported,2026-01-27,"https://zenodo.org/records/18161054","GB model specific archive"
-osm,0.7,archive,latest supported,2026-01-27,"https://zenodo.org/records/18161054","GB model specific archive"
+osm,0.7,archive,latest supported,2026-01-27,"GB model specific archive",https://zenodo.org/records/18161054/files
 osm,0.6,primary,deprecated not-supported,2026-01-13,,https://zenodo.org/records/14144752/files
 osm,0.6,archive,deprecated not-supported,2026-01-13,,https://data.pypsa.org/workflows/eur/osm/0.6
 osm,0.5,primary,deprecated not-supported,2026-01-13,,https://zenodo.org/records/13981528/files
