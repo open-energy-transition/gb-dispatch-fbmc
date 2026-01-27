@@ -43,11 +43,19 @@ def extract_fes_worksheet(
     new_idx = sheet_config.pop("add_index", {})
     header = sheet_config.get("header", None)
     header_name = sheet_config.pop("header_name", None)
+    index_col = sheet_config.pop("index_col", None)
     if isinstance(header, list):
         # We cannot use both "usecols" and "header" as list in pd.read_excel,
         # so set header to 0 here and dealt with later
         sheet_config["header"] = 0
     fes_data = pd.read_excel(excel_path, sheet_name=sheet_name, **sheet_config)
+
+    if isinstance(index_col, list):
+        fes_data = fes_data.set_index(fes_data.columns[index_col].tolist())
+    elif isinstance(index_col, int):
+        fes_data = fes_data.set_index(fes_data.columns[index_col])
+    elif index_col is not None:
+        raise ValueError("index_col must be int or list of int")
 
     if isinstance(header, list):
         for _ in header[1:]:

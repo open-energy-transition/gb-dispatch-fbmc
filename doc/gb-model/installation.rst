@@ -1,7 +1,8 @@
-.. SPDX-FileCopyrightText: Contributors to PyPSA-Eur <https://github.com/pypsa/pypsa-eur>
-.. SPDX-FileCopyrightText: Contributors to gb-dispatch-model
 ..
-.. SPDX-License-Identifier: CC-BY-4.0
+  SPDX-FileCopyrightText: Contributors to PyPSA-Eur <https://github.com/pypsa/pypsa-eur>
+  SPDX-FileCopyrightText: Contributors to gb-open-market-model <https://github.com/open-energy-transition/gb-open-market-model>
+
+  SPDX-License-Identifier: CC-BY-4.0
 
 .. _installation:
 
@@ -41,3 +42,17 @@ Once pixi is installed, you can activate the project environment (``gb-model``) 
 
 .. note::
     We don't currently support linux operating systems using ARM processors since certain packages, such as ``PySCIPOpt``, require being built from source.
+
+Access API keys
+===============
+
+For successful execution, you will need the ENTSO-E Transparency platform API key, stored in a `.env` file in your working directory.
+To get this key, first create an `ENTSO-E transparency platform <https://transparency.entsoe.eu/>`_ account.
+Then, contact the ENTSO-E helpdesk by emailing ``transparency@entsoe.eu`` with the email subject ``Restful API access`` and email body being just the email address associated with your account.
+
+Your `.env` file should then look like:
+
+.. code::
+
+    ENTSO_E_API_KEY=<your-api-key-here>
+

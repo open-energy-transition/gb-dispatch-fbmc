@@ -51,12 +51,13 @@ def parse_ev_unmanaged_charging_data(
 
     # Select unmanaged charging demand data
     unmanaged_charging_demand = df_charging_demand[
-        df_charging_demand["demand type"].str.lower() == "unmanaged ev charging demand"
+        df_charging_demand["Data item"].str.lower()
+        == "electric vehicle unmanaged peak demand"
     ]
 
     # Select scenario
     unmanaged_charging_demand = unmanaged_charging_demand[
-        unmanaged_charging_demand["scenario"].str.lower() == fes_scenario
+        unmanaged_charging_demand["Pathway"].str.lower() == fes_scenario.lower()
     ]
 
     # Select years in the specified range

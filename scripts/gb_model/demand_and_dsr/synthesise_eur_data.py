@@ -9,6 +9,7 @@ Add European demand data to the GB demand dataset.
 import logging
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 from scripts._helpers import configure_logging, set_scenario_config
@@ -20,7 +21,7 @@ def add_eur_demand(
     gb_demand_annual: pd.DataFrame,
     eur_demand_annual: pd.DataFrame,
     gb_dataset: pd.DataFrame,
-) -> pd.DataFrame:
+) -> pd.Series:
     """
     Add European demand data to the GB demand dataset.
 
@@ -35,26 +36,29 @@ def add_eur_demand(
 
     Returns
     -------
-    pd.DataFrame
+    pd.Series
         Combined annual demand data for GB and Europe
     """
     # Filter European demand for relevant load types and years
     all_demand_annual = pd.concat([gb_demand_annual, eur_demand_annual])
-    normalised_dataset = gb_dataset.squeeze() / all_demand_annual.squeeze()
+
+    normalised_dataset = gb_dataset.divide(all_demand_annual.squeeze(), axis="index")
 
     dataset_inc_eur = (
         normalised_dataset.groupby(level="year", group_keys=False)
         .apply(lambda x: x.fillna(x.mean()))
-        .mul(all_demand_annual)
+        .mul(all_demand_annual, axis="index")
     )
-    if (is_na := dataset_inc_eur.isna()).any():
+    if np.any(is_na := dataset_inc_eur.isna()):
         logger.info(
             "The following buses/years have NaN values in the combined dataset and will be dropped: %s",
             is_na[is_na].index.tolist(),
         )
         dataset_inc_eur = dataset_inc_eur.dropna()
+    if isinstance(dataset_inc_eur, pd.DataFrame):
+        dataset_inc_eur = dataset_inc_eur.stack()
 
-    return dataset_inc_eur.to_frame(gb_dataset.name)
+    return dataset_inc_eur
 
 
 if __name__ == "__main__":
@@ -83,10 +87,20 @@ if __name__ == "__main__":
         .squeeze()
     )
 
-    gb_regional_dataset = pd.read_csv(
-        snakemake.input.gb_only_dataset, index_col=["bus", "year"]
-    ).squeeze()
+    gb_regional_dataset = pd.read_csv(snakemake.input.gb_only_dataset)
+    if len(gb_regional_dataset.columns) > 3:
+        name = gb_regional_dataset.columns[-1]
+        gb_regional_dataset = gb_regional_dataset.pivot(
+            index=["bus", "year"],
+            values=gb_regional_dataset.columns[-1],
+            columns=gb_regional_dataset.columns.drop(["bus", "year"])[:-1],
+        )
+    else:
+        gb_regional_dataset = gb_regional_dataset.set_index(["bus", "year"]).squeeze()
+        name = gb_regional_dataset.name
+
     all_regional_dataset = add_eur_demand(
         gb_demand_annual, eur_demand_annual, gb_regional_dataset
     )
-    all_regional_dataset.to_csv(snakemake.output.csv)
+
+    all_regional_dataset.rename(name).to_csv(snakemake.output.csv)

@@ -33,7 +33,6 @@ if __name__ == "__main__":
     # Parse input data
     fes_scenario = snakemake.params.scenario
     year_range = snakemake.params.year_range
-    flexibility_type = snakemake.wildcards.flexibility_type
     carrier_mapping = snakemake.params.carrier_mapping
 
     df_flexibility = parse_flexibility_data(

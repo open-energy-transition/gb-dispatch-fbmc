@@ -80,17 +80,17 @@ rule manual_region_merger:
 
 rule extract_fes_workbook_sheet:
     message:
-        "Extract FES workbook sheet {wildcards.fes_sheet} for FES-{wildcards.fes_year} and process into machine-readable, 'tidy' dataframe format according to defined configuration."
+        "Extract FES workbook sheet {wildcards.fes_sheet} for FES and process into machine-readable, 'tidy' dataframe format according to defined configuration."
     input:
-        workbook="data/gb-model/downloaded/fes-{fes_year}-workbook.xlsx",
+        workbook="data/gb-model/downloaded/fes-workbook.xlsx",
     output:
-        csv=resources("gb-model/fes/{fes_year}/{fes_sheet}.csv"),
+        csv=resources("gb-model/fes/{fes_sheet}.csv"),
     params:
         sheet_extract_config=lambda wildcards: config["fes-sheet-config"][
-            int(wildcards.fes_year)
-        ][wildcards.fes_sheet],
+            wildcards.fes_sheet
+        ],
     log:
-        logs("extract_fes_workbook_sheet-{fes_year}_{fes_sheet}.log"),
+        logs("extract_fes_workbook_sheet-{fes_sheet}.log"),
     script:
         "../../scripts/gb_model/preprocess/extract_fes_workbook_sheet.py"
 
@@ -125,11 +125,11 @@ rule process_fes_eur_data:
     message:
         "Process FES-compatible European scenario workbook."
     params:
-        scenario=config["fes"]["eur"]["scenario"],
+        scenario=config["fes"]["scenario"],
         year_range=config["redispatch"]["year_range_incl"],
         countries=config["countries"],
     input:
-        eur_supply="data/gb-model/downloaded/eur-supply-table.csv",
+        eur_data=resources("gb-model/fes/ES2.csv"),
     output:
         csv=resources("gb-model/national_eur_data.csv"),
     log:
@@ -160,13 +160,14 @@ rule process_fes_gsp_data:
     message:
         "Process FES workbook sheet BB1 together with metadata from sheet BB2."
     params:
-        scenario=config["fes"]["gb"]["scenario"],
+        scenario=config["fes"]["scenario"],
         year_range=config["redispatch"]["year_range_incl"],
         target_crs=config["target_crs"],
-        fill_gsp_lat_lons=config["fill-gsp-lat-lons"],
+        fill_gsp_lat_lons=config["grid_supply_points"]["fill-lat-lons"],
+        manual_gsp_mapping=config["grid_supply_points"]["manual_mapping"],
     input:
-        bb1_sheet=resources("gb-model/fes/2021/BB1.csv"),
-        bb2_sheet=resources("gb-model/fes/2021/BB2.csv"),
+        bb1_sheet=resources(f"gb-model/fes/BB1.csv"),
+        bb2_sheet=resources(f"gb-model/fes/BB2.csv"),
         gsp_coordinates="data/gb-model/downloaded/gsp-coordinates.csv",
         regions=resources("gb-model/merged_shapes.geojson"),
     output:

@@ -16,7 +16,7 @@ import geopandas as gpd
 import pandas as pd
 
 from scripts._helpers import configure_logging, set_scenario_config
-from scripts.gb_model._helpers import map_points_to_regions, strip_srt
+from scripts.gb_model._helpers import map_points_to_regions, strip_str
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +26,7 @@ def parse_inputs(
     bb2_path: str,
     gsp_coordinates_path: str,
     extra_gsp_coordinates: dict,
+    manual_gsp_mapping: dict,
     fes_scenario: str,
     year_range: list,
 ) -> pd.DataFrame:
@@ -56,14 +57,14 @@ def parse_inputs(
         .reset_index()
         .set_index("Building Block ID Number")
         .drop("level_0", axis=1)
-        .apply(strip_srt)
+        .apply(strip_str)
     )
 
     df_bb1 = pd.read_csv(bb1_path)
-    df_bb1 = df_bb1.apply(strip_srt)
+    df_bb1 = df_bb1.apply(strip_str)
     df_bb1_scenario = df_bb1[
-        (df_bb1["FES Scenario"].str.lower() == fes_scenario)
-        & (df_bb1["year"].isin(range(year_range[0], year_range[1] + 1)))
+        (df_bb1["FES Pathway"].str.lower() == fes_scenario.lower())
+        & (df_bb1["year"].between(year_range[0], year_range[1], inclusive="both"))
     ]
     non_data_cols = df_bb1_scenario.columns.drop("data")
     if (duplicates := df_bb1_scenario[non_data_cols].duplicated()).any():
@@ -99,15 +100,18 @@ def parse_inputs(
     )
 
     df_gsp_coordinates = pd.read_csv(gsp_coordinates_path)
-    df_gsp_coordinates = df_gsp_coordinates.apply(strip_srt)
-    extra_gsp_coordinates_df = pd.DataFrame.from_dict(
-        extra_gsp_coordinates, orient="index"
-    ).rename_axis(index="Name")
+    df_gsp_coordinates = df_gsp_coordinates.apply(strip_str)
+    extra_gsp_coordinates_df = (
+        pd.DataFrame.from_dict(extra_gsp_coordinates, orient="index")
+        .rename_axis(index="Name")
+        .reset_index()
+    )
     df_gsp_coordinates = (
         # There are cases of duplicate GSPs where the lat and lon information is the same but the GSP ID and GSP group are slightly different
-        df_gsp_coordinates.drop_duplicates(subset=["Name", "Latitude", "Longitude"])
+        pd.concat([df_gsp_coordinates, extra_gsp_coordinates_df])
+        .drop_duplicates(subset=["Name", "Latitude", "Longitude"])
+        .dropna(subset=["Latitude", "Longitude"])
         .set_index("Name")
-        .fillna(extra_gsp_coordinates_df)
         .reset_index()
     )
     if (dups := df_gsp_coordinates.Name.duplicated()).any():
@@ -115,8 +119,13 @@ def parse_inputs(
             f"There are duplicate GSP names with different lat/lons in the GSP coordinates file:\n{df_gsp_coordinates[dups]}"
         )
 
+    df_bb1_bb2_scenario["GSP"] = df_bb1_bb2_scenario["GSP"].replace(manual_gsp_mapping)
+
     df_bb1_bb2_with_lat_lon = pd.merge(
-        df_bb1_bb2_scenario, df_gsp_coordinates, left_on="GSP", right_on="Name"
+        df_bb1_bb2_scenario,
+        df_gsp_coordinates,
+        left_on="GSP",
+        right_on="Name",
     )
 
     # Missing data checks.
@@ -127,7 +136,7 @@ def parse_inputs(
     if len(missing_lat_lon) > 0:
         raise ValueError(
             f"The following GSPs are missing latitude and/or longitude information: {missing_lat_lon}.\n"
-            "Please update the GSP coordinates file or provide extra coordinates via the `fill-gsp-lat-lons` configuration option."
+            "Please update the GSP coordinates file or provide extra coordinates via the `grid-supply_points.fill_lat_lons` configuration option."
         )
 
     missing_gsps = set(df_bb1_bb2_scenario.GSP).difference(df_bb1_bb2_with_lat_lon.GSP)
@@ -139,6 +148,7 @@ def parse_inputs(
     df_final = pd.concat(
         [df_bb1_bb2_scenario.query("GSP in @missing_gsps"), df_bb1_bb2_with_lat_lon]
     )
+
     return df_final
 
 
@@ -160,11 +170,13 @@ if __name__ == "__main__":
     fes_scenario = snakemake.params.scenario
     year_range = snakemake.params.year_range
     extra_gsp_coordinates = snakemake.params.fill_gsp_lat_lons
+    manual_gsp_mapping = snakemake.params.manual_gsp_mapping
     df = parse_inputs(
         bb1_path,
         bb2_path,
         gsp_coordinates_path,
         extra_gsp_coordinates,
+        manual_gsp_mapping,
         fes_scenario,
         year_range,
     )
