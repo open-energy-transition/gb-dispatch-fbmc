@@ -38,7 +38,7 @@ jobs:
 
     - name: Run unit tests
       run: |
-        pixi run unit-tests
+        pixi run -e gb-model unit-tests
 
   integration-tests:
     name: Integration
