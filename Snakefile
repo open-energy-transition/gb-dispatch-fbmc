@@ -25,7 +25,7 @@ from scripts.lib.validation.config import validate_config
 
 configfile: "config/config.default.yaml"
 configfile: "config/plotting.default.yaml"
-
+configfile: "config/config.gb.default.yaml"
 
 if Path("config/config.yaml").exists():
 
@@ -33,11 +33,6 @@ if Path("config/config.yaml").exists():
 
 
 validate_config(config)
-
-
-# Loading it in later so we don't fall foul of the config validation
-# TODO: update the pydantic model to accept our custom inputs
-configfile: "config/config.gb.default.yaml"
 
 
 run = config["run"]
