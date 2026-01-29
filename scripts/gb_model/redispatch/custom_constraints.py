@@ -111,6 +111,20 @@ def set_boundary_constraints(
         )
 
 
+def update_storage_p_bounds(n: pypsa.Network) -> None:
+    """
+    Update the bounds of storage unit dispatch and store power to make up for insufficient default bounding.
+
+    Args:
+        n (pypsa.Network): The PyPSA network to update.
+    """
+    # `p_dispatch`/`p_store` have correct upper bounds but no lower, so we copy one from the other to _fix_ the storage unit flows.
+    for direction in ["dispatch", "store"]:
+        n.model.constraints[
+            f"StorageUnit-fix-p_{direction}-lower"
+        ].rhs = n.model.constraints[f"StorageUnit-fix-p_{direction}-upper"].rhs
+
+
 def update_storage_balance(n: pypsa.Network) -> None:
     """
     Update the energy balance mathematics to include up and down ramping
@@ -124,12 +138,12 @@ def update_storage_balance(n: pypsa.Network) -> None:
     ].index
     ramp_p = n.model["Generator-p"].sel(name=ramp_names)
     idx = ramp_p.coords["name"].str.replace(r" ramp (up|down)", "")
-    ramp_p = ramp_p.groupby(idx).sum()
+    ramp_p_grouped = ramp_p.groupby(idx).sum()
 
     # ramping up and ramping down `p` already have the correct signs (positive and negative, respectively),
     # so no need to invert one of them when applying to the LHS.
     # `ramp_up` is equivalent to `p_dispatch`, `ramp_down` is equivalent to `p_store`
-    storage_unit_balance.lhs -= ramp_p
+    storage_unit_balance.lhs -= ramp_p_grouped.sel(storage_unit_balance.coords)
     logger.info("Updated energy balance math for storage units")
 
 
@@ -148,4 +162,5 @@ def custom_constraints(
     """
     # Apply boundary constraints
     set_boundary_constraints(n, snapshots, snakemake)
+    update_storage_p_bounds(n)
     update_storage_balance(n)
