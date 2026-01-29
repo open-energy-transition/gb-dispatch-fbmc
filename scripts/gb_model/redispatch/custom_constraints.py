@@ -90,11 +90,11 @@ def set_boundary_constraints(
         )
 
         # Get Line-s and Link-p for boundary lines and links
-        line_s_boundary = line_s.sel(snapshot=snapshots, Line=boundary_lines)
-        link_p_boundary = link_p.sel(snapshot=snapshots, Link=boundary_links)
+        line_s_boundary = line_s.sel(snapshot=snapshots, name=boundary_lines)
+        link_p_boundary = link_p.sel(snapshot=snapshots, name=boundary_links)
 
         # Sum across lines and DC links to get total flow at the boundary
-        lhs = line_s_boundary.sum("Line") + link_p_boundary.sum("Link")
+        lhs = line_s_boundary.sum("name") + link_p_boundary.sum("name")
 
         # Add bidirectional constraint: total flow ≤ boundary capability
         n.model.add_constraints(
@@ -109,6 +109,28 @@ def set_boundary_constraints(
         logger.info(
             f"Added boundary constraint: -{capacity_mw:.0f} <= '{boundary}' <= {capacity_mw:.0f} MW"
         )
+
+
+def update_storage_balance(n: pypsa.Network) -> None:
+    """
+    Update the energy balance mathematics to include up and down ramping
+
+    Args:
+        n (pypsa.Network): The PyPSA network to update.
+    """
+    storage_unit_balance = n.model.constraints["StorageUnit-energy_balance"]
+    ramp_names = n.generators[
+        n.generators.carrier.str.startswith("StorageUnit ramp")
+    ].index
+    ramp_p = n.model["Generator-p"].sel(name=ramp_names)
+    idx = ramp_p.coords["name"].str.replace(r" ramp (up|down)", "")
+    ramp_p = ramp_p.groupby(idx).sum()
+
+    # ramping up and ramping down `p` already have the correct signs (positive and negative, respectively),
+    # so no need to invert one of them when applying to the LHS.
+    # `ramp_up` is equivalent to `p_dispatch`, `ramp_down` is equivalent to `p_store`
+    storage_unit_balance.lhs -= ramp_p
+    logger.info("Updated energy balance math for storage units")
 
 
 def custom_constraints(
@@ -126,3 +148,4 @@ def custom_constraints(
     """
     # Apply boundary constraints
     set_boundary_constraints(n, snapshots, snakemake)
+    update_storage_balance(n)

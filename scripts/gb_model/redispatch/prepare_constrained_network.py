@@ -140,10 +140,13 @@ def create_up_down_plants(
     gb_buses: pd.Index
         Index of GB buses
     """
-    constrained_network.add("Carrier", ["ramp up", "ramp down"])
     for comp in constrained_network.components:
         if comp.name not in ["Generator", "StorageUnit", "Link"]:
             continue
+
+        constrained_network.add(
+            "Carrier", [f"{comp.name} ramp up", f"{comp.name} ramp down"]
+        )
 
         g_up = comp.static.loc[~comp.static.index.str.contains(LOAD_SHEDDING_REGEX)]
         g_down = comp.static.loc[~comp.static.index.str.contains(LOAD_SHEDDING_REGEX)]
@@ -199,26 +202,28 @@ def create_up_down_plants(
 
         # Add generators that can increase dispatch
         constrained_network.add(
-            comp.name,
+            "Generator",
             g_up.index,
             suffix=" ramp up",
-            carrier="ramp up",
+            carrier=f"{comp.name} ramp up",
             p_min_pu=0,
             p_max_pu=up_limit.loc[:, g_up.index],
             marginal_cost=prices["offer"],
-            **g_up.drop(["p_max_pu", "p_min_pu", "carrier", "marginal_cost"], axis=1),
+            p_nom=g_up.p_nom,
+            bus=g_up.bus if comp.name != "Link" else g_down.bus0,
         )
 
         # Add generators that can decrease dispatch
         constrained_network.add(
-            comp.name,
+            "Generator",
             g_down.index,
             suffix=" ramp down",
-            carrier="ramp down",
+            carrier=f"{comp.name} ramp down",
             p_min_pu=down_limit.loc[:, g_down.index],
             p_max_pu=0,
             marginal_cost=prices["bid"],
-            **g_down.drop(["p_max_pu", "p_min_pu", "carrier", "marginal_cost"], axis=1),
+            p_nom=g_down.p_nom,
+            bus=g_down.bus if comp.name != "Link" else g_down.bus0,
         )
 
         logger.info(
