@@ -27,6 +27,7 @@ configfile: "config/config.default.yaml"
 configfile: "config/plotting.default.yaml"
 configfile: "config/config.gb.default.yaml"
 
+
 if Path("config/config.yaml").exists():
 
     configfile: "config/config.yaml"
