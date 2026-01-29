@@ -144,7 +144,10 @@ def update_storage_balance(n: pypsa.Network) -> None:
     # so no need to invert one of them when applying to the LHS.
     # `ramp_up` is equivalent to `p_dispatch`, `ramp_down` is equivalent to `p_store`
     storage_unit_balance.lhs -= ramp_p_grouped.sel(storage_unit_balance.coords)
-    logger.info("Updated energy balance math for storage units")
+    # Log a randomly selected snapshot for verification
+    logger.info(
+        f"Updated energy balance math for storage units. Example: {storage_unit_balance.isel(snapshot=10)}"
+    )
 
 
 def custom_constraints(
