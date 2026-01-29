@@ -92,6 +92,11 @@ renewable:
     cutout: default
     carriers: [PHS, hydro]
 
+conventional:
+  nuclear:
+    max_annual_capacity_factor: 1
+    min_annual_capacity_factor: 0.80
+
 costs:
   GBP_to_EUR: 1.1632 # average in 2021: https://www.exchangerates.org.uk/GBP-EUR-spot-exchange-rates-history-2021.html#:~:text=This%20is%20the%20British%20Pound,rate%20in%202021%3A%201.1632%20EUR.
   GBP_to_USD: 1.3757 # average in 2021: https://www.exchangerates.org.uk/GBP-USD-spot-exchange-rates-history-2021.html#:~:text=Average%20exchange%20rate%20in%202021,USD%20on%2008%20Dec%202021.
@@ -246,6 +251,9 @@ solving:
   solver:
     name: gurobi
     options: gurobi-default
+  solver_options:
+    gurobi-default:
+      threads: 4
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#electricity
 electricity:
