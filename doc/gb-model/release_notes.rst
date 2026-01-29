@@ -9,6 +9,12 @@
 Release Notes
 ##########################################
 
+Unreleased
+==========
+
+* Fix storage flows in redispatch (both for the original asset and the ramp up/down assets) (#196).
+* Use `Generator` component for all ramp up/down assets to simplify optimisation problem.
+
 v0.1.0 (2026-01-23)
 ===================
 
