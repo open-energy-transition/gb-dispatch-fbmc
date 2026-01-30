@@ -461,7 +461,8 @@
             "busmap",
             "custom_busmap",
             "administrative",
-            "custom_busshapes"
+            "custom_busshapes",
+            "gb_shapes"
           ],
           "type": "string"
         },
@@ -3768,7 +3769,8 @@
               {
                 "enum": [
                   "adm",
-                  "all"
+                  "all",
+                  "clustered"
                 ],
                 "type": "string"
               }
@@ -7796,7 +7798,8 @@
               {
                 "enum": [
                   "adm",
-                  "all"
+                  "all",
+                  "clustered"
                 ],
                 "type": "string"
               }
@@ -11277,7 +11280,8 @@
             "busmap",
             "custom_busmap",
             "administrative",
-            "custom_busshapes"
+            "custom_busshapes",
+            "gb_shapes"
           ],
           "type": "string"
         },
