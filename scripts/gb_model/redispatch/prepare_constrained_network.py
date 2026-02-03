@@ -223,7 +223,7 @@ def create_up_down_plants(
             p_max_pu=0,
             marginal_cost=prices["bid"],
             p_nom=g_down.p_nom,
-            bus=g_down.bus if comp.name != "Link" else g_down.bus0,
+            bus=g_down.bus if comp.name not in [ "Link", "Line"] else g_down.bus0,
         )
 
         logger.info(
