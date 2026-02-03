@@ -9,9 +9,7 @@ Generator component rules.
 
 rule retrieve_entsoe_unavailability_data:
     output:
-        unavailability=resources(
-            "gb-model/{zone}_generator_unavailability.csv"
-        ),
+        unavailability=resources("gb-model/{zone}_generator_unavailability.csv"),
     log:
         logs("process_entsoe_unavailability_data_{zone}.log"),
     params:
