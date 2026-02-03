@@ -12,7 +12,7 @@ Release Notes
 Unreleased
 ==========
 
-* Impose nuclear capacity factor range to enforce nuclear power plant usage where it would otherwise have unrealistically low generation / high dispatchability (#201).
+* Impose nuclear capacity factor range to enforce nuclear power plant usage where it would otherwise have unrealistically low generation / high dispatchability (#201 and #202).
 
 v0.1.0 (2026-01-23)
 ===================
