@@ -253,7 +253,7 @@ solving:
     options: gurobi-default
   solver_options:
     gurobi-default:
-      threads: 4
+      threads: 4 # limit threads for stable local runs
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#electricity
 electricity:
