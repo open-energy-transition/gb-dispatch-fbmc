@@ -210,7 +210,7 @@ def create_up_down_plants(
             p_max_pu=up_limit.loc[:, g_up.index],
             marginal_cost=prices["offer"],
             p_nom=g_up.p_nom,
-            bus=g_down.bus if comp.name not in [ "Link", "Line"] else g_down.bus0,
+            bus=g_down.bus if comp.name not in ["Link", "Line"] else g_down.bus0,
         )
 
         # Add generators that can decrease dispatch
