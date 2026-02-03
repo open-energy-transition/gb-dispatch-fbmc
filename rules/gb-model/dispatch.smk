@@ -33,6 +33,12 @@ rule solve_unconstrained:
         ),
         custom_extra_functionality=Path(workflow.snakefile).parent
         / "../../scripts/gb_model/dispatch/custom_constraints.py",
+        nuclear_max_annual_capacity_factor=config["conventional"]["nuclear"][
+            "max_annual_capacity_factor"
+        ],
+        nuclear_min_annual_capacity_factor=config["conventional"]["nuclear"][
+            "min_annual_capacity_factor"
+        ],
     input:
         network=resources("networks/unconstrained_clustered/{year}.nc"),
     output:
