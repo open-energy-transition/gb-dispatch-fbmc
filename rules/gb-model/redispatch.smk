@@ -23,6 +23,24 @@ rule process_CfD_strike_prices:
         "../../scripts/gb_model/redispatch/process_CfD_strike_prices.py"
 
 
+rule process_elexon_bid_offer_multipliers:
+    message:
+        "Get bid/offer multiplier from Elexon"
+    params:
+        data_provider=config_provider("redispatch","data_provider"),
+        fes_year=config_provider("fes","fes_year")
+    input:
+        bmu_fuel_type="data/gb-model/downloaded/elexon_bmu_fuel_type.xlsx"
+    output:
+        csv=resources(
+            "gb-model/Bid_offer_multipliers.csv"
+        ),
+    log:
+        logs("process_elexon_bid_offer_multipliers.log"),
+    script:
+        "../../scripts/gb_model/redispatch/process_elexon_bid_offer_multipliers.py"
+
+
 rule calc_interconnector_bid_offer_profile:
     message:
         "Calculate interconnector bid/offer profiles"
