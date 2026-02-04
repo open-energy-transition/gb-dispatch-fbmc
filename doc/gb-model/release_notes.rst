@@ -12,6 +12,8 @@ Release Notes
 Unreleased
 ==========
 
+* Use correct currency (GBP, not EUR) in docs.
+* Clean SPDX copyright text where an outdated repository name was being used.
 * Add docs page detailing our dispatch/redispatch methodology (#158).
 * Impose nuclear capacity factor range to enforce nuclear power plant usage where it would otherwise have unrealistically low generation / high dispatchability (#201 and #202).
 * Fix storage flows in redispatch (both for the original asset and the ramp up/down assets) (#196).

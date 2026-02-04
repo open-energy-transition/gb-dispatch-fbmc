@@ -1,5 +1,5 @@
 ..
-  SPDX-FileCopyrightText: Contributors to gb-open-market-model <https://github.com/open-energy-transition/gb-open-market-model>
+  SPDX-FileCopyrightText: Contributors to gb-dispatch-model <https://github.com/open-energy-transition/gb-dispatch-model>
 
   SPDX-License-Identifier: CC-BY-4.0
 
@@ -62,11 +62,11 @@ The resulting ``fes_powerplants.csv`` contains complete generator data:
 
 **Economic Parameters**:
 
-- ``VOM`` - Variable O&M cost (€/MWh)
+- ``VOM`` - Variable O&M cost (GBP/MWh)
 - ``FOM`` - Fixed O&M cost (€/MW/year)
 - ``capital_cost`` - Investment cost (€/MW)
-- ``fuel`` - Fuel cost (€/MWh_thermal)
-- ``marginal_cost`` - Total variable cost (€/MWh_el)
+- ``fuel`` - Fuel cost (GBP/MWh_thermal)
+- ``marginal_cost`` - Total variable cost (GBP/MWh_el)
 
 **Index Format**: ``"{bus} {carrier}-{year}-{counter}"``
 
@@ -81,13 +81,13 @@ Marginal cost combines variable O&M and fuel costs::
 
 Where:
 
-- ``VOM`` - Variable operations and maintenance (€/MWh_el)
-- ``fuel`` - Fuel cost (€/MWh_thermal)
+- ``VOM`` - Variable operations and maintenance (GBP/MWh_el)
+- ``fuel`` - Fuel cost (GBP/MWh_thermal)
 - ``efficiency`` - Conversion efficiency (MWh_el / MWh_thermal)
 
 Example for CCGT with efficiency=0.55, VOM=2.5, fuel=25.0::
 
-    marginal_cost = 2.5 + 25.0/0.55 = 47.95 €/MWh
+    marginal_cost = 2.5 + 25.0/0.55 = 47.95 GBP/MWh
 
 Default Values
 ==============
@@ -97,7 +97,7 @@ When cost data is unavailable for specific carriers, defaults are applied:
 - ``efficiency``: 1 (100% conversion efficiency)
 - ``capital_cost``: 0.0 €/MW
 - ``lifetime``: 25.0 years
-- ``marginal_cost``: 0.0 €/MWh
+- ``marginal_cost``: 0.0 GBP/MWh
 
 These defaults prevent missing data from blocking network composition while logging warnings for review.
 
