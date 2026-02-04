@@ -46,6 +46,7 @@ The gb-dispatch-model workflow is continuously tested for Linux, macOS and Windo
    :caption: Development
 
    system
+   dispatch_redispatch
    implementation
 
 .. toctree::
