@@ -37,7 +37,7 @@ def prep_outage_data(
     Returns:
         pd.DataFrame: A DataFrame containing the prepared outage data.
     """
-    outages = pd.read_csv(input_path, dtype={"nominal_power": int, "qty_avail": int})
+    outages = pd.read_csv(input_path, dtype={"nominal_power": int, "avail_qty": int})
     for dt_col in ["start", "end"]:
         outages[dt_col] = pd.to_datetime(outages[dt_col], utc=True)
 
@@ -45,7 +45,6 @@ def prep_outage_data(
 
     outages["carrier"] = outages["plant_type"].map(carrier_mapping)
 
-    outages = outages.dropna(subset=["carrier"])
     if outages.empty:
         logger.warning(f"No outages found in {input_path} after filtering")
     elif (isna := outages["carrier"].isnull()).any():
@@ -53,6 +52,7 @@ def prep_outage_data(
         logger.warning(
             f"Some plant types in {input_path} could not be mapped to carriers: {missing_carriers}"
         )
+    outages = outages.dropna(subset=["carrier"])
     outages["max_unavailable_mw"] = outages["nominal_power"] - outages["avail_qty"]
 
     return outages
