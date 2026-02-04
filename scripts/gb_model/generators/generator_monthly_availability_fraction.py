@@ -45,14 +45,16 @@ def prep_outage_data(
 
     outages["carrier"] = outages["plant_type"].map(carrier_mapping)
 
-    if outages.empty:
-        logger.warning(f"No outages found in {input_path} after filtering")
-    elif (isna := outages["carrier"].isnull()).any():
+    if (isna := outages["carrier"].isnull()).any():
         missing_carriers = outages[isna]["plant_type"].unique()
         logger.warning(
             f"Some plant types in {input_path} could not be mapped to carriers: {missing_carriers}"
         )
     outages = outages.dropna(subset=["carrier"])
+
+    if outages.empty:
+        logger.warning(f"No outages found in {input_path} after filtering")
+
     outages["max_unavailable_mw"] = outages["nominal_power"] - outages["avail_qty"]
 
     return outages
