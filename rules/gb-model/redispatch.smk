@@ -27,11 +27,9 @@ rule fetch_bid_offer_data_elexon:
     message:
         "Get bid/offer data from Elexon"
     params:
-        technology_mapping=config_provider("redispatch","technology_mapping"),
+        technology_mapping=config_provider("redispatch", "technology_mapping"),
     output:
-        csv=resources(
-            "gb-model/bids_and_offers/Elexon/{bod_year}.csv"
-        ),
+        csv=resources("gb-model/bids_and_offers/Elexon/{bod_year}.csv"),
     log:
         logs("fetch_bid_offer_data_elexon_{bod_year}.log"),
     script:
@@ -39,31 +37,31 @@ rule fetch_bid_offer_data_elexon:
 
 
 rule calculate_bid_offer_multipliers:
-    message: 
+    message:
         "Calculate bid / offer multipliers for conventional generators"
     params:
         fes_scenario=config["fes"]["scenario"],
         costs_config=config["costs"],
-        fes_year=config_provider("fes","fes_year"),
-        technology_mapping=config_provider("redispatch","technology_mapping"),
+        technology_mapping=config_provider("redispatch", "technology_mapping"),
     input:
         fes_power_costs=resources("gb-model/fes-costing/AS.1 (Power Gen).csv"),
         fes_carbon_costs=resources("gb-model/fes-costing/AS.7 (Carbon Cost).csv"),
         tech_costs=Path(COSTS_DATASET["folder"])
-           / f"costs_{config['scenario']['planning_horizons'][0]}.csv",
+        / f"costs_{config['scenario']['planning_horizons'][0]}.csv",
         bid_offer_data=expand(
-            resources(
-                "gb-model/bids_and_offers/Elexon/{bod_year}.csv"
-            ),bod_year=[2020,2021]
-        )
+            resources("gb-model/bids_and_offers/Elexon/{bod_year}.csv"),
+            bod_year=range(
+                config["redispatch"]["elexon"]["start_year"],
+                config["redispatch"]["elexon"]["end_year"] + 1,
+            ),
+        ),
     output:
-        csv = resources(
-            "gb-model/bid_offer_multipliers.csv"
-        )
+        csv=resources("gb-model/bid_offer_multipliers.csv"),
     log:
-        logs("calculate_bid_offer_multipliers.log")
+        logs("calculate_bid_offer_multipliers.log"),
     script:
         "../../scripts/gb_model/redispatch/calculate_bid_offer_multipliers.py"
+
 
 rule calc_interconnector_bid_offer_profile:
     message:

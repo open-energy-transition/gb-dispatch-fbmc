@@ -1318,19 +1318,6 @@ interconnectors:
 redispatch:
   year_range_incl: [2025, 2045] # 20-year period over which we will run the simulation
   constraint_cost_extra_years: 20  # number of years to extend the constraint cost calculation beyond the final year (using the data from the final year)
-  # Source for bid and offers multipliers : https://www.nationalgrid.com/sites/default/files/documents/Long-term%20Market%20and%20Network%20Constraint%20Modelling.pdf
-  bid_multiplier:
-    gas: 0.8
-    coal: 0.7
-    oil: 0.38
-    OCGT: 1.37
-    CCGT: 0.8 #using same value as that of gas
-  offer_multiplier:
-    gas: 1.63
-    coal: 1.56
-    oil: 4.16
-    OCGT: 1.31
-    CCGT: 1.63 #using same value as that of gas
   technology_mapping: # ignoring renewables in mapping as they come from CfD data
     coal: coal
     CCGT: CCGT
@@ -1340,3 +1327,6 @@ redispatch:
     DIESEL: oil
     GAS: gas
     NUCLEAR: nuclear
+  elexon: # Elexon API data request years
+    start_year: 2020
+    end_year: 2024
