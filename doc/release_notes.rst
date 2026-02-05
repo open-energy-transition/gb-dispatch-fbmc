@@ -10,6 +10,8 @@ Release Notes
 Upcoming Release
 ================
 
+* Calculate bid/offer multipliers using data from Elexon (#209)
+
 * Fix `None` default config parameter from creating zero availability for offshore wind (#2019).
 
 * Remove snakemake's slurm plugin from windows installations (https://github.com/PyPSA/pypsa-eur/pull/2009).
