@@ -13,8 +13,10 @@ import requests
 import pandas as pd
 from datetime import datetime
 import numpy as np
+import pypsa
 
 from scripts._helpers import configure_logging, set_scenario_config
+from scripts.gb_model.generators.assign_costs import _load_fes_carbon_costs, _load_fes_power_costs, _load_costs
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +60,7 @@ def fetch_api_request_data(url: str, retrieval_message: str) -> pd.DataFrame:
     return df
 
 
-def get_year_bod(base_url: str,start_year: int, end_year: int) -> pd.DataFrame:
+def get_year_bod(base_url: str, filter_bmu_units:str, start_year: int, end_year: int) -> pd.DataFrame:
     """
     Fetch bid / offer data for an entire year by querying day by day
 
@@ -83,8 +85,8 @@ def get_year_bod(base_url: str,start_year: int, end_year: int) -> pd.DataFrame:
         next_month = current + pd.DateOffset(months=1)
 
         # API request URL for the month
-        url = f"{base_url}/datasets/BOD/stream?from={current}&to={next_month}"
-    
+        url = f"{base_url}/datasets/BOD/stream?from={current}&to={next_month}{filter_bmu_units}"
+
         # Fetch data for the current month
         df = fetch_api_request_data(url, retrieval_message=f"Bid/Offer data for the dates {current} to {next_month}")
 
@@ -96,136 +98,16 @@ def get_year_bod(base_url: str,start_year: int, end_year: int) -> pd.DataFrame:
     return pd.concat(dfs, ignore_index=True)
 
 
-# def get_acceptances_data(base_url: str,year: int) -> pd.DataFrame:
-#     """
-#     Fetch bid / offer data for an entire year by querying day by day
-
-#     Parameters:
-#     ----------
-#     base_url: str
-#         Base URL for the Elexon BMRS API
-#     year: int
-#         Year for which to fetch the data
-#     """
-#     dfs = []
-
-#     start = datetime(year, 1, 1)
-#     end = datetime(year, 12, 31)
-
-#     current = start
-
-#     while current <= end:
-#         for settlement_period in range(1,51):
-#             # API request URL for the month
-#             url = f"{base_url}/balancing/acceptances/all?settlementDate={current.strftime('%Y-%m-%d')}&settlementPeriod={settlement_period}"
-
-#             # Fetch acceptance data for the current day and settlement period
-#             df = fetch_api_request_data(url, retrieval_message=f"Acceptance data for date {current} and settlement period {settlement_period}")
-
-#             dfs.append(df)
-
-#         # Reset current date to next month
-#         current = current + pd.DateOffset(days=1)
-
-#     return pd.concat(dfs, ignore_index=True)
-
-
-# def get_balancing_volumes(base_url: str, year: int) -> pd.DataFrame:
-#     """
-#     Fetch balancing volumes data from Elexon API
-
-#     Parameters
-#     ----------
-
-#     base_url: str
-#         Base URL for the Elexon BMRS API
-#     """
-
-#     dfs = []
-
-#     start = datetime(year, 1, 1)
-#     end = datetime(year, 12, 31)
-
-#     current = start
-
-#     while current <= end:
-#         # Retrieving data month by month
-#         next_month = current + pd.DateOffset(days=1)
-
-#         # API request URL for the month
-#         url = f"{base_url}/balancing/nonbm/volumes?from={current.strftime('%Y-%m-%dT%H:%MZ')}&to={next_month.strftime('%Y-%m-%dT%H:%MZ')}"
-        
-#         # Fetch data for the current month
-#         df = fetch_api_request_data(url, retrieval_message=f"Acceptance data for the dates {current} to {next_month}")
-
-#         dfs.append(df)
-
-#         # Reset current date to next month
-#         current = next_month
-
-#     return pd.concat(dfs, ignore_index=True)
-
-
-def get_market_index(base_url: str, start_year: int, end_year: int, data_provider: str) -> pd.DataFrame:
+def calc_bid_offer_multipliers(df_bod: pd.DataFrame, srmc: pd.Series, bmu_carrier_map: dict[str, str]) -> pd.DataFrame:
     """
-    Fetch balancing volumes data from Elexon API
+    Calculate bid and offer multipliers based on Bid / Offer Data and Short run marginal costs
 
-    Parameters
-    ----------
-
-    base_url: str
-        Base URL for the Elexon BMRS API
     """
 
-    dfs = []
-
-    start = datetime(start_year, 1, 1)
-    end = datetime(end_year, 12, 31)
-
-    current = start
-
-    while current <= end:
-        # Retrieving data year by year
-        next_year = current + pd.DateOffset(years=1)
-
-        # API request URL for the year
-        url = f"{base_url}/datasets/MID/stream?from={current.strftime('%Y-%m-%dT%H:%MZ')}&to={next_year.strftime('%Y-%m-%dT%H:%MZ')}&dataProviders={data_provider}"
-        
-        # Fetch data for the current year
-        df = fetch_api_request_data(url, retrieval_message=f"Market Index data for the dates {current} to {next_year}")
-
-        dfs.append(df)
-
-        # Reset current date to next year
-        current = next_year
-
-    return pd.concat(dfs, ignore_index=True)
-
-def calc_bid_offer_multipliers(df_bod: pd.DataFrame, df_market: pd.DataFrame) -> pd.DataFrame:
-    """
-    Calculate bid and offer multipliers based on Bid / Offer Data and Market Index Data
-
-    """
-    df_units = pd.read_excel("/Users/Sermisha/Downloads/BMUFuelType (2).xlsx")
-    bmu_carrier_map = dict(df_units[['NESO BMU ID','REG FUEL TYPE']].values)
-
-    # df_bod = pd.read_csv("BOD_data.csv")
     df_bod['carrier'] = df_bod['nationalGridBmUnit'].map(bmu_carrier_map)
-
-    df_market = pd.read_csv("Market_Index.csv", index_col='startTime')
-    df_market.set_index('startTime', inplace=True)
-    df_market = df_market[pd.to_datetime(df_market.index).year != 2023].sort_index()
-    df_market = df_market.query("price != 0 and volume != 0")
-
-    dict_market = df_market['price'].to_dict()
-    dict_volume = df_market['volume'].to_dict()
-
-    df_bod['marketprice'] = df_bod['timeFrom'].map(dict_market)
-    df_bod['volume'] = df_bod['timeFrom'].map(dict_volume)
-
-    df_bod['bid_mul'] = df_bod.apply(lambda x: x['bid'] / x['marketprice'] , axis=1)
-    df_bod['offer_mul'] = df_bod.apply(lambda x: x['offer'] / x['marketprice'], axis=1)
-
+    df_bod = df_bod.dropna(subset=['carrier'])
+    df_bod['bid_mul'] = df_bod.apply(lambda x: x['bid'] / srmc.loc[x['carrier']], axis=1)
+    df_bod['offer_mul'] = df_bod.apply(lambda x: x['offer'] / srmc.loc[x['carrier']], axis=1)
     df_mul = df_bod.groupby('carrier')[['bid_mul', 'offer_mul']].mean()
 
     return df_mul
@@ -243,10 +125,50 @@ if __name__ == "__main__":
 
     # bmu_fuel_type = pd.read_excel(snakemake.input.bmu_fuel_type)
     fes_year = snakemake.params.fes_year
-    start_year = fes_year - 4
+    start_year = fes_year 
     end_year = fes_year
-    df_bod = get_year_bod(base_url, start_year, end_year)
-        # df_market = get_market_index(base_url, year, data_provider=snakemake.params.data_provider)
 
-        # df_mul = calc_bid_offer_multipliers(df_bod, df_market)
-    breakpoint()
+    pypsa_network = pypsa.Network(snakemake.input.compose_network)
+    srmc = pd.concat([pypsa_network.generators.groupby('carrier').marginal_cost.mean(), pypsa_network.storage_units.groupby('carrier').marginal_cost.mean()])
+
+    technology_mapping = snakemake.params.technology_mapping
+
+    url = f"{base_url}/reference/bmunits/all"
+    df_bmu = fetch_api_request_data(url, retrieval_message="BMU Unit Data")
+    df_bmu['carrier'] = df_bmu['fuelType'].map(technology_mapping)
+    df_bmu_filtered = df_bmu.loc[df_bmu['carrier'].isin(technology_mapping.values())]
+    bmu_units = df_bmu_filtered['nationalGridBmUnit'].unique().tolist()
+    filter_bmu_units = ",".join([(f"&bmUnit={x}") for x in bmu_units]).replace(",","")
+    bmu_carrier_map = dict(df_bmu_filtered[['nationalGridBmUnit','carrier']].values)
+
+    # df_bod = get_year_bod(base_url, filter_bmu_units, start_year, end_year)
+        # df_market = get_market_index(base_url, year, data_provider=snakemake.params.data_provider)
+    df_bod = pd.read_csv("BOD_new.csv")
+    df_mul = calc_bid_offer_multipliers(df_bod, srmc, bmu_carrier_map)
+
+    fes_power_costs = _load_fes_power_costs(snakemake.input.fes_power_costs, snakemake.params.fes_scenario)
+    fes_carbon_costs = _load_fes_carbon_costs(snakemake.input.fes_carbon_costs, snakemake.params.fes_scenario)
+    costs = _load_costs(snakemake.input.tech_costs, snakemake.params.costs_config)
+
+    costs_config = snakemake.params.costs_config
+    power_tech_map = {v:k.split(" ")[0] for k,v in costs_config['fes_VOM_carrier_mapping'].items() if 'CHP' not in k}
+    fes_power_costs['carrier'] = fes_power_costs.index.get_level_values('technology').map(power_tech_map).str.upper().map(technology_mapping)
+
+    multi_index = pd.MultiIndex.from_product([technology_mapping.values(), np.arange(start_year,end_year+1)], names=['carrier', 'year'])
+    df_tech = pd.DataFrame(index=multi_index)
+    df_tech = df_tech.join(fes_power_costs.reset_index().set_index(['carrier','year']))
+    df_tech = df_tech.join(fes_carbon_costs, on='year')
+    df_tech = df_tech.reset_index().set_index('carrier').join(costs[['efficiency','CO2 intensity']])
+
+    for tech in df_tech.index.tolist():
+        if tech in costs_config['carrier_gap_filling']['CO2 intensity'].keys() and np.isnan(df_tech.at[tech,'CO2 intensity']):
+            df_tech.at[tech, 'CO2 intensity'] = df_tech.at[costs_config['carrier_gap_filling']['CO2 intensity'][tech], 'CO2 intensity']
+        if tech in costs_config['carrier_gap_filling']['fuel'] and np.isnan(df_tech.at[tech, 'fuel']):
+            df_tech.at[tech, 'fuel'] = costs.at[tech, 'fuel']
+
+    df_tech[costs_config['marginal_cost_columns']] =df_tech[costs_config['marginal_cost_columns']].apply(lambda x: x.fillna(costs_config['default_characteristics'][x.name]['data']))
+    df_tech["marginal_cost"] = (
+        df_tech["VOM"]
+        + df_tech["fuel"] / df_tech["efficiency"]
+        + df_tech["CO2 intensity"] * df_tech["carbon_cost"] / df_tech["efficiency"]
+    )

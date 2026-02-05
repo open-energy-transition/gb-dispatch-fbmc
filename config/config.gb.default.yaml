@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  name: "GB-EUR"
+  name: "GB"
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#foresight
 foresight: overnight
@@ -286,7 +286,9 @@ urls:
   etys: https://www.neso.energy/document/286591/download # ETYS November 2023
   low-carbon-contracts: https://dp.lowcarboncontracts.uk/dataset/8e8ca0d5-c774-4dc8-a079-347f1c180c0f/resource/5279a55d-4996-4b1e-ba07-f411d8fd31f0/download/actual_cfd_generation_and_avoided_ghg_emissions.csv
   eur_H2_demand_today: https://observatory.clean-hydrogen.europa.eu/sites/default/files/2025-09/Hydrogen%20demand%202024%20%28Update%202025%29.xlsx # 2024 data
-  elexon_bmu_fuel_type: https://www.elexon.co.uk/documents/data/operational-data/bmu-fuel-type/ #Mapping of BMU unit to fuel type
+  # elexon_bmu_fuel_type: https://www.elexon.co.uk/documents/data/operational-data/bmu-fuel-type/ #Mapping of BMU unit to fuel type
+  # dukes_table-3.2.1: https://assets.publishing.service.gov.uk/media/6942bb14501cdd438f4cf52e/table_321.xlsx
+  # dukes-5.10: https://assets.publishing.service.gov.uk/media/688a28d6a11f85999440927a/DUKES_5.10.xlsx
 target_crs: "EPSG:27700"
 
 # Manual region merging configuration
@@ -1329,16 +1331,12 @@ redispatch:
     oil: 4.16
     OCGT: 1.31
     CCGT: 1.63 #using same value as that of gas
-  data_provider: "APXMIDP"
-  technology_mapping:
+  technology_mapping: # ignoring renewables in mapping as they come from CfD data
+    coal: coal
     CCGT: CCGT
     OCGT: OCGT
-    BATTERY: battery
+    BATTERY: battery storage
     BIOMASS: biomass
     DIESEL: oil
     GAS: gas
-    NUCKEAR: nuclear
-    SOLAR: solar
-    WIND: onwind
-    NPSHYD: hydro
-    PS: PHS
+    NUCLEAR: nuclear

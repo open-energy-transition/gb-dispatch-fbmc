@@ -28,15 +28,30 @@ rule process_elexon_bid_offer_multipliers:
         "Get bid/offer multiplier from Elexon"
     params:
         data_provider=config_provider("redispatch","data_provider"),
-        fes_year=config_provider("fes","fes_year")
+        fes_year=config_provider("fes","fes_year"),
+        #dukes_cost_mapping=config_provider("redispatch","dukes_cost_mapping"),
+        technology_mapping=config_provider("redispatch","technology_mapping"),
+        fes_scenario=config["fes"]["scenario"],
+        costs_config=config["costs"],
+
+
     input:
-        bmu_fuel_type="data/gb-model/downloaded/elexon_bmu_fuel_type.xlsx"
+        #bmu_fuel_type="data/gb-model/downloaded/elexon_bmu_fuel_type.xlsx",
+        #dukes_fuel_cost="data/gb-model/downloaded/dukes_table-3.2.1.xlsx",
+        #dukes_efficiency="data/gb-model/downloaded/dukes-5.10.xlsx",
+        #unconstrained_result=RESULTS + "networks/unconstrained_clustered/{year}.nc",
+        compose_network=resources("networks/composed_clustered/{year}.nc"),
+        
+        fes_power_costs=resources("gb-model/fes-costing/AS.1 (Power Gen).csv"),
+        fes_carbon_costs=resources("gb-model/fes-costing/AS.7 (Carbon Cost).csv"),
+        tech_costs=Path(COSTS_DATASET["folder"])
+        / f"costs_{config['scenario']['planning_horizons'][0]}.csv",
     output:
         csv=resources(
-            "gb-model/Bid_offer_multipliers.csv"
+            "gb-model/Bid_offer_multipliers/{year}.csv"
         ),
     log:
-        logs("process_elexon_bid_offer_multipliers.log"),
+        logs("process_elexon_bid_offer_multipliers_{year}.log"),
     script:
         "../../scripts/gb_model/redispatch/process_elexon_bid_offer_multipliers.py"
 
