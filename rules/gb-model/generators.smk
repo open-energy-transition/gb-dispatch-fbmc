@@ -8,55 +8,33 @@ Generator component rules.
 
 
 rule retrieve_entsoe_unavailability_data:
-    message:
-        "Retrieve data from ENTSOE API for generator {wildcards.business_type} unavailability in {wildcards.zone} bidding zone"
     output:
-        xml_base_dir=directory("data/gb-model/entsoe_api/{zone}/{business_type}"),
+        unavailability=resources("gb-model/{zone}_generator_unavailability.csv"),
+    log:
+        logs("process_entsoe_unavailability_data_{zone}.log"),
     params:
         start_date=config["entsoe_unavailability"]["start_date"],
         end_date=config["entsoe_unavailability"]["end_date"],
-        bidding_zones=config["entsoe_unavailability"]["bidding_zones"],
-        business_types=config["entsoe_unavailability"]["business_types"],
         max_request_days=config["entsoe_unavailability"]["max_request_days"],
-        api_params=config["entsoe_unavailability"]["api_params"],
-    log:
-        logs("retrieve_entsoe_unavailability_data_{zone}_{business_type}.log"),
     resources:
         mem_mb=1000,
     script:
         "../../scripts/gb_model/generators/retrieve_entsoe_unavailability_data.py"
 
 
-rule process_entsoe_unavailability_data:
-    input:
-        xml_base_dir="data/gb-model/entsoe_api/{zone}/{business_type}",
-    output:
-        unavailability=resources(
-            "gb-model/{zone}_{business_type}_generator_unavailability.csv"
-        ),
-    log:
-        logs("process_entsoe_unavailability_data_{zone}_{business_type}.log"),
-    params:
-        business_type_codes=config["entsoe_unavailability"]["api_params"][
-            "business_types"
-        ],
-    resources:
-        mem_mb=1000,
-    script:
-        "../../scripts/gb_model/generators/process_entsoe_unavailability_data.py"
-
-
 rule generator_monthly_availability_fraction:
+    message:
+        "Combine outage data with DUKES current technology capacities to get monthly outage fractions per carrier"
     input:
-        planned=resources("gb-model/{zone}_planned_generator_unavailability.csv"),
-        forced=resources("gb-model/{zone}_forced_generator_unavailability.csv"),
-        powerplants=resources("powerplants_s_all.csv"),
+        outages=resources("gb-model/{zone}_generator_unavailability.csv"),
+        dukes_data=resources("gb-model/dukes-current-capacity.csv"),
     params:
-        carrier_mapping=config["entsoe_unavailability"]["carrier_mapping"],
-        resource_type_mapping=config["entsoe_unavailability"]["resource_type_mapping"],
+        entsoe_carrier_mapping=config["entsoe_unavailability"]["entsoe_carrier_mapping"],
         start_date=config["entsoe_unavailability"]["start_date"],
         end_date=config["entsoe_unavailability"]["end_date"],
         max_unavailable_days=config["entsoe_unavailability"]["max_unavailable_days"],
+        dukes_config=config["dukes-5.11"],
+        default_set=config["fes"]["default_set"],
     output:
         csv=resources("gb-model/{zone}_generator_monthly_availability_fraction.csv"),
     log:
