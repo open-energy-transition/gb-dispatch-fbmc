@@ -28,9 +28,9 @@ rule fetch_bid_offer_data_elexon:
         "Get bid/offer data from Elexon"
     params:
         technology_mapping=config_provider("redispatch", "technology_mapping"),
+        api_bmu_fuel_map=config_provider("redispatch", "api_bmu_fuel_map"),
     input:
-        #elexon_bmu_fuel_type="data/gb-model/downloaded/elexon_bmu_fuel_type.xlsx"
-        elexon_bmu_fuel_type="C:/Users/Sermisha/Downloads/BMUFuelType.xlsx",
+        bmu_fuel_map_path="data/gb-model/BMUFuelType.xlsx",
     output:
         csv=resources("gb-model/bids_and_offers/Elexon/{bod_year}.csv"),
     log:

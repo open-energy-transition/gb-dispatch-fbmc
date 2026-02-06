@@ -366,7 +366,9 @@ def compose_data(
         Path to Bids and offers multipliers CSV data
     """
     # Bids and offers multipliers
-    bids_and_offers_multipliers = pd.read_csv(bids_and_offers_multipliers_path).to_dict()
+    bids_and_offers_multipliers = pd.read_csv(
+        bids_and_offers_multipliers_path
+    ).to_dict()
 
     # Get list of interconnectors between GB and Eur
     interconnectors = filter_interconnectors(

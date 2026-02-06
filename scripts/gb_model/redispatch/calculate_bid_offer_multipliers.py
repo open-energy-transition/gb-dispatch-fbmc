@@ -62,6 +62,7 @@ def calculate_marginal_costs(
         for k, v in costs_config["fes_VOM_carrier_mapping"].items()
         if "CHP" not in k
     }
+
     fes_power_costs["carrier"] = (
         fes_power_costs.index.get_level_values("technology")
         .map(power_tech_map)
