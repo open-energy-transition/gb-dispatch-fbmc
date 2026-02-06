@@ -1263,7 +1263,7 @@ interconnectors:
     lat: 53.81322
     lon: -0.41847
   plan:
-    2021: [East-West, IFA, IFA2, NS Link (NSL), Nemo] # existing
+    2021: [BritNed, East-West, IFA, IFA2, NS Link (NSL), Nemo] # existing
     2022: [Moyle, Greenlink (Greenwire)]
     2023: [Viking Link]
     2025: [ElecLink, LionLink (EuroLink), Aminth]
