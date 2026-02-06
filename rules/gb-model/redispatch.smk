@@ -28,6 +28,9 @@ rule fetch_bid_offer_data_elexon:
         "Get bid/offer data from Elexon"
     params:
         technology_mapping=config_provider("redispatch", "technology_mapping"),
+    input:
+        #elexon_bmu_fuel_type="data/gb-model/downloaded/elexon_bmu_fuel_type.xlsx"
+        elexon_bmu_fuel_type="C:/Users/Sermisha/Downloads/BMUFuelType.xlsx",
     output:
         csv=resources("gb-model/bids_and_offers/Elexon/{bod_year}.csv"),
     log:
@@ -66,10 +69,9 @@ rule calculate_bid_offer_multipliers:
 rule calc_interconnector_bid_offer_profile:
     message:
         "Calculate interconnector bid/offer profiles"
-    params:
-        bids_and_offers=config_provider("redispatch"),
     input:
         unconstrained_result=RESULTS + "networks/unconstrained_clustered/{year}.nc",
+        bids_and_offers=resources("gb-model/bid_offer_multipliers.csv"),
     output:
         bid_offer_profile=resources(
             "gb-model/interconnector_bid_offer_profile/{year}.csv"
@@ -83,8 +85,6 @@ rule calc_interconnector_bid_offer_profile:
 rule prepare_constrained_network:
     message:
         "Prepare network for constrained optimization"
-    params:
-        bids_and_offers=config_provider("redispatch"),
     input:
         network=resources("networks/composed_clustered/{year}.nc"),
         unconstrained_result=RESULTS + "networks/unconstrained_clustered/{year}.nc",
@@ -92,6 +92,7 @@ rule prepare_constrained_network:
         interconnector_bid_offer=resources(
             "gb-model/interconnector_bid_offer_profile/{year}.csv"
         ),
+        bids_and_offers=resources("gb-model/bid_offer_multipliers.csv"),
     output:
         network=resources("networks/constrained_clustered/{year}.nc"),
     log:

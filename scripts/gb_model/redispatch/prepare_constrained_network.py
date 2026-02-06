@@ -303,7 +303,7 @@ if __name__ == "__main__":
     # Load input networks and parameters
     network = pypsa.Network(snakemake.input.network)
     unconstrained_result = pypsa.Network(snakemake.input.unconstrained_result)
-    bids_and_offers = snakemake.params.bids_and_offers
+    bids_and_offers = pd.read_csv(snakemake.input.bids_and_offers).to_dict()
     renewable_strike_prices = pd.read_csv(
         snakemake.input.renewable_strike_prices, index_col="carrier"
     ).squeeze()
