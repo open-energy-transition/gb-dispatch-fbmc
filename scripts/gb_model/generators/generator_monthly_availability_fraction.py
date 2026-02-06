@@ -37,7 +37,7 @@ def prep_outage_data(
     Returns:
         pd.DataFrame: A DataFrame containing the prepared outage data.
     """
-    outages = pd.read_csv(input_path, dtype={"nominal_power": int, "avail_qty": int})
+    outages = pd.read_csv(input_path, dtype={"nominal_power": int, "avail_qty": float})
     for dt_col in ["start", "end"]:
         outages[dt_col] = pd.to_datetime(outages[dt_col], utc=True)
 
