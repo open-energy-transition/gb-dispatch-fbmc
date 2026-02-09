@@ -43,7 +43,8 @@ def load_fb_data(
     # Rename/reindex the columns to match the existing FBMC 
     combined_data = combined_data.rename({'datetime':'snapshot', 'boundary name':'CNEC_ID','Link name':'name'}, axis=1)
     # johannes wants [OPP] and [DIR] in square brackets
-    combined_data["name"] = combined_data["name"] + "_" + combined_data["direction"] # are opposing links handled in the og fbmc implementation?
+    combined_data["direction"] = combined_data["direction"].apply(lambda x: f"[{x[:3]}]")
+    combined_data["name"] = combined_data["name"] + " " + combined_data["direction"] # are opposing links handled in the og fbmc implementation?
     combined_data = combined_data.set_index(["CNEC_ID", "snapshot", "name"])
 
     return combined_data
@@ -76,16 +77,19 @@ def add_fbmc_constraints(n: pypsa.Network) -> None:
     # get data for the individual study zone
     # fbmc_data[fbmc_data.index.get_level_values('name') == 'gb']
 
-    fbmc_data_sz = fbmc_data[fbmc_data.index.get_level_values('name').isin(['gb_DIRECT', 'gb_OPPOSITE'])]
+    fbmc_data_sz = fbmc_data[fbmc_data.index.get_level_values('name').isin(['gb [DIR]', 'gb [OPP]'])]
 
-    # why isn't this working in the modify... function?
-    mask = n.components.links.static.bus1 == "CORE GB"
+    # why isn't this working in the modify function?
+    mask = n.components.links.static.bus1 == "EUR"
     n.components.links.static.loc[mask, "PTDF_type"] = "PTDF_SZ"
 
     # get links relevant for the intra-CCR FBMC constraint
     # this is GB # to GB CORE
+    # links_idx = n.components.links.static.loc[
+    #     n.components.links.static["PTDF_type"] == "PTDF_SZ"
+    # ].index
     links_idx = n.components.links.static.loc[
-        n.components.links.static["PTDF_type"] == "PTDF_SZ"
+        n.components.links.static["bus1"] == "EUR"
     ].index
 
     # # "study_zones" are named after the bidding zones, the flows in the network
@@ -110,18 +114,24 @@ def add_fbmc_constraints(n: pypsa.Network) -> None:
     ds = fbmc_data_sz["PTDF"].to_xarray()
     # Flows from GB # to virtual GB CORE (I think these flows need to be summed?)
     flows = n.model["Link-p"].sel(name=links_idx)
+    mask = flows.coords["name"].str.endswith("ramp down")
+    opp_flows = flows.sel(name=mask)    
+    mask = flows.coords["name"].str.endswith("ramp up")
+    dir_flows = flows.sel(name=mask)
+    # third case where neither ramp down or ramp up is included?
+    mask = ~flows.coords["name"].str.contains("ramp")
+    net_flows = flows.sel(name=mask) + dir_flows
 
-    # Align indices of ptdf and flows
-    ds = ds.reindex(snapshot=flows.coords["snapshot"], name=flows.coords["name"])
-    breakpoint()
     # Calculate PTDF contribution and group by snapshot and CNEC_ID to sum up all contributions to each CNEC at each snapshot
-    lhs_1 = (ds * flows.sum(axis=1)).sum(dim="name")
-
+    # need to think if this is the right orientation
+    lhs_1_dir = ds.sel(name='gb [DIR]') * net_flows.sum(dim="name")
+    lhs_1_opp = ds.sel(name='gb [OPP]') * opp_flows.sum(dim="name")
+    lhs_1 = lhs_1_dir + lhs_1_opp
     # -----------------------------------
     # Second part of the FBMC constraint:
     # loading from HVDC lines between CORE and outside of CORE
     # -----------------------------------
-    fbmc_data_ahc = fbmc_data.query('name != "gb"')
+    fbmc_data_ahc = fbmc_data.query('~name.str.contains("gb")')
 
     # Map pypsa.Network links that are related to DC and their names (index) to PTDF line names where bus0=from and bus1=to
     links = (
@@ -133,15 +143,20 @@ def add_fbmc_constraints(n: pypsa.Network) -> None:
     )
 
     ds = fbmc_data_ahc.to_xarray()
-
+    mask = ds.coords["name"].str.endswith("[DIR]")
+    net_ds = ds.sel(name=mask)
+    mask = ds.coords["name"].str.endswith("[OPP]")
+    opp_ds = ds.sel(name=mask)
     # Casting to xarray creates NaN values, need to fill those entries with 0
-    flows = n.model["Link-p"].sel(name=ds["name"])
-
-    ds = ds.reindex(snapshot=flows.coords["snapshot"], name=flows.coords["name"])
-
-    lhs_2 = ds * flows
+    # flows = n.model["Link-p"].sel(name=ds["name"]) # flows don't use the [OPP/DIR] syntax - they use ramp up/down
+    # restructure flows
+    breakpoint()
+    net_ds = net_ds.reindex(name=net_flows.coords["name"])
+    opp_ds = opp_ds.reindex(name=opp_flows.coords["name"])
+    lhs_2_dir = net_ds * net_flows
+    lhs_2_opp = opp_ds * opp_flows
     # Group by snapshot and CNEC_ID to sum up all contributions to each CNEC at each snapshot
-    lhs_2 = lhs_2.sum(dim="name")
+    lhs_2 = (lhs_2_dir + lhs_2_opp).sum(dim="name")
 
     # # -----------------------------------
     # # Third part of the FBMC constraint:
@@ -168,7 +183,7 @@ def add_fbmc_constraints(n: pypsa.Network) -> None:
 
     # # Casting to xarray creates NaN values, need to fill those entries with 0
     # lhs_3 = ds
-
+    breakpoint()
 
     rhs = fbmc_data['ram'].droplevel("name").to_xarray()
 
@@ -218,6 +233,7 @@ def modify_network_for_fbmc(n: pypsa.Network) -> pypsa.Network:
     )
     # links between the virtual GB specific core and the other GB nodes
     gb_buses = n.buses[n.buses.carrier == 'AC'].filter(like='GB', axis=0).index
+    
     n.add(
         "Link",
         name=gb_buses,
@@ -236,55 +252,13 @@ def modify_network_for_fbmc(n: pypsa.Network) -> pypsa.Network:
     mask = n.components.links.static.bus1 == "CORE GB"
     n.components.links.static.loc[mask, "PTDF_type"] = "PTDF_SZ"
 
-    # 3. Evolved Flow Based
-
-    logger.info("Adding FBMC evolved FB buses and links to the network.")
-    
-    for i in ['A', 'B', 'C']:
-        for j in range(1,4):
-            n.add(
-                "Bus",
-                name=f"EvFB-{i}{j}",
-            )
-            n.add(
-                "Bus",
-                name=f"EvFB-{i}{j}",
-            )
-            n.add(
-                "Bus",
-                name=f"EvFB-{i}{j}",
-            )
-
-    # links between the evolved FB buses
-    # capacities from PTDF file, "EvFB_capacities" sheet
-    
-    for i in ['A', 'B', 'C']:
-        for pair in [[1,2],[2,3],[3,1]]:
-            bus0 = f"EvFB-{i}{pair[0]}"
-            bus1 = f"EvFB-{i}{pair[1]}"
-            n.add(
-                "Link",
-                name=f"{bus0}-{bus1}",
-                bus0=bus0,
-                bus1=bus1,
-                p_nom=1e3,
-                efficiency=1.0,
-                p_nom_extendable=False,
-                p_min_pu=-1.0,
-                p_max_pu=1.0,
-            )
-
     # ----------------------------------------------------
     # Add details on which FBMC region each bus belongs to
     # ----------------------------------------------------
-    for bus in n.buses[n.buses.carrier=='AC'].index:
-        if bus.startswith("GB"):
-            n.buses.loc[bus, "FBMC_region"] = "CORE"
-        elif bus.startswith("Ev"): # need to parse by the actual link (not alegro - placeholder)
-            n.buses.loc[bus, "FBMC_region"] = "ALEGRO"
 
     # Assign links an attribute to indicate which parts of the PTDF they are relevant for
     logger.info("Assigning PTDF types to network links for FBMC implementation.")
+    n.components.buses.static["FBMC_region"] = ""
     n.components.links.static["PTDF_type"] = ""
     
     # 1. PTDF_SZ for intra-CORE flows
@@ -307,12 +281,5 @@ def modify_network_for_fbmc(n: pypsa.Network) -> pypsa.Network:
     ].index
     n.links.loc[idx, "PTDF_type"] = "PTDF*_AHC,SZ"
     n.links.loc[idx, "FBMC_region"] = "CORE-Outside"
-
-    # 3. PTDF_EvFB for flows related to the evolved FB
-    idx = n.components.links.static.filter(
-        regex=r"relation.*", axis="index"
-    ).index
-    n.links.loc[idx, "PTDF_type"] = "PTDF_EvFB"
-    n.links.loc[idx, "FBMC_region"] = "ALEGRO"
 
     return n
