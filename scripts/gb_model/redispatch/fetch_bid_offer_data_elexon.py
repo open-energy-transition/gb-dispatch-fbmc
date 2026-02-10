@@ -58,7 +58,6 @@ async def fetch_api_request_data(
                     # Convert JSON data to Dataframe
                     df = pd.DataFrame(json_data.get("data", []))
 
-                    # logger.info(f"Successfully retrieved {retrieval_message}.")
                     break  # Exit retry loop if successful
 
             except requests.exceptions.RequestException as e:
