@@ -9,6 +9,10 @@ run:
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#foresight
 foresight: overnight
 
+fbmc:
+  enable: true
+
+
 scenario:
   clusters:
   - clustered

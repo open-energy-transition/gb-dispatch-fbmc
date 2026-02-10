@@ -12,7 +12,7 @@ import pypsa
 
 logger = logging.getLogger(__name__)
 
-FP = "../../data/fbmc/flow_based_constraints_v20260202.xlsx"
+FP = "../../data/fbmc/flow_based_constraints_2030_v20260206.parquet"
 
 def load_fb_data(
     fp=FP # placeholder value
@@ -26,25 +26,16 @@ def load_fb_data(
     """
 
     # PTDF data is combined with RAM, etc.
-    combined_data = pd.read_excel(FP)
+    combined_data = pd.read_parquet(FP)
     combined_data.columns = combined_data.columns.str.replace('^ptdf_', '', regex=True)
-    combined_data = combined_data.melt(id_vars=['datetime', 'boundary name', 'direction', 'fref', 'f0', 'ram'], var_name='Link name', value_name='PTDF')
-
-    # # unnecessary?
-    # # Currently requires an existing reference network to map the buses using the NSIDE names. 
-    # ref_n = pypsa.Network("~/Documents/oet/NGV-FBMC/modules/gb-dispatch-model/resources/GB/networks/unconstrained_clustered/2040.nc")
-    # ref_n_links = ref_n.links[ref_n.links.carrier=='DC'][['bus0', 'bus1']]
-    # combined_data = pd.merge(ref_n_links, combined_data, how='right', left_on='name', right_on='Link name') # do we need to keep the relation/ links?
-
-    # # Flip the bus order so flow direction is positive
-    # mask = ptdf_gb.direction == 'OPPOSITE'
-    # combined_data.loc[mask, ['bus0', 'bus1']] = combined_data.loc[mask, ['bus1', 'bus0']].values
+    combined_data = combined_data.melt(id_vars=['datetime', 'boundary name', 'direction', 'fmax', 'fref', 'f0', 'ram'], var_name='Link name', value_name='PTDF')
 
     # Rename/reindex the columns to match the existing FBMC 
     combined_data = combined_data.rename({'datetime':'snapshot', 'boundary name':'CNEC_ID','Link name':'name'}, axis=1)
-    # johannes wants [OPP] and [DIR] in square brackets
     combined_data["direction"] = combined_data["direction"].apply(lambda x: f"[{x[:3]}]")
+
     combined_data["name"] = combined_data["name"] + " " + combined_data["direction"] # are opposing links handled in the og fbmc implementation?
+    combined_data["CNEC_ID"] = combined_data["CNEC_ID"] + " " + combined_data["direction"]
     combined_data = combined_data.set_index(["CNEC_ID", "snapshot", "name"])
 
     return combined_data
@@ -92,22 +83,6 @@ def add_fbmc_constraints(n: pypsa.Network) -> None:
         n.components.links.static["bus1"] == "EUR"
     ].index
 
-    # # "study_zones" are named after the bidding zones, the flows in the network
-    # # have a `-<CCR>` suffix, e.g. `-CORE` to indicate they are flows between the bidding zone
-    # # and the CCR hub. Therefore, to align the PTDF data with the flows, we need to add the
-    # # suffix to the study_zone names. We get the suffix from the link names and rename
-    # # the study zones in the PTDF rather than the linopy model
-    # rename_study_zones = {idx.split("-")[0]: idx for idx in links_idx}
-    # if len(set(rename_study_zones.values())) != len(links_idx):
-    #     raise ValueError(
-    #         "Renaming of study zones to match link names resulted in a non 1:1 mapping."
-    #     )
-    # ptdf["study_zone"] = ptdf["study_zone"].replace(rename_study_zones)
-
-    # TODO we do not include the offshore regions into the calculation
-    # reason: Not part of the market, not interconnection to other countries,
-    # consider with their transfer capacitiy rather than including them into the FBMC
-
     # get flow through links in CORE bidding zones
 
     # do the fancy multiplication
@@ -142,7 +117,7 @@ def add_fbmc_constraints(n: pypsa.Network) -> None:
         .rename(columns={"name": "link_name"})
     )
 
-    ds = fbmc_data_ahc.to_xarray()
+    ds = fbmc_data_ahc["PTDF"].to_xarray()
     mask = ds.coords["name"].str.endswith("[DIR]")
     net_ds = ds.sel(name=mask)
     mask = ds.coords["name"].str.endswith("[OPP]")
@@ -150,42 +125,20 @@ def add_fbmc_constraints(n: pypsa.Network) -> None:
     # Casting to xarray creates NaN values, need to fill those entries with 0
     # flows = n.model["Link-p"].sel(name=ds["name"]) # flows don't use the [OPP/DIR] syntax - they use ramp up/down
     # restructure flows
-    breakpoint()
     net_ds = net_ds.reindex(name=net_flows.coords["name"])
     opp_ds = opp_ds.reindex(name=opp_flows.coords["name"])
     lhs_2_dir = net_ds * net_flows
     lhs_2_opp = opp_ds * opp_flows
     # Group by snapshot and CNEC_ID to sum up all contributions to each CNEC at each snapshot
     lhs_2 = (lhs_2_dir + lhs_2_opp).sum(dim="name")
+    
+    # RAM data
 
-    # # -----------------------------------
-    # # Third part of the FBMC constraint:
-    # # loading from HVDC lines within CORE region bidding zones
-    # # -----------------------------------
+    ram_data = fbmc_data.reset_index()
+    ram_data = ram_data.pivot(index=['CNEC_ID', 'snapshot'], columns=['name'], values=['ram'])
+    ram_data = ram_data[[('ram','gb [OPP]'), ('ram','gb [DIR]')]].mean(axis=1)
 
-    # # Load PTDF
-    # ptdf = load_ptdf(fp=fp, sheet_name=ptdf_sheet_name, ptdf_type="PTDF_EvFB")
-
-    # # Map PTDF to seasonal values for RAM
-    # ptdf_snapshoted = wa.merge(
-    #     ptdf,
-    #     on="FB Domain",
-    #     how="left",
-    # )
-
-    # flows = n.model["Link-p"].sel(name="EvFBA1-EvFBA2")
-
-    # ds = ptdf_snapshoted.set_index(["CNEC_ID", "snapshot"])["PTDF"].to_xarray() * flows
-
-    # ds = ds.reindex(
-    #     snapshot=flows.coords["snapshot"],
-    # )
-
-    # # Casting to xarray creates NaN values, need to fill those entries with 0
-    # lhs_3 = ds
-    breakpoint()
-
-    rhs = fbmc_data['ram'].droplevel("name").to_xarray()
+    rhs = ram_data.to_xarray()
 
     # Enable lhs_1 and lhs_3 when implemented
     n.model.add_constraints(
