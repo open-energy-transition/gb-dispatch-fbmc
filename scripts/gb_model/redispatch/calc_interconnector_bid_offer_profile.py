@@ -367,7 +367,7 @@ def compose_data(
     """
     # Bids and offers multipliers
     bids_and_offers_multipliers = pd.read_csv(
-        bids_and_offers_multipliers_path
+        bids_and_offers_multipliers_path, index_col='carrier'
     ).to_dict()
 
     # Get list of interconnectors between GB and Eur

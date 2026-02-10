@@ -86,7 +86,7 @@ def get_year_bod(
 
     while current <= end:
         # Retrieving data month by month
-        next_month = current + pd.DateOffset(months=1)
+        next_month = current + pd.DateOffset(months=1) - pd.DateOffset(days=1)
 
         # API request URL for the month
         url = f"{base_url}/datasets/BOD/stream?from={current}&to={next_month}{bmu_units_filter}"
@@ -100,13 +100,18 @@ def get_year_bod(
         dfs.append(df)
 
         # Reset current date to next month
-        current = next_month
+        current = next_month + pd.DateOffset(days=1)
 
     df_bod = pd.concat(dfs, ignore_index=True)
 
     df_bod["carrier"] = df_bod["nationalGridBmUnit"].map(bmu_carrier_map)
 
-    df_bod_mean = df_bod.groupby("carrier")[["bid", "offer"]].mean()
+    df_bod_mean = pd.DataFrame()
+    # pairId is an indication of the bandwidth within which a BMunit can increase / decrease it's power output.
+    # -ve pairId's indicate bids and +ve pairId's indicate offers
+    df_bod_mean['bid'] = df_bod.query("pairId < 0").groupby("carrier").bid.mean()
+    df_bod_mean['offer'] = df_bod.query("pairId > 0").groupby("carrier").offer.mean()
+
     return df_bod_mean
 
 
