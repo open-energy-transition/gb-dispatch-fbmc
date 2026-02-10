@@ -778,7 +778,11 @@ fes-costing-sheet-config:
 
 fes:
   fes_year: 2024
-  scenario: Holistic Transition   # fes workbook
+  scenario_mapping:
+    HT: Holistic Transition   # fes workbook
+    CF: Counterfactual
+    EE: Electric Engagement
+    HE: Hydrogen Evolution
   default_set: PP
   gb:
     carrier_mapping:

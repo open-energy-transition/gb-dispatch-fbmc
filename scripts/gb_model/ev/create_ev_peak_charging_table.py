@@ -14,7 +14,7 @@ from pathlib import Path
 import pandas as pd
 
 from scripts._helpers import configure_logging, set_scenario_config
-from scripts.gb_model._helpers import pre_format
+from scripts.gb_model._helpers import get_scenario_name, pre_format
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +95,7 @@ if __name__ == "__main__":
     unmanaged_charging_sheet_path = snakemake.input.unmanaged_charging_sheet
 
     # Load parameters
-    fes_scenario = snakemake.params.scenario
+    fes_scenario = get_scenario_name(snakemake)
     year_range = snakemake.params.year_range
 
     # Parse EV unmanaged charging demand data

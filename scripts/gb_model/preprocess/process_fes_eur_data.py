@@ -16,6 +16,7 @@ import country_converter as coco
 import pandas as pd
 
 from scripts._helpers import configure_logging, set_scenario_config
+from scripts.gb_model._helpers import get_scenario_name
 
 logger = logging.getLogger(__name__)
 
@@ -88,7 +89,7 @@ if __name__ == "__main__":
     data_table = pd.read_csv(snakemake.input.eur_data)
 
     # Load all the params
-    fes_scenario = snakemake.params.scenario
+    fes_scenario = get_scenario_name(snakemake)
     year_range = snakemake.params.year_range
     countries = snakemake.params.countries
 

@@ -52,13 +52,13 @@ rule create_powerplants_table:
         dukes_config=config["dukes-5.11"],
         default_set=config["fes"]["default_set"],
     input:
-        gsp_data=resources("gb-model/regional_gb_data.csv"),
-        eur_data=resources("gb-model/national_eur_data.csv"),
+        gsp_data=resources("gb-model/{fes_scenario}/regional_gb_data.csv"),
+        eur_data=resources("gb-model/{fes_scenario}/national_eur_data.csv"),
         dukes_data=resources("gb-model/dukes-current-capacity.csv"),
     output:
-        csv=resources("gb-model/fes_powerplants.csv"),
+        csv=resources("gb-model/{fes_scenario}/fes_powerplants.csv"),
     log:
-        logs("create_powerplants_table.log"),
+        logs("create_powerplants_table_{fes_scenario}.log"),
     script:
         "../../scripts/gb_model/generators/create_powerplants_table.py"
 
@@ -68,17 +68,18 @@ rule assign_costs:
         "Prepares costs file from technology-data of PyPSA-Eur and FES and assigns to {wildcards.data_file}"
     params:
         costs_config=config["costs"],
-        fes_scenario=config["fes"]["scenario"],
     input:
         tech_costs=Path(COSTS_DATASET["folder"])
         / f"costs_{config['scenario']['planning_horizons'][0]}.csv",
         fes_power_costs=resources("gb-model/fes-costing/AS.1 (Power Gen).csv"),
         fes_carbon_costs=resources("gb-model/fes-costing/AS.7 (Carbon Cost).csv"),
-        fes_powerplants=resources("gb-model/{data_file}.csv"),
+        fes_powerplants=resources("gb-model/{fes_scenario}/{data_file}.csv"),
     output:
-        enriched_powerplants=resources("gb-model/{data_file}_inc_tech_data.csv"),
+        enriched_powerplants=resources(
+            "gb-model/{fes_scenario}/{data_file}_inc_tech_data.csv"
+        ),
     log:
-        logs("assign_costs_{data_file}.log"),
+        logs("assign_costs_{fes_scenario}_{data_file}.log"),
     wildcard_constraints:
         data_file="fes_powerplants|regional_H2_storage_capacity_inc_eur|regional_grid_electrolysis_capacities_inc_eur",
     script:
