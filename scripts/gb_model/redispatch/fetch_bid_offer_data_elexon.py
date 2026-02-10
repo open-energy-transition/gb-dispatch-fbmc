@@ -6,19 +6,29 @@
 Fetch Bid Offer Data from Elexon BMRS API
 """
 
+import asyncio
 import logging
 from datetime import datetime
 from pathlib import Path
 
+import aiohttp
+import numpy as np
 import pandas as pd
 import requests
+from tqdm.asyncio import tqdm_asyncio
 
 from scripts._helpers import configure_logging, set_scenario_config
 
 logger = logging.getLogger(__name__)
 
+# tune if HTTP 429 error occurs
+MAX_CONCURRENT_REQUESTS = 8
+SEM = asyncio.Semaphore(MAX_CONCURRENT_REQUESTS)
 
-def fetch_api_request_data(url: str, retrieval_message: str) -> pd.DataFrame:
+
+async def fetch_api_request_data(
+    url: str, retrieval_message: str, session=""
+) -> pd.DataFrame:
     """
     Fetch Bid Offer Data (BOD) from Elexon API for the specified date range.
 
@@ -28,40 +38,43 @@ def fetch_api_request_data(url: str, retrieval_message: str) -> pd.DataFrame:
         API request URL
     retrieval_message: str
         Message to log for the retrieval operation
+    session: requests.Session or aiohttp.ClientSession, optional
+        client session to use for the request
     """
 
     df = pd.DataFrame()
 
-    max_retries = 3
-    for i in range(1, max_retries + 1):
-        try:
-            headers = {"User-Agent": "Mozilla/5.0"}
+    async with SEM:
+        max_retries = 3
+        for i in range(1, max_retries + 1):
+            try:
+                headers = {"User-Agent": "Mozilla/5.0"}
 
-            response = requests.get(url, headers=headers)
-            response.raise_for_status()
+                async with session.get(url, headers=headers) as response:
+                    response.raise_for_status()
 
-            json_data = response.json()
+                    json_data = await response.json()
 
-            # Convert JSON data to Dataframe
-            df = pd.DataFrame(json_data)
+                    # Convert JSON data to Dataframe
+                    df = pd.DataFrame(json_data.get("data", []))
 
-            logger.info(f"Successfully retrieved {retrieval_message}.")
-            break  # Exit retry loop if successful
+                    # logger.info(f"Successfully retrieved {retrieval_message}.")
+                    break  # Exit retry loop if successful
 
-        except requests.exceptions.RequestException as e:
-            logger.warning(
-                f" Attempt {i}/{max_retries}: Error in fetching {retrieval_message}: {e}"
-            )
-            if i == max_retries:
-                logger.error(
-                    f"Max retries reached. Failed to fetch {retrieval_message}."
+            except requests.exceptions.RequestException as e:
+                logger.warning(
+                    f" Attempt {i}/{max_retries}: Error in fetching {retrieval_message}: {e}"
                 )
+                if i == max_retries:
+                    logger.error(
+                        f"Max retries reached. Failed to fetch {retrieval_message}."
+                    )
 
     return df
 
 
-def get_year_bod(
-    base_url: str, bmu_units_filter: str, bmu_carrier_map: dict[str, str], year: int
+async def get_historical_bod(
+    base_url: str, bmu_carrier_map: dict[str, str], year: int
 ) -> pd.DataFrame:
     """
     Fetch bid / offer data for an entire year by querying day by day
@@ -70,8 +83,6 @@ def get_year_bod(
     ----------
     base_url: str
         Base URL for the Elexon BMRS API
-    bmu_units_filter: str
-        Filter string to specify BMU units in the API request
     bmu_carrier_map: dict[str, str]
         Mapping of BM units to carriers
     year: int
@@ -84,33 +95,49 @@ def get_year_bod(
 
     current = start
 
-    while current <= end:
-        # Retrieving data month by month
-        next_month = current + pd.DateOffset(months=1) - pd.DateOffset(days=1)
+    async with aiohttp.ClientSession() as session:
+        while current <= end:
+            # There are 48 settlement periods per day - every 30 mins
+            for settlement_period in np.arange(1, 49):
+                # API request URL for the day
+                url = f"{base_url}/balancing/settlement/acceptances/all/{current.strftime('%Y-%m-%d')}/{settlement_period}"
 
-        # API request URL for the month
-        url = f"{base_url}/datasets/BOD/stream?from={current}&to={next_month}{bmu_units_filter}"
+                # Fetch data for the current day
+                df = asyncio.create_task(
+                    fetch_api_request_data(
+                        url,
+                        retrieval_message=f"Bid/Offer price data for the dates {current} and settlement period {settlement_period}",
+                        session=session,
+                    )
+                )
 
-        # Fetch data for the current month
-        df = fetch_api_request_data(
-            url,
-            retrieval_message=f"Bid/Offer price data for the dates {current} to {next_month}",
-        )
+                dfs.append(df)
 
-        dfs.append(df)
+            # Reset current date to next day
+            current = current + pd.DateOffset(days=1)
 
-        # Reset current date to next month
-        current = next_month + pd.DateOffset(days=1)
+        results = []
+        for task in tqdm_asyncio.as_completed(
+            dfs, total=len(dfs), desc=f"Fetching Bid/Offer data for the year {year}"
+        ):
+            res = await task
+            results.append(res)
 
-    df_bod = pd.concat(dfs, ignore_index=True)
+    logger.info(f"Successfully retrieved Bid/offer price data for {year}.")
 
+    df_bod = pd.concat(results, ignore_index=True)
     df_bod["carrier"] = df_bod["nationalGridBmUnit"].map(bmu_carrier_map)
 
     df_bod_mean = pd.DataFrame()
-    # pairId is an indication of the bandwidth within which a BMunit can increase / decrease it's power output.
+    # BidOfferPairId is an indication of the bandwidth within which a BMunit can increase / decrease it's power output.
     # -ve pairId's indicate bids and +ve pairId's indicate offers
-    df_bod_mean['bid'] = df_bod.query("pairId < 0").groupby("carrier").bid.mean()
-    df_bod_mean['offer'] = df_bod.query("pairId > 0").groupby("carrier").offer.mean()
+    # The bid / offer price can vary with the pairId - for simplicity an average of the prices over the pair id's is used here
+    df_bod_mean["bid"] = (
+        df_bod.query("bidOfferPairId < 0").groupby("carrier").bidPrice.mean()
+    )
+    df_bod_mean["offer"] = (
+        df_bod.query("bidOfferPairId > 0").groupby("carrier").offerPrice.mean()
+    )
 
     return df_bod_mean
 
@@ -151,19 +178,13 @@ def fetch_BM_units(
     df_bmu["carrier"] = df_bmu["fuelType"].map(technology_mapping)
 
     # Filter to only include BM units relevant to conventional technologies in the model
-    # Done to improve API request performance as CfD prices are used for renewables
-    # Helps reduce memory requirements for storing the BOD data
     df_bmu_filtered = df_bmu.loc[df_bmu["carrier"].isin(technology_mapping.values())]
-    bmu_units = df_bmu_filtered["nationalGridBmUnit"].unique().tolist()
-
-    # Create filter string for API request to only include relevant BM units
-    filter_bmu_units = ",".join([(f"&bmUnit={x}") for x in bmu_units]).replace(",", "")
 
     # Dictionary to map BM units to carriers
     bmu_carrier_map = dict(df_bmu_filtered[["nationalGridBmUnit", "carrier"]].values)
 
-    logger.info(f"Created BM unit filter for API request with {len(bmu_units)} units.")
-    return filter_bmu_units, bmu_carrier_map
+    logger.info(f"Created BM unit mapping to carriers {technology_mapping.keys()}.")
+    return bmu_carrier_map
 
 
 if __name__ == "__main__":
@@ -177,18 +198,19 @@ if __name__ == "__main__":
 
     base_url = "https://data.elexon.co.uk/bmrs/api/v1"
 
-    filter_bmu_units, bmu_carrier_map = fetch_BM_units(
+    bmu_carrier_map = fetch_BM_units(
         base_url,
         technology_mapping=snakemake.params.technology_mapping,
         bmu_fuel_map_path=snakemake.input.bmu_fuel_map_path,
         api_bmu_fuel_map=snakemake.params.api_bmu_fuel_map,
     )
 
-    df_bod = get_year_bod(
-        base_url,
-        filter_bmu_units,
-        bmu_carrier_map,
-        year=int(snakemake.wildcards.bod_year),
+    df_bod = asyncio.run(
+        get_historical_bod(
+            base_url,
+            bmu_carrier_map,
+            year=int(snakemake.wildcards.bod_year),
+        )
     )
 
     df_bod.to_csv(snakemake.output.csv)
