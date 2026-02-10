@@ -21,7 +21,7 @@ rule prepare_unconstrained:
     log:
         logs("prepare_unconstrained_network/{year}.log"),
     script:
-        "../../scripts/gb_model/dispatch/prepare_unconstrained_network.py"
+        scripts("gb_model/dispatch/prepare_unconstrained_network.py")
 
 
 rule solve_unconstrained:
@@ -32,7 +32,7 @@ rule solve_unconstrained:
             "sector", "co2_sequestration_potential", default=200
         ),
         custom_extra_functionality=Path(workflow.snakefile).parent
-        / "../../scripts/gb_model/dispatch/custom_constraints.py",
+        / scripts("gb_model/dispatch/custom_constraints.py"),
         nuclear_max_annual_capacity_factor=config["conventional"]["nuclear"][
             "max_annual_capacity_factor"
         ],
@@ -59,4 +59,4 @@ rule solve_unconstrained:
     shadow:
         shadow_config
     script:
-        "../../scripts/solve_network.py"
+        scripts("solve_network.py")

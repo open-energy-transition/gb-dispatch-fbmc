@@ -21,7 +21,7 @@ rule create_demand_table:
     log:
         logs("create_{demand_type}_demand_table.log"),
     script:
-        "../../scripts/gb_model/demand_and_dsr/create_demand_table.py"
+        scripts("gb_model/demand_and_dsr/create_demand_table.py")
 
 
 rule cluster_baseline_electricity_demand_timeseries:
@@ -39,7 +39,7 @@ rule cluster_baseline_electricity_demand_timeseries:
     log:
         logs("cluster_baseline_electricity_demand_timeseries.log"),
     script:
-        "../../scripts/gb_model/demand_and_dsr/cluster_baseline_electricity_demand_timeseries.py"
+        scripts("gb_model/demand_and_dsr/cluster_baseline_electricity_demand_timeseries.py")
 
 
 rule process_baseline_demand_shape:
@@ -55,7 +55,7 @@ rule process_baseline_demand_shape:
     log:
         logs("process_baseline_demand_shape_{year}.log"),
     script:
-        "../../scripts/gb_model/demand_and_dsr/process_baseline_demand_shape.py"
+        scripts("gb_model/demand_and_dsr/process_baseline_demand_shape.py")
 
 
 rule create_flexibility_table:
@@ -76,7 +76,7 @@ rule create_flexibility_table:
     wildcard_constraints:
         flexibility_type="|".join(config["fes"]["gb"]["flexibility"]["carrier_mapping"]),
     script:
-        "../../scripts/gb_model/demand_and_dsr/create_flexibility_table.py"
+        scripts("gb_model/demand_and_dsr/create_flexibility_table.py")
 
 
 rule synthesise_gb_regional_data:
@@ -96,7 +96,7 @@ rule synthesise_gb_regional_data:
     log:
         logs("synthesise_gb_regional_data_{data}.log"),
     script:
-        "../../scripts/gb_model/demand_and_dsr/synthesise_gb_regional_data.py"
+        scripts("gb_model/demand_and_dsr/synthesise_gb_regional_data.py")
 
 
 rule distribute_eur_demands:
@@ -118,7 +118,7 @@ rule distribute_eur_demands:
     log:
         logs("distribute_eur_demands.log"),
     script:
-        "../../scripts/gb_model/demand_and_dsr/distribute_eur_demands.py"
+        scripts("gb_model/demand_and_dsr/distribute_eur_demands.py")
 
 
 def _ref_demand_type(w):
@@ -143,7 +143,7 @@ rule synthesise_eur_data:
     wildcard_constraints:
         dataset="|".join(config["fes"]["eur"]["add_data_reference"].keys()),
     script:
-        "../../scripts/gb_model/demand_and_dsr/synthesise_eur_data.py"
+        scripts("gb_model/demand_and_dsr/synthesise_eur_data.py")
 
 
 rule scaled_demand_profile:
@@ -160,4 +160,4 @@ rule scaled_demand_profile:
     wildcard_constraints:
         demand_type="baseline_electricity|residential_heat|iandc_heat",
     script:
-        "../../scripts/gb_model/demand_and_dsr/scaled_demand_profile.py"
+        scripts("gb_model/demand_and_dsr/scaled_demand_profile.py")

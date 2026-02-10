@@ -22,4 +22,4 @@ rule process_regional_battery_storage_capacity:
     log:
         logs("process_regional_battery_storage_capacity.log"),
     script:
-        "../../scripts/gb_model/storage/process_regional_battery_storage_capacity.py"
+        scripts("gb_model/storage/process_regional_battery_storage_capacity.py")

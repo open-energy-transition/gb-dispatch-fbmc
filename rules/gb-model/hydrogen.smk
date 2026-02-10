@@ -26,7 +26,7 @@ rule create_hydrogen_data_tables:
     log:
         logs("create_hydrogen_data_tables.log"),
     script:
-        "../../scripts/gb_model/hydrogen/create_hydrogen_data_tables.py"
+        scripts("gb_model/hydrogen/create_hydrogen_data_tables.py")
 
 
 rule create_grid_electrolysis_table:
@@ -39,7 +39,7 @@ rule create_grid_electrolysis_table:
     log:
         logs("create_grid_electrolysis_table.log"),
     script:
-        "../../scripts/gb_model/hydrogen/create_grid_electrolysis_table.py"
+        scripts("gb_model/hydrogen/create_grid_electrolysis_table.py")
 
 
 rule add_eur_H2_demand:
@@ -56,7 +56,7 @@ rule add_eur_H2_demand:
     log:
         logs("add_eur_H2_demand.log"),
     script:
-        "../../scripts/gb_model/hydrogen/add_eur_H2_demand.py"
+        scripts("gb_model/hydrogen/add_eur_H2_demand.py")
 
 
 rule synthesise_eur_H2_data:
@@ -72,4 +72,4 @@ rule synthesise_eur_H2_data:
     wildcard_constraints:
         dataset="non_networked_electrolysis_demand_annual|H2_storage_capacity|grid_electrolysis_capacities",
     script:
-        "../../scripts/gb_model/hydrogen/synthesise_eur_H2_data.py"
+        scripts("gb_model/hydrogen/synthesise_eur_H2_data.py")

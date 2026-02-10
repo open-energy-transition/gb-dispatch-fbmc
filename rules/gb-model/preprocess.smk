@@ -34,7 +34,7 @@ rule extract_etys_boundary_capabilities:
     log:
         logs("extract_etys_boundary_capabilities.log"),
     script:
-        "../../scripts/gb_model/preprocess/extract_etys_boundary_capabilities.py"
+        scripts("gb_model/preprocess/extract_etys_boundary_capabilities.py")
 
 
 rule create_region_shapes:
@@ -57,7 +57,7 @@ rule create_region_shapes:
     resources:
         mem_mb=1000,
     script:
-        "../../scripts/gb_model/preprocess/create_region_shapes.py"
+        scripts("gb_model/preprocess/create_region_shapes.py")
 
 
 rule manual_region_merger:
@@ -75,7 +75,7 @@ rule manual_region_merger:
     resources:
         mem_mb=1000,
     script:
-        "../../scripts/gb_model/preprocess/manual_region_merger.py"
+        scripts("gb_model/preprocess/manual_region_merger.py")
 
 
 rule extract_fes_workbook_sheet:
@@ -92,7 +92,7 @@ rule extract_fes_workbook_sheet:
     log:
         logs("extract_fes_workbook_sheet-{fes_sheet}.log"),
     script:
-        "../../scripts/gb_model/preprocess/extract_fes_workbook_sheet.py"
+        scripts("gb_model/preprocess/extract_fes_workbook_sheet.py")
 
 
 rule unzip_fes_costing_workbook:
@@ -135,7 +135,7 @@ rule process_fes_eur_data:
     log:
         logs("process_fes_eur_data.log"),
     script:
-        "../../scripts/gb_model/preprocess/process_fes_eur_data.py"
+        scripts("gb_model/preprocess/process_fes_eur_data.py")
 
 
 rule process_dukes_current_capacities:
@@ -153,7 +153,7 @@ rule process_dukes_current_capacities:
         sheet_config=config["dukes-5.11"]["sheet-config"],
         target_crs=config["target_crs"],
     script:
-        "../../scripts/gb_model/preprocess/process_dukes_current_capacities.py"
+        scripts("gb_model/preprocess/process_dukes_current_capacities.py")
 
 
 rule process_fes_gsp_data:
@@ -175,4 +175,4 @@ rule process_fes_gsp_data:
     log:
         logs("process_fes_gsp_data.log"),
     script:
-        "../../scripts/gb_model/preprocess/process_fes_gsp_data.py"
+        scripts("gb_model/preprocess/process_fes_gsp_data.py")

@@ -20,7 +20,7 @@ rule process_CfD_strike_prices:
     log:
         logs("process_CfD_strike_prices.log"),
     script:
-        "../../scripts/gb_model/redispatch/process_CfD_strike_prices.py"
+        scripts("gb_model/redispatch/process_CfD_strike_prices.py")
 
 
 rule calc_interconnector_bid_offer_profile:
@@ -37,7 +37,7 @@ rule calc_interconnector_bid_offer_profile:
     log:
         logs("calc_interconnector_bid_offer_profile/{year}.log"),
     script:
-        "../../scripts/gb_model/redispatch/calc_interconnector_bid_offer_profile.py"
+        scripts("gb_model/redispatch/calc_interconnector_bid_offer_profile.py")
 
 
 rule prepare_constrained_network:
@@ -57,7 +57,7 @@ rule prepare_constrained_network:
     log:
         logs("prepare_constrained_network/{year}.log"),
     script:
-        "../../scripts/gb_model/redispatch/prepare_constrained_network.py"
+        scripts("gb_model/redispatch/prepare_constrained_network.py")
 
 
 rule solve_constrained:
@@ -68,7 +68,7 @@ rule solve_constrained:
             "sector", "co2_sequestration_potential", default=200
         ),
         custom_extra_functionality=Path(workflow.snakefile).parent
-        / "../../scripts/gb_model/redispatch/custom_constraints.py",
+        / scripts("gb_model/redispatch/custom_constraints.py"),
         etys_boundaries_to_lines=config["region_operations"]["etys_boundaries_lines"],
         etys_boundaries_to_links=config["region_operations"]["etys_boundaries_links"],
     input:
@@ -92,7 +92,7 @@ rule solve_constrained:
     shadow:
         shadow_config
     script:
-        "../../scripts/solve_network.py"
+        scripts("solve_network.py")
 
 
 rule calculate_constraint_costs:
@@ -111,4 +111,4 @@ rule calculate_constraint_costs:
     output:
         csv=RESULTS + "constraint_cost.csv",
     script:
-        "../../scripts/gb_model/redispatch/calculate_constraint_costs.py"
+        scripts("gb_model/redispatch/calculate_constraint_costs.py")

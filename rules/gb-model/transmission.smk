@@ -15,7 +15,7 @@ rule extract_transmission_availability:
     log:
         logs("extract_transmission_availability_{report_year}.log"),
     script:
-        "../../scripts/gb_model/transmission/extract_transmission_availability.py"
+        scripts("gb_model/transmission/extract_transmission_availability.py")
 
 
 rule process_transmission_availability:
@@ -41,7 +41,7 @@ rule process_transmission_availability:
     log:
         logs("process_transmission_availability_{transmission_zone}.log"),
     script:
-        "../../scripts/gb_model/transmission/process_transmission_availability.py"
+        scripts("gb_model/transmission/process_transmission_availability.py")
 
 
 rule create_interconnectors_table:
@@ -56,4 +56,4 @@ rule create_interconnectors_table:
     log:
         logs("create_interconnectors_table.log"),
     script:
-        "../../scripts/gb_model/transmission/create_interconnectors_table.py"
+        scripts("gb_model/transmission/create_interconnectors_table.py")

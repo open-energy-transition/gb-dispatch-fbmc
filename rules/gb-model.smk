@@ -87,7 +87,7 @@ rule compose_network:
         # We only accept clustered clusters
         clusters="clustered",
     script:
-        "../scripts/gb_model/compose_network.py"
+        scripts("gb_model/compose_network.py")
 
 
 rule gb_all:
