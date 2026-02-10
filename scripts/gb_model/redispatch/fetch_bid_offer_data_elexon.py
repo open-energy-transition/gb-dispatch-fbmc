@@ -109,8 +109,8 @@ def get_year_bod(
     df_bod_mean = pd.DataFrame()
     # pairId is an indication of the bandwidth within which a BMunit can increase / decrease it's power output.
     # -ve pairId's indicate bids and +ve pairId's indicate offers
-    df_bod_mean['bid'] = df_bod.query("pairId < 0").groupby("carrier").bid.mean()
-    df_bod_mean['offer'] = df_bod.query("pairId > 0").groupby("carrier").offer.mean()
+    df_bod_mean["bid"] = df_bod.query("pairId < 0").groupby("carrier").bid.mean()
+    df_bod_mean["offer"] = df_bod.query("pairId > 0").groupby("carrier").offer.mean()
 
     return df_bod_mean
 
