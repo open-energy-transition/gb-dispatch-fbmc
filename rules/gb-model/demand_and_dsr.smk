@@ -39,7 +39,9 @@ rule cluster_baseline_electricity_demand_timeseries:
     log:
         logs("cluster_baseline_electricity_demand_timeseries.log"),
     script:
-        scripts("gb_model/demand_and_dsr/cluster_baseline_electricity_demand_timeseries.py")
+        scripts(
+            "gb_model/demand_and_dsr/cluster_baseline_electricity_demand_timeseries.py"
+        )
 
 
 rule process_baseline_demand_shape:
