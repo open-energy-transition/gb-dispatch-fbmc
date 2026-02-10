@@ -125,15 +125,14 @@ rule process_fes_eur_data:
     message:
         "Process FES-compatible European scenario workbook."
     params:
-        scenario=config["fes"]["scenario"],
         year_range=config["redispatch"]["year_range_incl"],
         countries=config["countries"],
     input:
         eur_data=resources("gb-model/fes/ES2.csv"),
     output:
-        csv=resources("gb-model/national_eur_data.csv"),
+        csv=resources("gb-model/{fes_scenario}/national_eur_data.csv"),
     log:
-        logs("process_fes_eur_data.log"),
+        logs("process_fes_eur_data_{fes_scenario}.log"),
     script:
         "../../scripts/gb_model/preprocess/process_fes_eur_data.py"
 
@@ -160,7 +159,6 @@ rule process_fes_gsp_data:
     message:
         "Process FES workbook sheet BB1 together with metadata from sheet BB2."
     params:
-        scenario=config["fes"]["scenario"],
         year_range=config["redispatch"]["year_range_incl"],
         target_crs=config["target_crs"],
         fill_gsp_lat_lons=config["grid_supply_points"]["fill-lat-lons"],
@@ -171,8 +169,8 @@ rule process_fes_gsp_data:
         gsp_coordinates="data/gb-model/downloaded/gsp-coordinates.csv",
         regions=resources("gb-model/merged_shapes.geojson"),
     output:
-        csv=resources("gb-model/regional_gb_data.csv"),
+        csv=resources("gb-model/{fes_scenario}/regional_gb_data.csv"),
     log:
-        logs("process_fes_gsp_data.log"),
+        logs("process_fes_gsp_data_{fes_scenario}.log"),
     script:
         "../../scripts/gb_model/preprocess/process_fes_gsp_data.py"

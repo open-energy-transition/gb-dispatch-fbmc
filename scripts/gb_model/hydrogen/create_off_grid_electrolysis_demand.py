@@ -14,7 +14,11 @@ from pathlib import Path
 import pandas as pd
 
 from scripts._helpers import configure_logging, set_scenario_config
-from scripts.gb_model._helpers import get_regional_distribution, pre_format
+from scripts.gb_model._helpers import (
+    get_regional_distribution,
+    get_scenario_name,
+    pre_format,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -111,7 +115,7 @@ if __name__ == "__main__":
     grid_electrolysis_sheet = snakemake.input.grid_electrolysis_capacities
 
     # Load all params
-    fes_scenario = snakemake.params.scenario
+    fes_scenario = get_scenario_name(snakemake)
     year_range = snakemake.params.year_range
     supply_sheets_mapping = snakemake.params.fes_supply_sheets
 

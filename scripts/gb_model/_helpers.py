@@ -12,6 +12,7 @@ import pandas as pd
 import pypsa
 import pytz
 from pytz import country_timezones
+from snakemake.script import Snakemake
 
 logger = logging.getLogger(__name__)
 
@@ -269,3 +270,18 @@ def get_gb_neighbour_countries(network: pypsa.Network) -> np.ndarray:
         countries = [x for x in countries if "GB" not in x]
 
     return countries
+
+
+def get_scenario_name(snakemake: Snakemake) -> str:
+    """
+    Get the full FES scenario name from snakemake wildcard.
+
+    Args:
+        snakemake (Snakemake): The snakemake object containing wildcards and config.
+
+    Returns:
+        str: The FES scenario name.
+    """
+    wildcard_scenario = snakemake.wildcards.fes_scenario
+    scenario_mapping = snakemake.config["fes"]["scenario_mapping"]
+    return scenario_mapping[wildcard_scenario]

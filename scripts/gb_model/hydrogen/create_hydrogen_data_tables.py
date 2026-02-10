@@ -14,6 +14,7 @@ from pathlib import Path
 import pandas as pd
 
 from scripts._helpers import configure_logging, set_scenario_config
+from scripts.gb_model._helpers import get_scenario_name
 
 logger = logging.getLogger(__name__)
 
@@ -87,7 +88,7 @@ if __name__ == "__main__":
     net_demand, non_networked_electrolysis_demand, storage_capacity = (
         parse_hydrogen_data(
             fes_data,
-            snakemake.params.scenario,
+            get_scenario_name(snakemake),
             snakemake.params.year_range,
             snakemake.params.data_selection,
             snakemake.params.electrolysis_efficiency,
