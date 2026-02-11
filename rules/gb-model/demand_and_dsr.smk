@@ -111,7 +111,9 @@ rule distribute_eur_demands:
         eur_data=resources("gb-model/{fes_scenario}/national_eur_data.csv"),
         energy_totals=resources("energy_totals.csv"),
         electricity_demands=expand(
-            resources("gb-model/regional_{demand_type}_demand_annual.csv"),
+            resources(
+                "gb-model/{{fes_scenario}}/regional_{demand_type}_demand_annual.csv"
+            ),
             demand_type=config["fes"]["gb"]["demand"]["Technology Detail"].keys(),
         ),
         extra_demands=[],
