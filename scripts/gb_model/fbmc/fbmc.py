@@ -70,38 +70,31 @@ def add_fbmc_constraints(n: pypsa.Network) -> None:
 
     fbmc_data_sz = fbmc_data[fbmc_data.index.get_level_values('name').isin(['gb [DIR]', 'gb [OPP]'])]
 
-    # why isn't this working in the modify function?
-    mask = n.components.links.static.bus1 == "EUR"
-    n.components.links.static.loc[mask, "PTDF_type"] = "PTDF_SZ"
-
     # get links relevant for the intra-CCR FBMC constraint
     # this is GB # to GB CORE
-    # links_idx = n.components.links.static.loc[
-    #     n.components.links.static["PTDF_type"] == "PTDF_SZ"
-    # ].index
     links_idx = n.components.links.static.loc[
-        n.components.links.static["bus1"] == "EUR"
+        n.components.links.static["PTDF_type"] == "PTDF_SZ"
     ].index
-
-    # get flow through links in CORE bidding zones
 
     # do the fancy multiplication
     ds = fbmc_data_sz["PTDF"].to_xarray()
-    # Flows from GB # to virtual GB CORE (I think these flows need to be summed?)
+    mask = ds.coords["name"].str.endswith("[DIR]")
+    net_ds = ds.sel(name=mask)
+    mask = ds.coords["name"].str.endswith("[OPP]")
+    opp_ds = ds.sel(name=mask)
+
     flows = n.model["Link-p"].sel(name=links_idx)
     mask = flows.coords["name"].str.endswith("ramp down")
-    opp_flows = flows.sel(name=mask)    
+    ramp_down_flows = flows.sel(name=mask)    
     mask = flows.coords["name"].str.endswith("ramp up")
-    dir_flows = flows.sel(name=mask)
-    # third case where neither ramp down or ramp up is included?
+    ramp_up_flows = flows.sel(name=mask)
     mask = ~flows.coords["name"].str.contains("ramp")
-    net_flows = flows.sel(name=mask) + dir_flows
+    net_flows = flows.sel(name=mask) + ramp_up_flows + ramp_down_flows
 
     # Calculate PTDF contribution and group by snapshot and CNEC_ID to sum up all contributions to each CNEC at each snapshot
-    # need to think if this is the right orientation
-    lhs_1_dir = ds.sel(name='gb [DIR]') * net_flows.sum(dim="name")
-    lhs_1_opp = ds.sel(name='gb [OPP]') * opp_flows.sum(dim="name")
-    lhs_1 = lhs_1_dir + lhs_1_opp
+    lhs_1_dir = ds_dir * net_flows.sum(dim="name")
+    lhs_1_opp = ds_opp * net_flows.sum(dim="name")
+    
     # -----------------------------------
     # Second part of the FBMC constraint:
     # loading from HVDC lines between CORE and outside of CORE
@@ -118,19 +111,19 @@ def add_fbmc_constraints(n: pypsa.Network) -> None:
     )
 
     ds = fbmc_data_ahc["PTDF"].to_xarray()
+    ds = ds.reindex(name=net_flows.coords["name"])
     mask = ds.coords["name"].str.endswith("[DIR]")
     net_ds = ds.sel(name=mask)
     mask = ds.coords["name"].str.endswith("[OPP]")
     opp_ds = ds.sel(name=mask)
+
     # Casting to xarray creates NaN values, need to fill those entries with 0
     # flows = n.model["Link-p"].sel(name=ds["name"]) # flows don't use the [OPP/DIR] syntax - they use ramp up/down
     # restructure flows
-    net_ds = net_ds.reindex(name=net_flows.coords["name"])
-    opp_ds = opp_ds.reindex(name=opp_flows.coords["name"])
-    lhs_2_dir = net_ds * net_flows
-    lhs_2_opp = opp_ds * opp_flows
+    
+    lhs_2_dir = (ds_dir * net_flows).sum(dim="name")
+    lhs_2_opp = (ds_opp * net_flows).sum(dim="name")
     # Group by snapshot and CNEC_ID to sum up all contributions to each CNEC at each snapshot
-    lhs_2 = (lhs_2_dir + lhs_2_opp).sum(dim="name")
     
     # RAM data
 
@@ -138,14 +131,17 @@ def add_fbmc_constraints(n: pypsa.Network) -> None:
     ram_data = ram_data.pivot(index=['CNEC_ID', 'snapshot'], columns=['name'], values=['ram'])
     ram_data = ram_data[[('ram','gb [OPP]'), ('ram','gb [DIR]')]].mean(axis=1)
 
-    rhs = ram_data.to_xarray()
-
-    # Enable lhs_1 and lhs_3 when implemented
+    rhs_dir = ram_data.to_xarray() # positive values, aligns with given convention
+    rhs_opp = ram_data.to_xarray()
+    
     n.model.add_constraints(
-        lhs_1 + lhs_2 <= rhs,
-        name="PTDF-RAM-constraints",
+        lhs_1_dir + lhs_2_dir <= rhs_dir,
+        name="PTDF-RAM-constraints-DIR",
     )
-
+    n.model.add_constraints(
+        lhs_1_opp + lhs_2_opp >= -1 * rhs_opp,
+        name="PTDF-RAM-constraints-OPP"
+    )
 
 def modify_network_for_fbmc(n: pypsa.Network) -> pypsa.Network:
     """
@@ -174,35 +170,23 @@ def modify_network_for_fbmc(n: pypsa.Network) -> pypsa.Network:
     # Add the buses and links required for the FBMC
     # ---------------------------------------------------
 
-    # 1. Virtual core
-
-    # Any of these links is removed and replaced with an unlimited link
-    # between the study zone and a virtual CORE hub
-    n.add("Carrier", name="FBMC")
-    n.add(
-        "Bus",
-        name="CORE GB",
-        carrier="FBMC"
-    )
-    # links between the virtual GB specific core and the other GB nodes
-    gb_buses = n.buses[n.buses.carrier == 'AC'].filter(like='GB', axis=0).index
+    # # virtual links to track postive/negative flows
+    # n.add(
+    #     "Link",
+    #     name=gb_buses,
+    #     suffix='-GB CORE',
+    #     bus0=gb_buses,
+    #     bus1="CORE GB",
+    #     p_nom=np.inf,
+    #     efficiency=1.0,
+    #     p_nom_extendable=False,
+    #     p_min_pu=-1.0,
+    #     p_max_pu=1.0,
+    #     PTDF_type="PTDF_SZ", # not working
+    #     FBMC_region="CORE",
+    # )
     
-    n.add(
-        "Link",
-        name=gb_buses,
-        suffix='-GB CORE',
-        bus0=gb_buses,
-        bus1="CORE GB",
-        p_nom=np.inf,
-        efficiency=1.0,
-        p_nom_extendable=False,
-        p_min_pu=-1.0,
-        p_max_pu=1.0,
-        PTDF_type="PTDF_SZ", # not working
-        FBMC_region="CORE",
-    )
-
-    mask = n.components.links.static.bus1 == "CORE GB"
+    mask = n.components.links.static.bus1 == "EUR"
     n.components.links.static.loc[mask, "PTDF_type"] = "PTDF_SZ"
 
     # ----------------------------------------------------
