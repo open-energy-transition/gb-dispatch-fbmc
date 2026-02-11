@@ -95,7 +95,7 @@ renewable:
 conventional:
   nuclear:
     max_annual_capacity_factor: 1
-    min_annual_capacity_factor: 0.70
+    min_annual_capacity_factor: 0.50
 
 costs:
   GBP_to_EUR: 1.1632 # average in 2021: https://www.exchangerates.org.uk/GBP-EUR-spot-exchange-rates-history-2021.html#:~:text=This%20is%20the%20British%20Pound,rate%20in%202021%3A%201.1632%20EUR.
@@ -1264,7 +1264,7 @@ interconnectors:
     lat: 53.81322
     lon: -0.41847
   plan:
-    2021: [East-West, IFA, IFA2, NS Link (NSL), Nemo] # existing
+    2021: [BritNed, East-West, IFA, IFA2, NS Link (NSL), Nemo] # existing
     2022: [Moyle, Greenlink (Greenwire)]
     2023: [Viking Link]
     2025: [ElecLink, LionLink (EuroLink), Aminth]
