@@ -89,7 +89,7 @@ def add_fbmc_constraints(n: pypsa.Network) -> None:
     flow_dir = n.model["Link-p"].sel(name=mask)
     mask = n.model["Link-p"].coords["name"].str.endswith("[OPP]")
     flow_opp = n.model["Link-p"].sel(name=mask)
-    breakpoint()
+    # breakpoint()
     # Calculate PTDF contribution and group by snapshot and CNEC_ID to sum up all contributions to each CNEC at each snapshot
     lhs_1_dir = ds_dir * flow_dir.sum(dim="name")
     lhs_1_opp = ds_opp * flow_opp.sum(dim="name")
@@ -133,67 +133,21 @@ def add_fbmc_constraints(n: pypsa.Network) -> None:
     rhs_dir = ram_data.to_xarray() # positive values, aligns with given convention
     rhs_opp = ram_data.to_xarray()
     
-    n.model.add_constraints(
-        lhs_1_dir + lhs_2_dir <= rhs_dir,
-        name="PTDF-RAM-constraints-DIR",
-    )
-    n.model.add_constraints(
-        lhs_1_opp + lhs_2_opp >= -1 * rhs_opp,
-        name="PTDF-RAM-constraints-OPP"
-    )
+    # n.model.add_constraints(
+    #     lhs_1_dir + lhs_2_dir <= rhs_dir,
+    #     name="PTDF-RAM-constraints-DIR",
+    # )
+    # n.model.add_constraints(
+    #     lhs_1_opp + lhs_2_opp >= -1 * rhs_opp,
+    #     name="PTDF-RAM-constraints-OPP"
+    # )
 
 def add_dir_opp_links(n: pypsa.Network):
     # only for the Viking link for now
+    
     links = n.components.links.static.loc[['Viking Link', 'SENECA']]#.reset_index()
-    # add (1) carrier to track dir / opp 
-    n.add(
-        "Carrier", ["FBMC_flow"]
-    )
+
     for name, link in links.iterrows():
-        # add link with 100 efficiency
-        n.add(
-            "Link",
-            name=name,
-            suffix=' [DIR]',
-            bus0=link.bus0,
-            bus1=link.bus1,
-            p_nom=np.inf,
-            efficiency=1.0,
-            p_nom_extendable=False,
-            p_min_pu=0.0,
-            p_max_pu=1.0,
-            PTDF_type="PTDF_SZ",
-            carrier="FBMC_flow",
-        )
-
-        n.add(
-            "Link",
-            name=name,
-            suffix=' [OPP]',
-            bus0=link.bus1,
-            bus1=link.bus0,
-            p_nom=np.inf,
-            efficiency=1.0,
-            p_nom_extendable=False,
-            p_min_pu=0.0,
-            p_max_pu=1.0,
-            PTDF_type="PTDF_SZ",
-            carrier="FBMC_flow",
-        )
-
-        # add generator between -inf and inf
-        n.add(
-            "Generator",
-            name=name,
-            suffix="-flow",
-            carrier='FBMC_flow',
-            marginal_cost=0,
-            p_min_pu=-np.inf,
-            p_max_pu=np.inf,
-            p_nom=np.inf,
-            bus=link.bus0,
-            )
-
         # calculate the net flow
         mask = n.model["Link-p"].coords["name"].to_index().str.contains(name)
         flows = n.model["Link-p"].sel(name=mask)
@@ -204,24 +158,25 @@ def add_dir_opp_links(n: pypsa.Network):
         ramp_up_flows = flows.sel(name=mask)
         mask = ~flows.coords["name"].str.contains("ramp|[DIR]|[OPP]", regex=True)
         net_flows = flows.sel(name=mask) + ramp_up_flows + ramp_down_flows
-        # linearize max/min trick to seperate the flow into neg/pos
         
+        # linearize max/min trick to seperate the flow into neg/pos
         # initialize dir/opp flow vars 
-        dir_flow = n.model.add_variables(0, np.inf, coords=None, name=f"{name} DIR")
-        opp_flow = n.model.add_variables(-np.inf, 0, coords=None, name=f"{name} OPP") 
+        mask = flows.coords["name"].str.endswith("[DIR]")
+        dir_flow = flows.sel(name=mask)
+        mask = flows.coords["name"].str.endswith("[OPP]")
+        opp_flow = flows.sel(name=mask)
+
         dir_slack = n.model.add_variables(0, np.inf, coords=None, name=f"{name} DIR slack")
         opp_slack = n.model.add_variables(-np.inf, 0, coords=None, name=f"{name} OPP slack")
         
         # net flow pos = dispatch on the link_dir 
         # net flow neg = dispatch on the link_opp
         n.model.add_constraints(dir_slack + dir_flow <= net_flows)
-        n.model.add_constraints(opp_slack + opp_flow >= net_flows)
+        n.model.add_constraints(opp_slack - opp_flow >= net_flows)
         n.model.add_constraints(dir_flow >= net_flows)
-        n.model.add_constraints(opp_flow <= net_flows)
+        n.model.add_constraints(-1 * opp_flow <= net_flows)
 
-        # assign flows to links
-        n.components.links.static.loc[f"{name} [DIR]", ["p_min_pu","p_max_pu"]] = dir_flow
-        n.components.links.static.loc[f"{name} [OPP]", ["p_min_pu","p_max_pu"]] = opp_flow
+        n.model.add_constraints(dir_flow + opp_flow == net_flows)
 
         logger.info(
             f"Added {name} that can mimic increase and decrease in dispatch"
@@ -260,51 +215,77 @@ def modify_network_for_fbmc(n: pypsa.Network) -> pypsa.Network:
     n.add(
         "Carrier", ["FBMC_flow"]
     )
-    for name, link in links.iterrows():
-        # add link with 100 efficiency
-        n.add(
-            "Link",
-            name=name,
-            suffix=' [DIR]',
-            bus0=link.bus0,
-            bus1=link.bus1,
-            p_nom=np.inf,
-            efficiency=1.0,
-            p_nom_extendable=False,
-            p_min_pu=0.0,
-            p_max_pu=1.0,
-            PTDF_type="PTDF_SZ",
-            carrier="FBMC_flow",
-        )
 
-        n.add(
-            "Link",
-            name=name,
-            suffix=' [OPP]',
-            bus0=link.bus1,
-            bus1=link.bus0,
-            p_nom=np.inf,
-            efficiency=1.0,
-            p_nom_extendable=False,
-            p_min_pu=0.0,
-            p_max_pu=1.0,
-            PTDF_type="PTDF_SZ",
-            carrier="FBMC_flow",
-        )
+    # add dedicated buses 
+    n.add(
+        "Bus",
+        name=links.bus0.unique(),
+        suffix=' FBMC'
+    )
 
-        # add generator between -inf and inf
-        n.add(
-            "Generator",
-            name=name + "-flow",
-            carrier='FBMC_flow',
-            marginal_cost=0,
-            p_min_pu=-np.inf,
-            p_max_pu=np.inf,
-            p_nom=np.inf,
-            bus=link.bus0,
-            )
-    
-    mask = n.components.links.static.bus1 == "EUR"
+    n.add(
+        "Bus",
+        name=links.bus1.unique(),
+        suffix=' FBMC',
+    )
+
+    # add link with 100 efficiency
+    n.add(
+        "Link",
+        name=links.index,
+        suffix=' [DIR]',
+        bus0=links.bus0 + " FBMC",
+        bus1=links.bus1 + " FBMC",
+        p_nom=np.inf,
+        efficiency=1.0,
+        p_nom_extendable=False,
+        p_min_pu=0.0,
+        p_max_pu=1.0,
+        PTDF_type="PTDF_SZ",
+        carrier="FBMC_flow",
+    )
+
+    n.add(
+        "Link",
+        name=links.index,
+        suffix=' [OPP]',
+        bus0=links.bus1 + " FBMC",
+        bus1=links.bus0 + " FBMC",
+        p_nom=np.inf,
+        efficiency=1.0,
+        p_nom_extendable=False,
+        p_min_pu=0.0,
+        p_max_pu=1.0,
+        PTDF_type="PTDF_SZ",
+        carrier="FBMC_flow",
+    )
+
+    # add generator between -inf and inf
+    n.add(
+        "Generator",
+        name=links.index,
+        suffix=" flow",
+        carrier='FBMC_flow',
+        marginal_cost=0,
+        p_min_pu=-np.inf,
+        p_max_pu=np.inf,
+        p_nom=np.inf,
+        bus=links.bus0 + " FBMC",
+    )
+
+    n.add(
+        "Generator",
+        name=links.index,
+        suffix=" flow",
+        carrier='FBMC_flow',
+        marginal_cost=0,
+        p_min_pu=-np.inf,
+        p_max_pu=np.inf,
+        p_nom=np.inf,
+        bus=links.bus1 + " FBMC",
+    )
+
+    mask = n.components.links.static.bus1 == "EUR FBMC"
     n.components.links.static.loc[mask, "PTDF_type"] = "PTDF_SZ"
 
     # ----------------------------------------------------

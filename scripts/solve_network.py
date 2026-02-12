@@ -1239,7 +1239,7 @@ def extra_functionality(
     if config["sector"]["imports"]["enable"]:
         add_import_limit_constraint(n, snapshots)
 
-    if True:
+    if True: # fbmc and fbmc["enable"]:
         add_fbmc_constraints(n)
 
     if n.params.custom_extra_functionality:
