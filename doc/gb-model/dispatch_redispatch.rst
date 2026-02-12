@@ -77,6 +77,10 @@ Process
 Stage 1: Unconstrained (day-ahead) dispatch
 -------------------------------------------
 
+.. image:: img/dispatch.drawio.svg
+    :class: full-width
+    :align: center
+
 The unconstrained dispatch represents the economically optimal dispatch without considering internal GB transmission constraints.
 By default, we optimise with a perfect foresight at an hourly resolution for individual years.
 
@@ -101,6 +105,14 @@ Where:
 - Interconnector flow limits
 - Storage state of charge limits
 
+Two changes to the default PyPSA-Eur constraints are made during the unconstrained dispatch stage:
+
+1. We remove all line and link limits within the GB network and we remove Kirchhoff-Voltage-Law (linearised power flow) constraints throughout the entire network.
+   We apply the first to "copperplate" the GB bidding zone (no transmission constraints between intra-GB regions).
+   We apply the second to ensure all intra-GB regional market prices align in each time period.
+2. We set upper and lower bounds on annual nuclear power capacity factors, to limit their dispatchability.
+   The bounds can be found within the configuration file.
+
 **Output**:
 
 - Optimal dispatch schedule
@@ -110,14 +122,31 @@ Where:
 Stage 2: Constrained (balancing market) redispatch
 --------------------------------------------------
 
+.. image:: /gb-model/img/redispatch.drawio.svg
+    :class: full-width
+    :align: center
+
 The constrained redispatch modifies the unconstrained dispatch to respect ETYS (Electricity Ten Year Statement) boundary capabilities, as well as individual line limits of the GB high-voltage transmission network.
 By default, we optimise with a perfect foresight at an hourly resolution for individual years.
 
 **Key Modifications**:
 
-1. **Bid/Offer Costs Applied**
+1. **Fixed dispatch & redispatch generators**
 
-   Generators that deviate from unconstrained dispatch incur bid (decrease) or offer (increase) costs based on technology-specific multipliers.The modified marginal cost becomes:
+   The initial dispatch profiles for generators, GB->neighbour interconnectors, and storage units are all fixed to their optimal values from stage 1.
+   We also re-impose the physical intra-GB transmission line and link limits (as well as applying the boundary constraints defined below).
+   Generators, interconnectors, and storage units can deviate from their optimal dispatch via virtual ``up`` and ``down`` generators that we create for each asset.
+   ``down`` generators can only remove energy from the system, ``up`` generators can only add energy to it.
+   To these virtual generators we then apply redispatch (bid/offer) costs.
+
+   .. note::
+
+        This process requires updates to core PyPSA-Eur storage constraints to (a) fix their optimal dispatch correctly and (b) include the virtual generators in the storage energy balance constraint.
+
+2. **Bid/Offer Costs Applied**
+
+   Generators that deviate from unconstrained dispatch incur bid (decrease) or offer (increase) costs based on technology-specific multipliers.
+   The modified marginal cost becomes:
 
    .. math::
 
@@ -126,7 +155,7 @@ By default, we optimise with a perfect foresight at an hourly resolution for ind
        MC_g \times bid\_multiplier & \text{if decrease from unconstrained} \\
        \end{cases}
 
-2. **ETYS Boundary Constraints**
+3. **ETYS Boundary Constraints**
 
    Transmission boundaries between ETYS regions are constrained to their capabilities:
 
@@ -136,6 +165,16 @@ By default, we optimise with a perfect foresight at an hourly resolution for ind
 
    Several transmission lines cross each boundary.
    Some lines cross several boundaries, such as offshore HVDC lines that connect northern Scotland with central England.
+
+4. **Rest of Europe**
+
+   At this stage, the operation of assets in the rest of Europe is fixed, with no scope for deviation.
+   In fact, we don't care about distinguishing between European countries, we only care about the bid/offer costs on each interconnector with GB.
+   We assume that GB can fully deviate from the use of these interconnectors as defined in the initial dispatch stage.
+   That is, if it is exporting at full capacity in the optimal dispatch, it can feasibly redispatch to importing at full capacity.
+   We assume that the rest of Europe can absorb this change without a change of redispatch costs along the interconnectors.
+
+   Since we only care about the redispatch costs on the interconnectors, we simplify the rest of Europe at this stage to a single node with an infinite store that can inject/remove any quantity of energy from the system at zero additional cost.
 
 **Objective**: Minimize redispatch cost
 
@@ -182,10 +221,10 @@ Interconnector bid/offer costs are given as an hourly timeseries profile, derive
 There are six options available to interconnectors during redispatch, as outlined in `the National Grid Long-term Market and Constraint Modelling methodology document <https://www.nationalgrid.com/sites/default/files/documents/Long-term%20Market%20and%20Network%20Constraint%20Modelling.pdf>`_.
 
 1. Currently importing into GB and offering to import more.
-2. Currently importing into GB and bidding to import less.
+2. Currently importing into GB and bidding to import less or switch to exporting.
 3. Currently not in use ("floating") and offering to import.
 4. Currently not in use ("floating") and bidding to export.
-5. Currently exporting from GB and offering to export less.
+5. Currently exporting from GB and offering to export less or switch to importing.
 6. Currently exporting from GB and bidding to export more.
 
 These can be collapsed into four profiles as we consider (1) & (3) and (4) & (6) to be equivalent.

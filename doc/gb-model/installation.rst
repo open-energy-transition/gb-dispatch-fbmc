@@ -10,8 +10,8 @@
 Installation
 ##########################################
 
-The subsequently described installation steps are demonstrated as shell commands, where the path before the ``%`` sign denotes the
-directory in which the commands following the ``%`` should be entered.
+The subsequently described installation steps are demonstrated as shell commands.
+To use them in your shell, copy all but the initial ``$`` symbol.
 
 Clone the Repository
 ====================
