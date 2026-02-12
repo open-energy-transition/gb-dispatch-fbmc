@@ -95,7 +95,7 @@ renewable:
 conventional:
   nuclear:
     max_annual_capacity_factor: 1
-    min_annual_capacity_factor: 0.80
+    min_annual_capacity_factor: 0.50
 
 costs:
   GBP_to_EUR: 1.1632 # average in 2021: https://www.exchangerates.org.uk/GBP-EUR-spot-exchange-rates-history-2021.html#:~:text=This%20is%20the%20British%20Pound,rate%20in%202021%3A%201.1632%20EUR.
@@ -574,68 +574,23 @@ region_operations:
 # Note: Set ENTSO_E_API_KEY in your .env file or environment variables
 # Register at https://transparency.entsoe.eu/ to get API key
 entsoe_unavailability:
-  start_date: "2022-01-01"
+  start_date: "2020-01-01"
   end_date: "2024-12-31"
   bidding_zones: ["GB"]  # Great Britain only
   business_types: ["planned", "forced"]  # planned maintenance and forced outages
-  max_request_days: 120  # Maximum days per API request to avoid timeouts
-  max_unavailable_days: 365 # Maximum days to consider an outage in availability profile generation.
-  api_params:
-    # UK bidding zone codes
-    bidding_zones:
-      GB: "10YGB----------A"  # Great Britain
-    # Business types for outage classification
-    business_types:
-      planned: "A53"  # Planned maintenance
-      forced: "A54"   # Forced unavailability (unplanned outage)
-    # Document status codes
-    doc_status:
-      active: "A05"     # Active
-      cancelled: "A09"  # Cancelled
-      withdrawn: "A13"  # Withdrawn
-
-  carrier_mapping: # Null values are those for which we don't plan to map data
-    Bioenergy: biomass
-    Lignite: lignite
-    Natural Gas: gas
-    Hard Coal: coal
-    Oil: oil
+  max_request_days: 366  # Maximum days per API request to avoid timeouts
+  max_unavailable_days: 366 # Maximum days to consider an outage in availability profile generation.
+  entsoe_carrier_mapping:
+    Biomass: biomass
+    Fossil Lignite: lignite
+    Fossil Gas: CCGT
+    Fossil Hard coal: coal
+    Fossil Oil: oil
     Geothermal: geothermal
-    Pumped Hydro: PHS
-    Run-Of-River: hydro
-    Reservoir: hydro
+    Hydro Pumped Storage: PHS
+    Hydro Run-of-river and poundage: hydro
     Nuclear: nuclear
     Waste: waste
-
-  resource_type_mapping:
-    Fueltype:
-      B01: Bioenergy  # Biomass
-      B02: Lignite # "Fossil Brown coal/Lignite"
-      B03: Hard Coal # "Fossil Coal-derived gas"
-      B04: Natural Gas  # "Fossil Gas"
-      B05: Hard Coal # "Fossil Hard coal"
-      B06: Oil # "Fossil Oil"
-      B07: Oil # "Fossil Oil shale"
-      B09: Geothermal  # "Geothermal"
-      B14: Nuclear  # "Nuclear"
-      B17: Waste  # "Waste"
-    Technology:
-      B10: Pumped Storage # "Hydro Pumped Storage"
-      B11: Run-Of-River # "Hydro Run-of-river and poundage"
-      B12: Reservoir  # "Hydro Water Reservoir"
-
-    ## unmapped
-    # B08: "Fossil Peat"
-    # B13: "Marine"
-    # B15: "Other renewable"
-    # B16: "Solar"
-    # B18: "Wind Offshore"
-    # B19: "Wind Onshore"
-    # B20: "Other"
-    # B21: "AC Link"
-    # B22: "DC Link"
-    # B23: "Substation"
-    # B24: "Transformer"
 
 transmission_availability:
   years: [2020, 2021, 2022, 2023, 2024]
@@ -672,14 +627,12 @@ dukes-5.11:
       Nuclear: nuclear
       Pumped Hydro: PHS
       Pumped hydro: PHS
+      Hydro: hydro
     Type:
       Onshore: onwind
       onshore: onwind
       Offshore: offwind-dc
       CCGT: CCGT
-      Small Hydro: hydro
-      Natural Flow: hydro
-      Large Hydro: hydro
     Primary Fuel:
       Natural Gas: gas
       Diesel/Gas Oil: oil
@@ -1310,7 +1263,7 @@ interconnectors:
     lat: 53.81322
     lon: -0.41847
   plan:
-    2021: [East-West, IFA, IFA2, NS Link (NSL), Nemo] # existing
+    2021: [BritNed, East-West, IFA, IFA2, NS Link (NSL), Nemo] # existing
     2022: [Moyle, Greenlink (Greenwire)]
     2023: [Viking Link]
     2025: [ElecLink, LionLink (EuroLink), Aminth]
