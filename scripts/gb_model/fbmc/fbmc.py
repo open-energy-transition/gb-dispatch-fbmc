@@ -80,12 +80,15 @@ def add_fbmc_constraints(n: pypsa.Network) -> None:
     # do the fancy multiplication
     ds = fbmc_data_sz["PTDF"].to_xarray()
     mask = ds.coords["name"].str.endswith("[DIR]")
-    net_ds = ds.sel(name=mask)
+    ds_dir = ds.sel(name=mask)
     mask = ds.coords["name"].str.endswith("[OPP]")
-    opp_ds = ds.sel(name=mask)
+    ds_opp = ds.sel(name=mask)
     
-    flow_dir = n.model[f"{link.name} DIR"] # to be changed when more than one link is implemented
-    flow_opp = n.model[f"{link.name} OPP"]
+    
+    mask = n.model["Link-p"].coords["name"].str.endswith("[DIR]")
+    flow_dir = n.model["Link-p"].sel(name=mask)
+    mask = n.model["Link-p"].coords["name"].str.endswith("[OPP]")
+    flow_opp = n.model["Link-p"].sel(name=mask)
     breakpoint()
     # Calculate PTDF contribution and group by snapshot and CNEC_ID to sum up all contributions to each CNEC at each snapshot
     lhs_1_dir = ds_dir * flow_dir.sum(dim="name")
@@ -109,9 +112,9 @@ def add_fbmc_constraints(n: pypsa.Network) -> None:
     ds = fbmc_data_ahc["PTDF"].to_xarray()
     # ds = ds.reindex(name=net_flows.coords["name"])
     mask = ds.coords["name"].str.endswith("[DIR]")
-    net_ds = ds.sel(name=mask)
+    ds_dir = ds.sel(name=mask)
     mask = ds.coords["name"].str.endswith("[OPP]")
-    opp_ds = ds.sel(name=mask)
+    ds_opp = ds.sel(name=mask)
 
     # Casting to xarray creates NaN values, need to fill those entries with 0
     # flows = n.model["Link-p"].sel(name=ds["name"]) # flows don't use the [OPP/DIR] syntax - they use ramp up/down
@@ -192,18 +195,15 @@ def add_dir_opp_links(n: pypsa.Network):
             )
 
         # calculate the net flow
-        breakpoint()
         mask = n.model["Link-p"].coords["name"].to_index().str.contains(name)
         flows = n.model["Link-p"].sel(name=mask)
 
         mask = flows.coords["name"].str.endswith("ramp down")
-        
         ramp_down_flows = flows.sel(name=mask)    
         mask = flows.coords["name"].str.endswith("ramp up")
         ramp_up_flows = flows.sel(name=mask)
-        mask = ~flows.coords["name"].str.contains("ramp")
+        mask = ~flows.coords["name"].str.contains("ramp|[DIR]|[OPP]", regex=True)
         net_flows = flows.sel(name=mask) + ramp_up_flows + ramp_down_flows
-
         # linearize max/min trick to seperate the flow into neg/pos
         
         # initialize dir/opp flow vars 
@@ -216,10 +216,12 @@ def add_dir_opp_links(n: pypsa.Network):
         # net flow neg = dispatch on the link_opp
         n.model.add_constraints(dir_slack + dir_flow <= net_flows)
         n.model.add_constraints(opp_slack + opp_flow >= net_flows)
+        n.model.add_constraints(dir_flow >= net_flows)
+        n.model.add_constraints(opp_flow <= net_flows)
 
         # assign flows to links
-        n.components.static.loc[f"{name} [DIR]", ["p_min_pu","p_max_pu"]] = dir_flow
-        n.components.static.loc[f"{name} [OPP]", ["p_min_pu","p_max_pu"]] = opp_flow
+        n.components.links.static.loc[f"{name} [DIR]", ["p_min_pu","p_max_pu"]] = dir_flow
+        n.components.links.static.loc[f"{name} [OPP]", ["p_min_pu","p_max_pu"]] = opp_flow
 
         logger.info(
             f"Added {name} that can mimic increase and decrease in dispatch"
