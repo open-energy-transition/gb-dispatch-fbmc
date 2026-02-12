@@ -16,13 +16,13 @@ gb-dispatch-model is an extension of `PyPSA-Eur <../index.html>`_., used to quan
 Workflow
 ========
 
-.. image:: img/workflow.png
+.. image:: img/workflow.svg
     :class: full-width
     :align: center
 
 .. note::
     The graph above was generated using
-    ``snakemake --rulegraph -F | sed -n "/digraph/,/}/p" | dot -Tpng -o doc/gb-model/img/workflow.png``
+    ``snakemake --rulegraph -F | sed -n "/digraph/,/}/p" | dot -Tsvg -o doc/gb-model/img/workflow.svg``
 
 
 Operating Systems
@@ -46,6 +46,7 @@ The gb-dispatch-model workflow is continuously tested for Linux, macOS and Windo
    :caption: Development
 
    system
+   dispatch_redispatch
    implementation
 
 .. toctree::

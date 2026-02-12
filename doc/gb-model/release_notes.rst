@@ -12,6 +12,12 @@ Release Notes
 Unreleased
 ==========
 
+* Use correct currency (GBP, not EUR) in docs.
+* Clean SPDX copyright text where an outdated repository name was being used.
+* Add docs page detailing our dispatch/redispatch methodology (#158).
+* Extend workflow to run all FES scenarios in parallel.
+* Fix monthly outage calculations by using the `entsoe-py` package to collect outages and DUKES data to define current capacities (#204).
+* Update custom busmap definition to have one per configured run name (``data/gb-model/custom-busmap.csv`` -> ``data/gb-model/custom-busmap/<run-name>.csv``) (#207).
 * Extend workflow to run all FES scenarios in parallel (#215).
 * Update custom busmap definition to have one per configured run name (``data/gb-model/custom-busmap.csv`` -> ``data/gb-model/custom-busmap/<run-name>.csv``) (#207).
 * Fix monthly outage calculations by using the `entsoe-py` package to collect outages and DUKES data to define current capacities (#204).
