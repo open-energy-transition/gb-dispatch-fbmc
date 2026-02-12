@@ -152,4 +152,4 @@ These are calculated relative to the GB wholesale market price as given by the s
 Elexon BMU Fuel Map
 -------------------
 The `Elexon BMU Fuel Map <https://www.elexon.co.uk/documents/data/operational-data/bmu-fuel-type/>` provides a mapping of the balancing mechanism units (BMU) to their respective fuel types.
-This information is required to calculate bid / offer multiplier carrier-wise for redispatch.
+This information is required to calculate bid / offer multiplier carrier-wise for redispatch. This is a static copy in the repo and can be updated by navigating to `<https://bmrs.elexon.co.uk/generation-by-fuel-type?>`

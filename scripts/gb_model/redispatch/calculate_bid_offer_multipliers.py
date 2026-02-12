@@ -85,20 +85,15 @@ def calculate_marginal_costs(
     )
 
     # Fill missing values for fuel and CO2 intensity
-    for tech in df_tech.index.tolist():
-        if (
-            tech in costs_config["carrier_gap_filling"]["CO2 intensity"].keys()
-            and df_tech.at[tech, "CO2 intensity"].isna().any()
-        ):
-            df_tech.at[tech, "CO2 intensity"] = df_tech.at[
-                costs_config["carrier_gap_filling"]["CO2 intensity"][tech],
-                "CO2 intensity",
-            ].values
-        if (
-            tech in costs_config["carrier_gap_filling"]["fuel"]
-            and df_tech.at[tech, "fuel"].isna().any()
-        ):
-            df_tech.at[tech, "fuel"] = costs.at[tech, "fuel"]
+    for tech in df_tech.index.unique().tolist():
+        for param in ["CO2 intensity", "fuel"]:
+            if (
+                tech in costs_config["carrier_gap_filling"][param].keys()
+                and df_tech.at[tech, param].isna().any()
+            ):
+                df_tech.at[tech, param] = costs.at[
+                    costs_config["carrier_gap_filling"][param][tech], param
+                ]
 
     # Fill any missing values with default characteristics from the config
     df_tech[costs_config["marginal_cost_columns"]] = df_tech[

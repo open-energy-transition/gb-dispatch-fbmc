@@ -27,8 +27,11 @@ rule fetch_bid_offer_data_elexon:
     message:
         "Get bid/offer data from Elexon"
     params:
-        technology_mapping=config_provider("redispatch", "technology_mapping"),
-        api_bmu_fuel_map=config_provider("redispatch", "api_bmu_fuel_map"),
+        technology_mapping=config_provider("redispatch", "elexon", "technology_mapping"),
+        api_bmu_fuel_map=config_provider("redispatch", "elexon", "api_bmu_fuel_map"),
+        max_concurrent_requests=config_provider(
+            "redispatch", "elexon", "max_concurrent_requests"
+        ),
     input:
         bmu_fuel_map_path="data/gb-model/BMUFuelType.xlsx",
     output:
@@ -45,7 +48,7 @@ rule calculate_bid_offer_multipliers:
     params:
         fes_scenario=config["fes"]["scenario"],
         costs_config=config["costs"],
-        technology_mapping=config_provider("redispatch", "technology_mapping"),
+        technology_mapping=config_provider("redispatch", "elexon", "technology_mapping"),
     input:
         fes_power_costs=resources("gb-model/fes-costing/AS.1 (Power Gen).csv"),
         fes_carbon_costs=resources("gb-model/fes-costing/AS.7 (Carbon Cost).csv"),
@@ -54,8 +57,8 @@ rule calculate_bid_offer_multipliers:
         bid_offer_data=expand(
             resources("gb-model/bids_and_offers/Elexon/{bod_year}.csv"),
             bod_year=range(
-                config["redispatch"]["elexon"]["start_year"],
-                config["redispatch"]["elexon"]["end_year"] + 1,
+                config["redispatch"]["elexon"]["years"][0],
+                config["redispatch"]["elexon"]["years"][1] + 1,
             ),
         ),
     output:

@@ -21,13 +21,9 @@ from scripts._helpers import configure_logging, set_scenario_config
 
 logger = logging.getLogger(__name__)
 
-# tune if HTTP 429 error occurs
-MAX_CONCURRENT_REQUESTS = 8
-SEM = asyncio.Semaphore(MAX_CONCURRENT_REQUESTS)
-
 
 async def fetch_api_request_data(
-    url: str, retrieval_message: str, session=""
+    url: str, retrieval_message: str, session: requests.Session = None
 ) -> pd.DataFrame:
     """
     Fetch Bid Offer Data (BOD) from Elexon API for the specified date range.
@@ -113,7 +109,7 @@ async def get_historical_bod(
                 dfs.append(df)
 
             # Reset current date to next day
-            current = current + pd.DateOffset(days=1)
+            current += pd.DateOffset(days=1)
 
         results = []
         for task in tqdm_asyncio.as_completed(
@@ -196,6 +192,11 @@ if __name__ == "__main__":
     set_scenario_config(snakemake)
 
     base_url = "https://data.elexon.co.uk/bmrs/api/v1"
+
+    # tune if HTTP 429 error occurs
+    max_concurrent_requests = int(snakemake.params.max_concurrent_requests)
+    global SEM
+    SEM = asyncio.Semaphore(max_concurrent_requests)
 
     bmu_carrier_map = fetch_BM_units(
         base_url,
