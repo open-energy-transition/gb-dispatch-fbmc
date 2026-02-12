@@ -17,6 +17,7 @@ Unreleased
 * Add docs page detailing our dispatch/redispatch methodology (#158).
 * Extend workflow to run all FES scenarios in parallel.
 * Fix monthly outage calculations by using the `entsoe-py` package to collect outages and DUKES data to define current capacities (#204).
+* Update custom busmap definition to have one per configured run name (``data/gb-model/custom-busmap.csv`` -> ``data/gb-model/custom-busmap/<run-name>.csv``) (#207).
 * Impose nuclear capacity factor range to enforce nuclear power plant usage where it would otherwise have unrealistically low generation / high dispatchability (#201 and #202).
 * Fix storage flows in redispatch (both for the original asset and the ramp up/down assets) (#196).
 * Use `Generator` component for all ramp up/down assets to simplify optimisation problem.
