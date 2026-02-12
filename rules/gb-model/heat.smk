@@ -22,7 +22,7 @@ rule process_cop_profiles:
     log:
         logs("process_cop_profiles_clustered_{year}.log"),
     script:
-        "../../scripts/gb_model/heat/process_cop_profiles.py"
+        scripts("gb_model/heat/process_cop_profiles.py")
 
 
 rule process_fes_heat_technologies:
@@ -43,7 +43,7 @@ rule process_fes_heat_technologies:
     log:
         logs("process_fes_heat_technologies_{fes_scenario}.log"),
     script:
-        "../../scripts/gb_model/heat/process_fes_heat_technologies.py"
+        scripts("gb_model/heat/process_fes_heat_technologies.py")
 
 
 rule resistive_heater_demand_profile:
@@ -63,7 +63,7 @@ rule resistive_heater_demand_profile:
     log:
         logs("resistive_heater_demand_profile_{fes_scenario}_{year}.log"),
     script:
-        "../../scripts/gb_model/heat/resistive_heater_demand_profile.py"
+        scripts("gb_model/heat/resistive_heater_demand_profile.py")
 
 
 rule process_heat_demand_shape:
@@ -81,4 +81,4 @@ rule process_heat_demand_shape:
     log:
         logs("heat_demand_s_clustered_{fes_scenario}_{sector}_{year}.log"),
     script:
-        "../../scripts/gb_model/heat/process_heat_demand_shape.py"
+        scripts("gb_model/heat/process_heat_demand_shape.py")

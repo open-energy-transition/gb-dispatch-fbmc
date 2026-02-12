@@ -23,7 +23,7 @@ rule process_ev_demand_shape:
     log:
         logs("process_ev_demand_shape.log"),
     script:
-        "../../scripts/gb_model/ev/process_ev_demand_shape.py"
+        scripts("gb_model/ev/process_ev_demand_shape.py")
 
 
 rule create_ev_peak_charging_table:
@@ -38,7 +38,7 @@ rule create_ev_peak_charging_table:
     log:
         logs("create_ev_peak_charging_table_{fes_scenario}.log"),
     script:
-        "../../scripts/gb_model/ev/create_ev_peak_charging_table.py"
+        scripts("gb_model/ev/create_ev_peak_charging_table.py")
 
 
 rule create_ev_v2g_storage_table:
@@ -55,7 +55,7 @@ rule create_ev_v2g_storage_table:
     log:
         logs("create_ev_v2g_storage_table_{fes_scenario}.log"),
     script:
-        "../../scripts/gb_model/ev/create_ev_v2g_storage_table.py"
+        scripts("gb_model/ev/create_ev_v2g_storage_table.py")
 
 
 use rule scaled_demand_profile as scaled_ev_demand_profile with:
