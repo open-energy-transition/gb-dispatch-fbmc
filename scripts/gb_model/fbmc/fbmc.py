@@ -177,7 +177,11 @@ def add_dir_opp_links(n: pypsa.Network):
         n.model.add_constraints(-1 * opp_flow <= net_flows)
 
         n.model.add_constraints(dir_flow + opp_flow == net_flows)
-
+        # not sure why it doesn't work without explicitly setting these
+        g_dispatch = n.model["Generator-p"].sel(name = name + " flow 0")
+        l_dispatch = n.model["Generator-p"].sel(name = name + " flow 1")
+        n.model.add_constraints(g_dispatch == net_flows)
+        n.model.add_constraints(l_dispatch == -1 * net_flows)
         logger.info(
             f"Added {name} that can mimic increase and decrease in dispatch"
         )
@@ -264,7 +268,7 @@ def modify_network_for_fbmc(n: pypsa.Network) -> pypsa.Network:
     n.add(
         "Generator",
         name=links.index,
-        suffix=" flow",
+        suffix=" flow 0",
         carrier='FBMC_flow',
         marginal_cost=0,
         p_min_pu=-np.inf,
@@ -276,7 +280,7 @@ def modify_network_for_fbmc(n: pypsa.Network) -> pypsa.Network:
     n.add(
         "Generator",
         name=links.index,
-        suffix=" flow",
+        suffix=" flow 1",
         carrier='FBMC_flow',
         marginal_cost=0,
         p_min_pu=-np.inf,
