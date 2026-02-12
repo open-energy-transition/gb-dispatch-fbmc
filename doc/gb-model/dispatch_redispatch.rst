@@ -159,7 +159,7 @@ The offer cost is the asset's short-run marginal cost plus a premium, to reflect
 
 **Low-Carbon Generators**
 
-For low-carbon generators with Contracts for Difference (CfD), the bid/offer costs are based on the strike price - the subsidy received by the operator - minus the asset short-run marginal cost.
+For low-carbon generators with Contracts for Difference (CfD), the bid/offer costs are based on the strike price (the subsidy received by the operator) minus the asset short-run marginal cost.
 This value is applied as a cost to the system whether the asset operator is increasing or decreasing output in redispatch.
 It reflects a cost to the system operator to account for lost subsidy (bids) and to pay for additional generation (offers).
 
