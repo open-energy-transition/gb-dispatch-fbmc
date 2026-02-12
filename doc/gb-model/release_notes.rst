@@ -12,6 +12,7 @@ Release Notes
 Unreleased
 ==========
 
+* Update custom busmap definition to have one per configured run name (``data/gb-model/custom-busmap.csv`` -> ``data/gb-model/custom-busmap/<run-name>.csv``) (#207).
 * Impose nuclear capacity factor range to enforce nuclear power plant usage where it would otherwise have unrealistically low generation / high dispatchability (#201 and #202).
 * Fix storage flows in redispatch (both for the original asset and the ramp up/down assets) (#196).
 * Use `Generator` component for all ramp up/down assets to simplify optimisation problem.
