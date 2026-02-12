@@ -664,7 +664,7 @@ def input_custom_busmap(w):
 
     if mode == "gb_shapes":
         custom_busshapes = resources("gb-model/merged_shapes.geojson")
-        custom_busmap = f"data/gb-model/custom_busmap.csv"
+        custom_busmap = f"data/gb-model/custom_busmap/{config["run"]["name"]}.csv"
 
     return {
         "custom_busmap": custom_busmap,

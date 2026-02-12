@@ -6,7 +6,7 @@ SPDX-PackageDownloadLocation = "https://github.com/open-energy-transition/gb-dis
 [[annotations]]
 path = [
     "doc/gb-model/**",
-    "data/gb-model/custom_busmap.csv"
+    "data/gb-model/custom_busmap/*.csv"
 ]
 SPDX-FileCopyrightText = "gb-dispatch-model contributors"
 SPDX-License-Identifier = "CC-BY-4.0"
