@@ -19,7 +19,7 @@ rule retrieve_entsoe_unavailability_data:
     resources:
         mem_mb=1000,
     script:
-        "../../scripts/gb_model/generators/retrieve_entsoe_unavailability_data.py"
+        scripts("gb_model/generators/retrieve_entsoe_unavailability_data.py")
 
 
 rule generator_monthly_availability_fraction:
@@ -40,7 +40,7 @@ rule generator_monthly_availability_fraction:
     log:
         logs("{zone}_generator_monthly_availability_fraction.log"),
     script:
-        "../../scripts/gb_model/generators/generator_monthly_availability_fraction.py"
+        scripts("gb_model/generators/generator_monthly_availability_fraction.py")
 
 
 rule create_powerplants_table:
@@ -60,7 +60,7 @@ rule create_powerplants_table:
     log:
         logs("create_powerplants_table_{fes_scenario}.log"),
     script:
-        "../../scripts/gb_model/generators/create_powerplants_table.py"
+        scripts("gb_model/generators/create_powerplants_table.py")
 
 
 rule assign_costs:
@@ -83,7 +83,7 @@ rule assign_costs:
     wildcard_constraints:
         data_file="fes_powerplants|regional_H2_storage_capacity_inc_eur|regional_grid_electrolysis_capacities_inc_eur",
     script:
-        "../../scripts/gb_model/generators/assign_costs.py"
+        scripts("gb_model/generators/assign_costs.py")
 
 
 rule create_chp_p_min_pu_profile:
@@ -101,4 +101,4 @@ rule create_chp_p_min_pu_profile:
     log:
         logs("create_chp_p_min_pu_profile.log"),
     script:
-        "../../scripts/gb_model/generators/create_chp_p_min_pu_profile.py"
+        scripts("gb_model/generators/create_chp_p_min_pu_profile.py")
