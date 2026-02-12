@@ -29,13 +29,14 @@ rule calc_interconnector_bid_offer_profile:
     params:
         bids_and_offers=config_provider("redispatch"),
     input:
-        unconstrained_result=RESULTS + "networks/unconstrained_clustered/{year}.nc",
+        unconstrained_result=RESULTS
+        + "networks/{fes_scenario}/unconstrained_clustered/{year}.nc",
     output:
         bid_offer_profile=resources(
-            "gb-model/interconnector_bid_offer_profile/{year}.csv"
+            "gb-model/{fes_scenario}/interconnector_bid_offer_profile/{year}.csv"
         ),
     log:
-        logs("calc_interconnector_bid_offer_profile/{year}.log"),
+        logs("calc_interconnector_bid_offer_profile_{fes_scenario}_{year}.log"),
     script:
         "../../scripts/gb_model/redispatch/calc_interconnector_bid_offer_profile.py"
 
@@ -46,16 +47,17 @@ rule prepare_constrained_network:
     params:
         bids_and_offers=config_provider("redispatch"),
     input:
-        network=resources("networks/composed_clustered/{year}.nc"),
-        unconstrained_result=RESULTS + "networks/unconstrained_clustered/{year}.nc",
+        network=resources("networks/{fes_scenario}/composed_clustered/{year}.nc"),
+        unconstrained_result=RESULTS
+        + "networks/{fes_scenario}/unconstrained_clustered/{year}.nc",
         renewable_strike_prices=resources("gb-model/CfD_strike_prices.csv"),
         interconnector_bid_offer=resources(
-            "gb-model/interconnector_bid_offer_profile/{year}.csv"
+            "gb-model/{fes_scenario}/interconnector_bid_offer_profile/{year}.csv"
         ),
     output:
-        network=resources("networks/constrained_clustered/{year}.nc"),
+        network=resources("networks/{fes_scenario}/constrained_clustered/{year}.nc"),
     log:
-        logs("prepare_constrained_network/{year}.log"),
+        logs("prepare_constrained_network_{fes_scenario}_{year}.log"),
     script:
         "../../scripts/gb_model/redispatch/prepare_constrained_network.py"
 
@@ -72,19 +74,26 @@ rule solve_constrained:
         etys_boundaries_to_lines=config["region_operations"]["etys_boundaries_lines"],
         etys_boundaries_to_links=config["region_operations"]["etys_boundaries_links"],
     input:
-        network=resources("networks/constrained_clustered/{year}.nc"),
+        network=resources("networks/{fes_scenario}/constrained_clustered/{year}.nc"),
         etys_caps=resources("gb-model/etys_boundary_capabilities.csv"),
     output:
-        network=RESULTS + "networks/constrained_clustered/{year}.nc",
-        config=RESULTS + "configs/config.constrained_clustered/{year}.yaml",
+        network=RESULTS + "networks/{fes_scenario}/constrained_clustered/{year}.nc",
+        config=RESULTS
+        + "configs/{fes_scenario}/config.constrained_clustered/{year}.yaml",
     log:
         solver=normpath(
-            RESULTS + "logs/solve_network/constrained_clustered/{year}_solver.log"
+            RESULTS
+            + "logs/solve_network/{fes_scenario}/constrained_clustered/{year}_solver.log"
         ),
-        memory=RESULTS + "logs/solve_network/constrained_clustered/{year}_memory.log",
-        python=RESULTS + "logs/solve_network/constrained_clustered/{year}_python.log",
+        memory=RESULTS
+        + "logs/solve_network/{fes_scenario}/constrained_clustered/{year}_memory.log",
+        python=RESULTS
+        + "logs/solve_network/{fes_scenario}/constrained_clustered/{year}_python.log",
     benchmark:
-        (RESULTS + "benchmarks/solve_network/constrained_clustered/{year}")
+        (
+            RESULTS
+            + "benchmarks/solve_network/{fes_scenario}/constrained_clustered/{year}"
+        )
     threads: solver_threads
     resources:
         mem_mb=config_provider("solving", "mem_mb"),
@@ -97,18 +106,18 @@ rule solve_constrained:
 
 rule calculate_constraint_costs:
     message:
-        "Calculate total constraint cost across all years"
+        "Calculate total constraint cost across all years for `{wildcards.fes_scenario}` scenario"
     params:
         constraint_cost_extra_years=config["redispatch"]["constraint_cost_extra_years"],
     input:
         networks=expand(
-            RESULTS + "networks/constrained_clustered/{year}.nc",
+            RESULTS + "networks/{{fes_scenario}}/constrained_clustered/{year}.nc",
             year=range(
                 config["redispatch"]["year_range_incl"][0],
                 config["redispatch"]["year_range_incl"][1] + 1,
             ),
         ),
     output:
-        csv=RESULTS + "constraint_cost.csv",
+        csv=RESULTS + "constraint_costs/{fes_scenario}.csv",
     script:
         "../../scripts/gb_model/redispatch/calculate_constraint_costs.py"

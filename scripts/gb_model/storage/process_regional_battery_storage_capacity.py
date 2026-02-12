@@ -14,7 +14,7 @@ from pathlib import Path
 import pandas as pd
 
 from scripts._helpers import configure_logging, set_scenario_config
-from scripts.gb_model._helpers import parse_flexibility_data
+from scripts.gb_model._helpers import get_scenario_name, parse_flexibility_data
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +95,7 @@ if __name__ == "__main__":
 
     battery_capacity = parse_flexibility_data(
         flexibility_df,
-        snakemake.params.scenario,
+        get_scenario_name(snakemake),
         snakemake.params.year_range,
         snakemake.params.carrier_mapping,
     )

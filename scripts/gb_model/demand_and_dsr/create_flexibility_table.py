@@ -14,7 +14,7 @@ from pathlib import Path
 import pandas as pd
 
 from scripts._helpers import configure_logging, set_scenario_config
-from scripts.gb_model._helpers import parse_flexibility_data
+from scripts.gb_model._helpers import get_scenario_name, parse_flexibility_data
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ if __name__ == "__main__":
     flexibility_data = pd.read_csv(snakemake.input.flexibility_sheet)
 
     # Parse input data
-    fes_scenario = snakemake.params.scenario
+    fes_scenario = get_scenario_name(snakemake)
     year_range = snakemake.params.year_range
     carrier_mapping = snakemake.params.carrier_mapping
 

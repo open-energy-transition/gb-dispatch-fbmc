@@ -33,20 +33,22 @@ rule compose_network:
     input:
         unpack(input_profile_tech),
         demands=expand(
-            resources("gb-model/{demand_type}_demand/{{year}}.csv"),
+            resources("gb-model/{{fes_scenario}}/{demand_type}_demand/{{year}}.csv"),
             demand_type=config["fes"]["gb"]["demand"]["Technology Detail"].keys(),
         ),
         dsr=expand(
-            resources("gb-model/regional_{sector}_dsr_inc_eur.csv"),
+            resources("gb-model/{{fes_scenario}}/regional_{sector}_dsr_inc_eur.csv"),
             sector=["residential", "iandc", "iandc_heat", "ev", "residential_heat"],
         ),
         ev_data=expand(
-            resources("gb-model/regional_ev_{ev_data}_inc_eur.csv"),
+            resources("gb-model/{{fes_scenario}}/regional_ev_{ev_data}_inc_eur.csv"),
             ev_data=["v2g_storage", "v2g"],
         )
         + [resources("avail_profile_s_clustered.csv")],
         network=resources("networks/base_s_clustered.nc"),
-        powerplants=resources("gb-model/fes_powerplants_inc_tech_data.csv"),
+        powerplants=resources(
+            "gb-model/{fes_scenario}/fes_powerplants_inc_tech_data.csv"
+        ),
         tech_costs=Path(COSTS_DATASET["folder"])
         / f"costs_{config['scenario']['planning_horizons'][0]}.csv",
         hydro_capacities=ancient("data/hydro_capacities.csv"),
@@ -59,18 +61,18 @@ rule compose_network:
             "gb-model/GB_generator_monthly_availability_fraction.csv"
         ),
         battery_e_nom=resources(
-            "gb-model/regional_battery_storage_capacity_inc_eur.csv"
+            "gb-model/{fes_scenario}/regional_battery_storage_capacity_inc_eur.csv"
         ),
         H2_data=[
-            resources("gb-model/regional_H2_demand_annual_inc_eur.csv"),
+            resources("gb-model/{fes_scenario}/regional_H2_demand_annual_inc_eur.csv"),
             resources(
-                "gb-model/regional_non_networked_electrolysis_demand_annual_inc_eur.csv"
+                "gb-model/{fes_scenario}/regional_non_networked_electrolysis_demand_annual_inc_eur.csv"
             ),
             resources(
-                "gb-model/regional_H2_storage_capacity_inc_eur_inc_tech_data.csv"
+                "gb-model/{fes_scenario}/regional_H2_storage_capacity_inc_eur_inc_tech_data.csv"
             ),
             resources(
-                "gb-model/regional_grid_electrolysis_capacities_inc_eur_inc_tech_data.csv"
+                "gb-model/{fes_scenario}/regional_grid_electrolysis_capacities_inc_eur_inc_tech_data.csv"
             ),
         ],
         intermediate_data=[
@@ -78,9 +80,9 @@ rule compose_network:
             resources("gb-model/intra_gb_transmission_availability.csv"),
         ],
     output:
-        network=resources("networks/composed_{clusters}/{year}.nc"),
+        network=resources("networks/{fes_scenario}/composed_{clusters}/{year}.nc"),
     log:
-        logs("compose_network_{clusters}_{year}.log"),
+        logs("compose_network_{clusters}_{fes_scenario}_{year}.log"),
     resources:
         mem_mb=4000,
     wildcard_constraints:
@@ -92,4 +94,7 @@ rule compose_network:
 
 rule gb_all:
     input:
-        RESULTS + "constraint_cost.csv",
+        expand(
+            RESULTS + "constraint_costs/{fes_scenario}.csv",
+            fes_scenario=config["fes"]["scenario_mapping"].keys(),
+        ),

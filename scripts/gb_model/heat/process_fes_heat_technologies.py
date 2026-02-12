@@ -16,6 +16,7 @@ import numpy as np
 import pandas as pd
 
 from scripts._helpers import configure_logging, set_scenario_config
+from scripts.gb_model._helpers import get_scenario_name
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +65,13 @@ def process_fes_heat_technologies(
         .data.sum()
     )
     grouped_data_dict: dict[str, pd.Series] = defaultdict(pd.Series)
+
     for current_tech, new_tech in electrified_heating_technologies.items():
+        if current_tech not in sectoral_data.index.get_level_values("Technology"):
+            logger.warning(
+                f"Technology '{current_tech}' not found in the dataset. Skipping."
+            )
+            continue
         current_tech_data = sectoral_data.xs(current_tech, level="Technology")
         if isinstance(new_tech, str):
             grouped_data_dict[new_tech] = pd.concat(
@@ -102,7 +109,7 @@ if __name__ == "__main__":
     heating_technology_data = process_fes_heat_technologies(
         fes_heat_technology_data=snakemake.input.fes_heat_technology_data,
         electrified_heating_technologies=snakemake.params.electrified_heating_technologies,
-        scenario=snakemake.params.scenario,
+        scenario=get_scenario_name(snakemake),
         year_range=snakemake.params.year_range,
     )
     for sector in heating_technology_data.index.get_level_values("sector").unique():

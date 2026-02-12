@@ -16,7 +16,11 @@ import geopandas as gpd
 import pandas as pd
 
 from scripts._helpers import configure_logging, set_scenario_config
-from scripts.gb_model._helpers import map_points_to_regions, strip_str
+from scripts.gb_model._helpers import (
+    get_scenario_name,
+    map_points_to_regions,
+    strip_str,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -167,7 +171,7 @@ if __name__ == "__main__":
     gdf_regions = gpd.read_file(snakemake.input.regions)
 
     # Load all the params
-    fes_scenario = snakemake.params.scenario
+    fes_scenario = get_scenario_name(snakemake)
     year_range = snakemake.params.year_range
     extra_gsp_coordinates = snakemake.params.fill_gsp_lat_lons
     manual_gsp_mapping = snakemake.params.manual_gsp_mapping
