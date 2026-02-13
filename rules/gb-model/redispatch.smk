@@ -46,7 +46,6 @@ rule calculate_bid_offer_multipliers:
     message:
         "Calculate bid / offer multipliers for conventional generators"
     params:
-        fes_scenario=config["fes"]["scenario"],
         costs_config=config["costs"],
         technology_mapping=config_provider("redispatch", "elexon", "technology_mapping"),
     input:
@@ -61,7 +60,7 @@ rule calculate_bid_offer_multipliers:
     output:
         csv=resources("gb-model/bid_offer_multipliers.csv"),
     log:
-        logs("calculate_bid_offer_multipliers.log"),https://github.com/open-energy-transition/gb-dispatch-model/pull/209/conflict?name=rules%252Fgb-model%252Fredispatch.smk&ancestor_oid=34d44e63129351ec98017d2819c88de1744cda4e&base_oid=ad1c5189bcfe0b2e5743ffece702c3ceeff19986&head_oid=89d9b574dc50faba87e5cc09556654e1421df9af
+        logs("calculate_bid_offer_multipliers.log"),
     script:
         "../../scripts/gb_model/redispatch/calculate_bid_offer_multipliers.py"
 
