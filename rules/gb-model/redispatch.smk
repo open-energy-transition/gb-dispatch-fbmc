@@ -54,8 +54,9 @@ rule calculate_bid_offer_multipliers:
         fes_carbon_costs=resources("gb-model/fes-costing/AS.7 (Carbon Cost).csv"),
         tech_costs=Path(COSTS_DATASET["folder"])
         / f"costs_{config['scenario']['planning_horizons'][0]}.csv",
+        bid_offer_data=expand(
+            resources("gb-model/bids_and_offers/Elexon/{bod_year}.csv"),
             bod_year=config["redispatch"]["elexon"]["years"],
-            ),
         ),
     output:
         csv=resources("gb-model/bid_offer_multipliers.csv"),
