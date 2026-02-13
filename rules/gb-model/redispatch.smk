@@ -39,7 +39,7 @@ rule fetch_bid_offer_data_elexon:
     log:
         logs("fetch_bid_offer_data_elexon_{bod_year}.log"),
     script:
-        "../../scripts/gb_model/redispatch/fetch_bid_offer_data_elexon.py"
+        scripts("gb_model/redispatch/fetch_bid_offer_data_elexon.py")
 
 
 rule calculate_bid_offer_multipliers:
@@ -58,18 +58,18 @@ rule calculate_bid_offer_multipliers:
             bod_year=config["redispatch"]["elexon"]["years"],
         ),
     output:
-        csv=resources("gb-model/bid_offer_multipliers.csv"),
+        csv=resources("gb-model/{fes_scenario}/bid_offer_multipliers.csv"),
     log:
-        logs("calculate_bid_offer_multipliers.log"),
+        logs("calculate_bid_offer_multipliers_{fes_scenario}.log"),
     script:
-        "../../scripts/gb_model/redispatch/calculate_bid_offer_multipliers.py"
+        scripts("gb_model/redispatch/calculate_bid_offer_multipliers.py")
 
 
 rule calc_interconnector_bid_offer_profile:
     message:
         "Calculate interconnector bid/offer profiles"
     input:
-        bids_and_offers=resources("gb-model/bid_offer_multipliers.csv"),
+        bids_and_offers=resources("gb-model/{fes_scenario}/bid_offer_multipliers.csv"),
         unconstrained_result=RESULTS
         + "networks/{fes_scenario}/unconstrained_clustered/{year}.nc",
     output:
@@ -93,7 +93,7 @@ rule prepare_constrained_network:
         interconnector_bid_offer=resources(
             "gb-model/{fes_scenario}/interconnector_bid_offer_profile/{year}.csv"
         ),
-        bids_and_offers=resources("gb-model/bid_offer_multipliers.csv"),
+        bids_and_offers=resources("gb-model/{fes_scenario}/bid_offer_multipliers.csv"),
     output:
         network=resources("networks/{fes_scenario}/constrained_clustered/{year}.nc"),
     log:

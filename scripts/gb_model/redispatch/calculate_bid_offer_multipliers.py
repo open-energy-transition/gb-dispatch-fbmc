@@ -12,7 +12,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from scripts._helpers import configure_logging, get_scenario_name, set_scenario_config
+from scripts._helpers import configure_logging, set_scenario_config
+from scripts.gb_model._helpers import get_scenario_name
 from scripts.gb_model.generators.assign_costs import (
     _load_costs,
     _load_fes_carbon_costs,
