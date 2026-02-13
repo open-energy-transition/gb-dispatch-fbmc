@@ -15,6 +15,7 @@ from pathlib import Path
 import pandas as pd
 
 from scripts._helpers import configure_logging, set_scenario_config
+from scripts.gb_model._helpers import get_scenario_name
 
 logger = logging.getLogger(__name__)
 
@@ -343,7 +344,7 @@ if __name__ == "__main__":
 
     # Load all the params
     costs_config = snakemake.params.costs_config
-    fes_scenario = snakemake.params.fes_scenario
+    fes_scenario = get_scenario_name(snakemake)
 
     # Enrich powerplants with technical/cost parameters
     df_powerplants = assign_technical_and_costs_defaults(

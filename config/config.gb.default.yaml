@@ -779,7 +779,11 @@ fes-costing-sheet-config:
 
 fes:
   fes_year: 2024
-  scenario: Holistic Transition   # fes workbook
+  scenario_mapping:
+    HT: Holistic Transition
+    CF: Counterfactual
+    EE: Electric Engagement
+    HE: Hydrogen Evolution
   default_set: PP
   gb:
     carrier_mapping:
@@ -1275,7 +1279,7 @@ interconnectors:
     2037: [Continental Link]
 
 redispatch:
-  year_range_incl: [2025, 2045] # 20-year period over which we will run the simulation
+  year_range_incl: [2025, 2044] # 20-year period over which we will run the simulation
   constraint_cost_extra_years: 20  # number of years to extend the constraint cost calculation beyond the final year (using the data from the final year)
   elexon: # Elexon API data 
     technology_mapping: # ignoring renewables in mapping as they come from CfD data

@@ -6,7 +6,7 @@ SPDX-PackageDownloadLocation = "https://github.com/open-energy-transition/gb-dis
 [[annotations]]
 path = [
     "doc/gb-model/**",
-    "data/gb-model/custom_busmap.csv"
+    "data/gb-model/custom_busmap/*.csv"
 ]
 SPDX-FileCopyrightText = "gb-dispatch-model contributors"
 SPDX-License-Identifier = "CC-BY-4.0"
@@ -23,7 +23,6 @@ SPDX-License-Identifier = "CC-BY-4.0"
 
 [[annotations]]
 path = [
-    "doc/configtables/*",
     "doc/data_inventory.csv",
     "doc/img/*",
     "test/test_data/*",
@@ -38,7 +37,9 @@ path = [
     "pixi.lock",
     "matplotlibrc",
     "envs/*.pin.txt",
-    "envs/environment.yaml"
+    "envs/environment.yaml",
+    "config/config.default.yaml",
+    "config/schema.json"
 ]
 SPDX-FileCopyrightText = "The PyPSA-Eur Authors"
 SPDX-License-Identifier = "CC0-1.0"
