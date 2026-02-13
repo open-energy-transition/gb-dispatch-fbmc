@@ -133,25 +133,25 @@ def add_fbmc_constraints(n: pypsa.Network) -> None:
     rhs_dir = ram_data.to_xarray() # positive values, aligns with given convention
     rhs_opp = ram_data.to_xarray()
     
-    # n.model.add_constraints(
-    #     lhs_1_dir + lhs_2_dir <= rhs_dir,
-    #     name="PTDF-RAM-constraints-DIR",
-    # )
-    # n.model.add_constraints(
-    #     lhs_1_opp + lhs_2_opp >= -1 * rhs_opp,
-    #     name="PTDF-RAM-constraints-OPP"
-    # )
+    n.model.add_constraints(
+        lhs_1_dir + lhs_2_dir <= rhs_dir,
+        name="PTDF-RAM-constraints-DIR",
+    )
+    n.model.add_constraints(
+        lhs_1_opp + lhs_2_opp >= -1 * rhs_opp,
+        name="PTDF-RAM-constraints-OPP"
+    )
 
 def add_dir_opp_constraints(n: pypsa.Network):
     # only for the Viking link for now
     
-    links = n.components.links.static[n.components.links.static.bus1 == 'EUR'] #.static.loc[['Viking Link', 'SENECA']]#.reset_index()
+    links = n.components.links.static[n.components.links.static.bus1 == 'EUR'] 
+    links = n.c.links.static.loc[['Viking Link', 'SENECA']]#.reset_index()
 
     for name, link in links.iterrows():
         # calculate the net flow
         mask = n.model["Link-p"].coords["name"].to_index().str.contains(name)
-        flows = n.model["Link-p"].sel(name=mask)
-
+        flows = n.model["Link-p"].sel(name=mask, method="nearest")
         mask = flows.coords["name"].str.endswith("ramp down")
         ramp_down_flows = flows.sel(name=mask)    
         mask = flows.coords["name"].str.endswith("ramp up")
@@ -165,13 +165,10 @@ def add_dir_opp_constraints(n: pypsa.Network):
         mask = flows.coords["name"].str.endswith("[OPP]")
         opp_flow = flows.sel(name=mask)
 
-        # dir_slack = n.model.add_variables(0, np.inf, coords=None, name=f"{name} DIR slack")
-        # opp_slack = n.model.add_variables(-np.inf, 0, coords=None, name=f"{name} OPP slack")
-        
         # net flow pos = dispatch on the link_dir 
         # net flow neg = dispatch on the link_opp
-        n.model.add_constraints(dir_flow >= net_flows)
-        n.model.add_constraints(-1 * opp_flow <= net_flows)
+        # n.model.add_constraints(dir_flow >= net_flows)
+        # n.model.add_constraints(-1 * opp_flow <= net_flows)
 
         logger.info(
             f"Added {name} that can mimic increase and decrease in dispatch"
