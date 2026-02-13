@@ -57,7 +57,7 @@ def add_fbmc_constraints(n: pypsa.Network) -> None:
     config : dict
         Configuration used to modify the network for FBMC implementation.
     """
-    add_dir_opp_links(n) # model must be initialized - so not sure i can do this in the modify function or need to split
+    add_dir_opp_constraints(n) # model must be initialized - so not sure i can do this in the modify function or need to split
 
     fbmc_data = load_fb_data()
 
@@ -142,10 +142,10 @@ def add_fbmc_constraints(n: pypsa.Network) -> None:
     #     name="PTDF-RAM-constraints-OPP"
     # )
 
-def add_dir_opp_links(n: pypsa.Network):
+def add_dir_opp_constraints(n: pypsa.Network):
     # only for the Viking link for now
     
-    links = n.components.links.static.loc[['Viking Link', 'SENECA']]#.reset_index()
+    links = n.components.links.static[n.components.links.static.bus1 == 'EUR'] #.static.loc[['Viking Link', 'SENECA']]#.reset_index()
 
     for name, link in links.iterrows():
         # calculate the net flow
@@ -156,8 +156,7 @@ def add_dir_opp_links(n: pypsa.Network):
         ramp_down_flows = flows.sel(name=mask)    
         mask = flows.coords["name"].str.endswith("ramp up")
         ramp_up_flows = flows.sel(name=mask)
-        mask = ~flows.coords["name"].str.contains("ramp|[DIR]|[OPP]", regex=True)
-        net_flows = flows.sel(name=mask) + ramp_up_flows + ramp_down_flows
+        net_flows = flows.sel(name=name) + ramp_up_flows + ramp_down_flows
         
         # linearize max/min trick to seperate the flow into neg/pos
         # initialize dir/opp flow vars 
@@ -166,22 +165,14 @@ def add_dir_opp_links(n: pypsa.Network):
         mask = flows.coords["name"].str.endswith("[OPP]")
         opp_flow = flows.sel(name=mask)
 
-        dir_slack = n.model.add_variables(0, np.inf, coords=None, name=f"{name} DIR slack")
-        opp_slack = n.model.add_variables(-np.inf, 0, coords=None, name=f"{name} OPP slack")
+        # dir_slack = n.model.add_variables(0, np.inf, coords=None, name=f"{name} DIR slack")
+        # opp_slack = n.model.add_variables(-np.inf, 0, coords=None, name=f"{name} OPP slack")
         
         # net flow pos = dispatch on the link_dir 
         # net flow neg = dispatch on the link_opp
-        n.model.add_constraints(dir_slack + dir_flow <= net_flows)
-        n.model.add_constraints(opp_slack - opp_flow >= net_flows)
         n.model.add_constraints(dir_flow >= net_flows)
         n.model.add_constraints(-1 * opp_flow <= net_flows)
 
-        n.model.add_constraints(dir_flow + opp_flow == net_flows)
-        # not sure why it doesn't work without explicitly setting these
-        g_dispatch = n.model["Generator-p"].sel(name = name + " flow 0")
-        l_dispatch = n.model["Generator-p"].sel(name = name + " flow 1")
-        n.model.add_constraints(g_dispatch == net_flows)
-        n.model.add_constraints(l_dispatch == -1 * net_flows)
         logger.info(
             f"Added {name} that can mimic increase and decrease in dispatch"
         )
@@ -214,7 +205,7 @@ def modify_network_for_fbmc(n: pypsa.Network) -> pypsa.Network:
     # Add the buses and links required for the FBMC
     # ---------------------------------------------------
     
-    links = n.components.links.static.loc[['Viking Link', 'SENECA']]#.reset_index()
+    links = n.components.links.static[n.components.links.static.bus1 == 'EUR']
     # add (1) carrier to track dir / opp 
     n.add(
         "Carrier", ["FBMC_flow"]
@@ -270,9 +261,9 @@ def modify_network_for_fbmc(n: pypsa.Network) -> pypsa.Network:
         name=links.index,
         suffix=" flow 0",
         carrier='FBMC_flow',
-        marginal_cost=0,
-        p_min_pu=-np.inf,
-        p_max_pu=np.inf,
+        marginal_cost=1.e-3,
+        p_min_pu=-1,
+        p_max_pu=1,
         p_nom=np.inf,
         bus=links.bus0 + " FBMC",
     )
@@ -282,9 +273,9 @@ def modify_network_for_fbmc(n: pypsa.Network) -> pypsa.Network:
         name=links.index,
         suffix=" flow 1",
         carrier='FBMC_flow',
-        marginal_cost=0,
-        p_min_pu=-np.inf,
-        p_max_pu=np.inf,
+        marginal_cost=1.e-3,
+        p_min_pu=-1,
+        p_max_pu=1,
         p_nom=np.inf,
         bus=links.bus1 + " FBMC",
     )
