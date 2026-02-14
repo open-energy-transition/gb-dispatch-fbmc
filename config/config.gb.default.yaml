@@ -9,6 +9,10 @@ run:
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#foresight
 foresight: overnight
 
+fbmc:
+  enable: true
+
+
 scenario:
   clusters:
   - clustered
@@ -95,7 +99,7 @@ renewable:
 conventional:
   nuclear:
     max_annual_capacity_factor: 1
-    min_annual_capacity_factor: 0.70
+    min_annual_capacity_factor: 0.50
 
 costs:
   GBP_to_EUR: 1.1632 # average in 2021: https://www.exchangerates.org.uk/GBP-EUR-spot-exchange-rates-history-2021.html#:~:text=This%20is%20the%20British%20Pound,rate%20in%202021%3A%201.1632%20EUR.
@@ -1263,7 +1267,7 @@ interconnectors:
     lat: 53.81322
     lon: -0.41847
   plan:
-    2021: [East-West, IFA, IFA2, NS Link (NSL), Nemo] # existing
+    2021: [BritNed, East-West, IFA, IFA2, NS Link (NSL), Nemo] # existing
     2022: [Moyle, Greenlink (Greenwire)]
     2023: [Viking Link]
     2025: [ElecLink, LionLink (EuroLink), Aminth]
@@ -1274,7 +1278,7 @@ interconnectors:
     2037: [Continental Link]
 
 redispatch:
-  year_range_incl: [2025, 2045] # 20-year period over which we will run the simulation
+  year_range_incl: [2035,2036] # 20-year period over which we will run the simulation
   constraint_cost_extra_years: 20  # number of years to extend the constraint cost calculation beyond the final year (using the data from the final year)
   # Source for bid and offers multipliers : https://www.nationalgrid.com/sites/default/files/documents/Long-term%20Market%20and%20Network%20Constraint%20Modelling.pdf
   bid_multiplier:

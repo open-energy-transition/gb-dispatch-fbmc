@@ -1,0 +1,313 @@
+# SPDX-FileCopyrightText: Contributors to PyPSA-Eur <https://github.com/pypsa/pypsa-eur>
+# SPDX-FileCopyrightText: Open Energy Transition gGmbH
+#
+# SPDX-License-Identifier: MIT
+
+import logging
+import re
+
+import numpy as np
+import pandas as pd
+import pypsa
+
+logger = logging.getLogger(__name__)
+
+FP = "../../data/fbmc/flow_based_constraints_2030_v20260206.parquet"
+
+def load_fb_data(
+    fp=FP # placeholder value
+) -> pd.DataFrame:
+    """
+    Load PTDF/RAM matrix from Excel file.
+
+    PTDF matrix contains the weights for each flow through each
+    line/link, by each critical network element component (CNEC)
+    known as a boundary in the GB PTDF.
+    """
+
+    # PTDF data is combined with RAM, etc.
+    combined_data = pd.read_parquet(FP)
+    combined_data.columns = combined_data.columns.str.replace('^ptdf_', '', regex=True)
+    combined_data = combined_data.melt(id_vars=['datetime', 'boundary name', 'direction', 'fmax', 'fref', 'f0', 'ram'], var_name='Link name', value_name='PTDF')
+
+    # Rename/reindex the columns to match the existing FBMC 
+    combined_data = combined_data.rename({'datetime':'snapshot', 'boundary name':'CNEC_ID','Link name':'name'}, axis=1)
+    combined_data["direction"] = combined_data["direction"].apply(lambda x: f"[{x[:3]}]")
+
+    combined_data["name"] = combined_data["name"] + " " + combined_data["direction"] # are opposing links handled in the og fbmc implementation?
+    combined_data["CNEC_ID"] = combined_data["CNEC_ID"] + " " + combined_data["direction"]
+    combined_data = combined_data.set_index(["CNEC_ID", "snapshot", "name"])
+
+    return combined_data
+
+def add_fbmc_constraints(n: pypsa.Network) -> None:
+    """
+    Add the FBMC constraints to the pypsa.Network model.
+
+    Function is currently tailored towards the PTDF matrix and RAM values from ERAA2023,
+    can be downloaded from https://eepublicdownloads.blob.core.windows.net/public-cdn-container/clean-documents/sdc-documents/ERAA/2023/FB-Domain-CORE_Merged.xlsx .
+
+    Parameters
+    ----------
+    n : pypsa.Network
+        The pypsa.Network object to which the FBMC constraints will be added.
+    fp : str, optional
+        File path to the Excel file containing the FBMC data.
+        Needs to contain the PTDF matrix, RAM matrix, and weather assignments.
+    config : dict
+        Configuration used to modify the network for FBMC implementation.
+    """
+    add_dir_opp_constraints(n) # model must be initialized - so not sure i can do this in the modify function or need to split
+
+    fbmc_data = load_fb_data()
+
+    # ----------------------------------
+    # First part of the FBMC constraint:
+    # Flows into and out of CORE bidding zones
+    # ----------------------------------
+
+    # get data for the individual study zone
+    # fbmc_data[fbmc_data.index.get_level_values('name') == 'gb']
+
+    fbmc_data_sz = fbmc_data[fbmc_data.index.get_level_values('name').isin(['gb [DIR]', 'gb [OPP]'])]
+
+    # get links relevant for the intra-CCR FBMC constraint
+    # this is GB # to GB CORE
+    links_idx = n.components.links.static.loc[
+        n.components.links.static["PTDF_type"] == "PTDF_SZ"
+    ].index
+
+    # do the fancy multiplication
+    ds = fbmc_data_sz["PTDF"].to_xarray()
+    mask = ds.coords["name"].str.endswith("[DIR]")
+    ds_dir = ds.sel(name=mask)
+    mask = ds.coords["name"].str.endswith("[OPP]")
+    ds_opp = ds.sel(name=mask)
+    
+    
+    mask = n.model["Link-p"].coords["name"].str.endswith("[DIR]")
+    flow_dir = n.model["Link-p"].sel(name=mask)
+    mask = n.model["Link-p"].coords["name"].str.endswith("[OPP]")
+    flow_opp = n.model["Link-p"].sel(name=mask)
+    # breakpoint()
+    # Calculate PTDF contribution and group by snapshot and CNEC_ID to sum up all contributions to each CNEC at each snapshot
+    lhs_1_dir = ds_dir * flow_dir.sum(dim="name")
+    lhs_1_opp = ds_opp * flow_opp.sum(dim="name")
+    
+    # -----------------------------------
+    # Second part of the FBMC constraint:
+    # loading from HVDC lines between CORE and outside of CORE
+    # -----------------------------------
+    fbmc_data_ahc = fbmc_data.query('~name.str.contains("gb")')
+
+    # Map pypsa.Network links that are related to DC and their names (index) to PTDF line names where bus0=from and bus1=to
+    links = (
+        n.components.links.static.query("`carrier`.str.startswith('DC')")[
+            ["bus0", "bus1"]
+        ]
+        .reset_index()
+        .rename(columns={"name": "link_name"})
+    )
+
+    ds = fbmc_data_ahc["PTDF"].to_xarray()
+    # ds = ds.reindex(name=net_flows.coords["name"])
+    mask = ds.coords["name"].str.endswith("[DIR]")
+    ds_dir = ds.sel(name=mask)
+    mask = ds.coords["name"].str.endswith("[OPP]")
+    ds_opp = ds.sel(name=mask)
+
+    # Casting to xarray creates NaN values, need to fill those entries with 0
+    # flows = n.model["Link-p"].sel(name=ds["name"]) # flows don't use the [OPP/DIR] syntax - they use ramp up/down
+    # restructure flows
+    
+    lhs_2_dir = (ds_dir * flow_dir).sum(dim="name")
+    lhs_2_opp = (ds_opp * flow_opp).sum(dim="name")
+    # Group by snapshot and CNEC_ID to sum up all contributions to each CNEC at each snapshot
+    
+    # RAM data
+
+    ram_data = fbmc_data.reset_index()
+    ram_data = ram_data.pivot(index=['CNEC_ID', 'snapshot'], columns=['name'], values=['ram'])
+    ram_data = ram_data[[('ram','gb [OPP]'), ('ram','gb [DIR]')]].mean(axis=1)
+
+    rhs_dir = ram_data.to_xarray() # positive values, aligns with given convention
+    rhs_opp = ram_data.to_xarray()
+    
+    n.model.add_constraints(
+        lhs_1_dir + lhs_2_dir <= rhs_dir,
+        name="PTDF-RAM-constraints-DIR",
+    )
+    n.model.add_constraints(
+        lhs_1_opp + lhs_2_opp >= -1 * rhs_opp,
+        name="PTDF-RAM-constraints-OPP"
+    )
+
+def add_dir_opp_constraints(n: pypsa.Network):
+    # only for the Viking link for now
+    
+    links = n.components.links.static[n.components.links.static.bus1 == 'EUR'] 
+    links = n.c.links.static.loc[['Viking Link', 'SENECA']]#.reset_index()
+
+    for name, link in links.iterrows():
+        # calculate the net flow
+        mask = n.model["Link-p"].coords["name"].to_index().str.contains(name)
+        flows = n.model["Link-p"].sel(name=mask, method="nearest")
+        mask = flows.coords["name"].str.endswith("ramp down")
+        ramp_down_flows = flows.sel(name=mask)    
+        mask = flows.coords["name"].str.endswith("ramp up")
+        ramp_up_flows = flows.sel(name=mask)
+        net_flows = flows.sel(name=name) + ramp_up_flows + ramp_down_flows
+        
+        # linearize max/min trick to seperate the flow into neg/pos
+        # initialize dir/opp flow vars 
+        mask = flows.coords["name"].str.endswith("[DIR]")
+        dir_flow = flows.sel(name=mask)
+        mask = flows.coords["name"].str.endswith("[OPP]")
+        opp_flow = flows.sel(name=mask)
+
+        # net flow pos = dispatch on the link_dir 
+        # net flow neg = dispatch on the link_opp
+        # n.model.add_constraints(dir_flow >= net_flows)
+        # n.model.add_constraints(-1 * opp_flow <= net_flows)
+
+        logger.info(
+            f"Added {name} that can mimic increase and decrease in dispatch"
+        )
+    return
+
+def modify_network_for_fbmc(n: pypsa.Network) -> pypsa.Network:
+    """
+    Modify the pypsa.Network for the FBMC implementation.
+
+    The methodology follows the description in ERAA2023.
+    This function modified the network and adds additional components that are necessary for the
+    evolved FBMC implementation.
+    It also assigns some helpful, additional attributes to existing components like buses and links.
+
+    Parameters
+    ----------
+    n : pypsa.Network
+        The pypsa.Network object to be modified for FBMC implementation.
+    config : dict
+        Configuration used to modify the network for FBMC implementation.
+        (TODO: Currently not used, but needed for proper ERAA2024 implementation)
+
+    Returns
+    -------
+    pypsa.Network
+        The modified pypsa.Network object with FBMC implementation.
+    """
+
+    # ---------------------------------------------------
+    # Add the buses and links required for the FBMC
+    # ---------------------------------------------------
+    
+    links = n.components.links.static[n.components.links.static.bus1 == 'EUR']
+    # add (1) carrier to track dir / opp 
+    n.add(
+        "Carrier", ["FBMC_flow"]
+    )
+
+    # add dedicated buses 
+    n.add(
+        "Bus",
+        name=links.bus0.unique(),
+        suffix=' FBMC'
+    )
+
+    n.add(
+        "Bus",
+        name=links.bus1.unique(),
+        suffix=' FBMC',
+    )
+
+    # add link with 100 efficiency
+    n.add(
+        "Link",
+        name=links.index,
+        suffix=' [DIR]',
+        bus0=links.bus0 + " FBMC",
+        bus1=links.bus1 + " FBMC",
+        p_nom=np.inf,
+        efficiency=1.0,
+        p_nom_extendable=False,
+        p_min_pu=0.0,
+        p_max_pu=1.0,
+        PTDF_type="PTDF_SZ",
+        carrier="FBMC_flow",
+    )
+
+    n.add(
+        "Link",
+        name=links.index,
+        suffix=' [OPP]',
+        bus0=links.bus1 + " FBMC",
+        bus1=links.bus0 + " FBMC",
+        p_nom=np.inf,
+        efficiency=1.0,
+        p_nom_extendable=False,
+        p_min_pu=0.0,
+        p_max_pu=1.0,
+        PTDF_type="PTDF_SZ",
+        carrier="FBMC_flow",
+    )
+
+    # add generator between -inf and inf
+    n.add(
+        "Generator",
+        name=links.index,
+        suffix=" flow 0",
+        carrier='FBMC_flow',
+        marginal_cost=1.e-3,
+        p_min_pu=-1,
+        p_max_pu=1,
+        p_nom=np.inf,
+        bus=links.bus0 + " FBMC",
+    )
+
+    n.add(
+        "Generator",
+        name=links.index,
+        suffix=" flow 1",
+        carrier='FBMC_flow',
+        marginal_cost=1.e-3,
+        p_min_pu=-1,
+        p_max_pu=1,
+        p_nom=np.inf,
+        bus=links.bus1 + " FBMC",
+    )
+
+    mask = n.components.links.static.bus1 == "EUR FBMC"
+    n.components.links.static.loc[mask, "PTDF_type"] = "PTDF_SZ"
+
+    # ----------------------------------------------------
+    # Add details on which FBMC region each bus belongs to
+    # ----------------------------------------------------
+
+    # Assign links an attribute to indicate which parts of the PTDF they are relevant for
+    logger.info("Assigning PTDF types to network links for FBMC implementation.")
+    n.components.buses.static["FBMC_region"] = ""
+    n.components.links.static["PTDF_type"] = ""
+    
+    # 1. PTDF_SZ for intra-CORE flows
+    core_buses = n.components.buses.static.query("FBMC_region == 'CORE'").index.tolist()
+    idx = n.components.links.static[
+        (n.components.links.static["bus0"].isin(core_buses))
+        & (n.components.links.static["bus1"].isin(core_buses))
+    ].index
+    n.links.loc[idx, "PTDF_type"] = "PTDF_SZ"
+    n.links.loc[idx, "FBMC_region"] = "CORE-CORE"
+
+    # 2. PTDF*_AHC,SZ for flows between CORE and outside of CORE
+    idx = n.components.links.static[
+        (
+            (n.components.links.static["bus0"].isin(core_buses))
+            ^ (n.components.links.static["bus1"].isin(core_buses))
+        )
+        & (n.components.links.static["carrier"].isin(["DC", "DC_OH", "AC"]))
+        & (n.components.links.static["PTDF_type"] != "PTDF_SZ")
+    ].index
+    n.links.loc[idx, "PTDF_type"] = "PTDF*_AHC,SZ"
+    n.links.loc[idx, "FBMC_region"] = "CORE-Outside"
+
+    return n

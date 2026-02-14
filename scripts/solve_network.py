@@ -53,6 +53,9 @@ from scripts._helpers import (
     update_config_from_wildcards,
 )
 
+from scripts.gb_model.fbmc.fbmc import add_fbmc_constraints, modify_network_for_fbmc
+
+
 logger = logging.getLogger(__name__)
 
 # Allow for PyPSA versions <0.35
@@ -506,6 +509,10 @@ def prepare_network(
             t.df["capital_cost"] += (
                 1e-1 + 2e-2 * (np.random.random(len(t.df)) - 0.5)
             ) * t.df["length"]
+
+    # if fbmc and fbmc["enable"]:
+    if True:
+        n = modify_network_for_fbmc(n)
 
     if solve_opts.get("nhours"):
         nhours = solve_opts["nhours"]
@@ -1231,6 +1238,9 @@ def extra_functionality(
 
     if config["sector"]["imports"]["enable"]:
         add_import_limit_constraint(n, snapshots)
+
+    if True: # fbmc and fbmc["enable"]:
+        add_fbmc_constraints(n)
 
     if n.params.custom_extra_functionality:
         source_path = n.params.custom_extra_functionality
