@@ -1,6 +1,6 @@
 ..
   SPDX-FileCopyrightText: Contributors to PyPSA-Eur <https://github.com/pypsa/pypsa-eur>
-  SPDX-FileCopyrightText: Contributors to gb-open-market-model <https://github.com/open-energy-transition/gb-open-market-model>
+  SPDX-FileCopyrightText: Contributors to gb-dispatch-model <https://github.com/open-energy-transition/gb-dispatch-model>
 
   SPDX-License-Identifier: CC-BY-4.0
 
@@ -10,8 +10,8 @@
 Installation
 ##########################################
 
-The subsequently described installation steps are demonstrated as shell commands, where the path before the ``%`` sign denotes the
-directory in which the commands following the ``%`` should be entered.
+The subsequently described installation steps are demonstrated as shell commands.
+To use them in your shell, copy all but the initial ``$`` symbol.
 
 Clone the Repository
 ====================

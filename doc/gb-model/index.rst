@@ -11,18 +11,21 @@ gb-dispatch-model: Great Britain dispatch model built on the PyPSA-Eur workflow
 About
 =====
 
-gb-dispatch-model is an extension of `PyPSA-Eur <../index.html>`_., used to quantify dispatch decisions in Great Britain under the conditions set out by the UK Future Energy Scenarios.
+gb-dispatch-model is an extension of `PyPSA-Eur <../pypsa_eur.html>`_., used to quantify dispatch decisions in Great Britain under the conditions set out by the UK Future Energy Scenarios.
 
 Workflow
 ========
 
-.. image:: img/workflow.png
+The full workflow rulegraph is shown below.
+Open the image in a new tab/window to view it in more detail.
+
+.. image:: img/workflow.svg
     :class: full-width
     :align: center
 
 .. note::
     The graph above was generated using
-    ``snakemake --rulegraph -F | sed -n "/digraph/,/}/p" | dot -Tpng -o doc/gb-model/img/workflow.png``
+    ``snakemake --rulegraph -F | sed -n "/digraph/,/}/p" | dot -Tsvg -o doc/gb-model/img/workflow.svg``
 
 
 Operating Systems
@@ -46,6 +49,7 @@ The gb-dispatch-model workflow is continuously tested for Linux, macOS and Windo
    :caption: Development
 
    system
+   dispatch_redispatch
    implementation
 
 .. toctree::
@@ -55,4 +59,4 @@ The gb-dispatch-model workflow is continuously tested for Linux, macOS and Windo
 
    release_notes
    data_sources
-   ../index
+   ../pypsa_eur

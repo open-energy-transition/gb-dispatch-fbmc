@@ -34,7 +34,7 @@ rule extract_etys_boundary_capabilities:
     log:
         logs("extract_etys_boundary_capabilities.log"),
     script:
-        "../../scripts/gb_model/preprocess/extract_etys_boundary_capabilities.py"
+        scripts("gb_model/preprocess/extract_etys_boundary_capabilities.py")
 
 
 rule create_region_shapes:
@@ -57,7 +57,7 @@ rule create_region_shapes:
     resources:
         mem_mb=1000,
     script:
-        "../../scripts/gb_model/preprocess/create_region_shapes.py"
+        scripts("gb_model/preprocess/create_region_shapes.py")
 
 
 rule manual_region_merger:
@@ -75,7 +75,7 @@ rule manual_region_merger:
     resources:
         mem_mb=1000,
     script:
-        "../../scripts/gb_model/preprocess/manual_region_merger.py"
+        scripts("gb_model/preprocess/manual_region_merger.py")
 
 
 rule extract_fes_workbook_sheet:
@@ -92,7 +92,7 @@ rule extract_fes_workbook_sheet:
     log:
         logs("extract_fes_workbook_sheet-{fes_sheet}.log"),
     script:
-        "../../scripts/gb_model/preprocess/extract_fes_workbook_sheet.py"
+        scripts("gb_model/preprocess/extract_fes_workbook_sheet.py")
 
 
 rule unzip_fes_costing_workbook:
@@ -125,17 +125,16 @@ rule process_fes_eur_data:
     message:
         "Process FES-compatible European scenario workbook."
     params:
-        scenario=config["fes"]["scenario"],
         year_range=config["redispatch"]["year_range_incl"],
         countries=config["countries"],
     input:
         eur_data=resources("gb-model/fes/ES2.csv"),
     output:
-        csv=resources("gb-model/national_eur_data.csv"),
+        csv=resources("gb-model/{fes_scenario}/national_eur_data.csv"),
     log:
-        logs("process_fes_eur_data.log"),
+        logs("process_fes_eur_data_{fes_scenario}.log"),
     script:
-        "../../scripts/gb_model/preprocess/process_fes_eur_data.py"
+        scripts("gb_model/preprocess/process_fes_eur_data.py")
 
 
 rule process_dukes_current_capacities:
@@ -153,14 +152,13 @@ rule process_dukes_current_capacities:
         sheet_config=config["dukes-5.11"]["sheet-config"],
         target_crs=config["target_crs"],
     script:
-        "../../scripts/gb_model/preprocess/process_dukes_current_capacities.py"
+        scripts("gb_model/preprocess/process_dukes_current_capacities.py")
 
 
 rule process_fes_gsp_data:
     message:
         "Process FES workbook sheet BB1 together with metadata from sheet BB2."
     params:
-        scenario=config["fes"]["scenario"],
         year_range=config["redispatch"]["year_range_incl"],
         target_crs=config["target_crs"],
         fill_gsp_lat_lons=config["grid_supply_points"]["fill-lat-lons"],
@@ -171,8 +169,8 @@ rule process_fes_gsp_data:
         gsp_coordinates="data/gb-model/downloaded/gsp-coordinates.csv",
         regions=resources("gb-model/merged_shapes.geojson"),
     output:
-        csv=resources("gb-model/regional_gb_data.csv"),
+        csv=resources("gb-model/{fes_scenario}/regional_gb_data.csv"),
     log:
-        logs("process_fes_gsp_data.log"),
+        logs("process_fes_gsp_data_{fes_scenario}.log"),
     script:
-        "../../scripts/gb_model/preprocess/process_fes_gsp_data.py"
+        scripts("gb_model/preprocess/process_fes_gsp_data.py")

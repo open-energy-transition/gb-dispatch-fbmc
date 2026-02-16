@@ -14,6 +14,7 @@ from pathlib import Path
 import pandas as pd
 
 from scripts._helpers import configure_logging, set_scenario_config
+from scripts.gb_model._helpers import get_scenario_name
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +73,7 @@ if __name__ == "__main__":
     )
 
     # Parse input data
-    fes_scenario = snakemake.params.scenario
+    fes_scenario = get_scenario_name(snakemake)
     year_range = [int(i) for i in snakemake.params.year_range]
     flex_level = snakemake.params.flex_level
 

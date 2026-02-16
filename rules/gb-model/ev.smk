@@ -23,23 +23,22 @@ rule process_ev_demand_shape:
     log:
         logs("process_ev_demand_shape.log"),
     script:
-        "../../scripts/gb_model/ev/process_ev_demand_shape.py"
+        scripts("gb_model/ev/process_ev_demand_shape.py")
 
 
 rule create_ev_peak_charging_table:
     message:
         "Process EV unmanaged charging demand from FES workbook into CSV format"
     params:
-        scenario=config["fes"]["scenario"],
         year_range=config["redispatch"]["year_range_incl"],
     input:
         unmanaged_charging_sheet=resources("gb-model/fes/ED5.csv"),
     output:
-        csv=resources("gb-model/ev_peak_demand.csv"),
+        csv=resources("gb-model/{fes_scenario}/ev_peak_demand.csv"),
     log:
-        logs("create_ev_peak_charging_table.log"),
+        logs("create_ev_peak_charging_table_{fes_scenario}.log"),
     script:
-        "../../scripts/gb_model/ev/create_ev_peak_charging_table.py"
+        scripts("gb_model/ev/create_ev_peak_charging_table.py")
 
 
 rule create_ev_v2g_storage_table:
@@ -50,21 +49,25 @@ rule create_ev_v2g_storage_table:
             "v2g_storage_to_capacity_ratio"
         ],
     input:
-        v2g_cap=resources("gb-model/regional_ev_v2g.csv"),
+        v2g_cap=resources("gb-model/{fes_scenario}/regional_ev_v2g.csv"),
     output:
-        csv=resources("gb-model/regional_ev_v2g_storage.csv"),
+        csv=resources("gb-model/{fes_scenario}/regional_ev_v2g_storage.csv"),
     log:
-        logs("create_ev_v2g_storage_table.log"),
+        logs("create_ev_v2g_storage_table_{fes_scenario}.log"),
     script:
-        "../../scripts/gb_model/ev/create_ev_v2g_storage_table.py"
+        scripts("gb_model/ev/create_ev_v2g_storage_table.py")
 
 
 use rule scaled_demand_profile as scaled_ev_demand_profile with:
     input:
-        gb_demand_annual=resources("gb-model/regional_{demand_type}_demand_annual.csv"),
-        eur_demand_annual=resources("gb-model/eur_demand_annual.csv"),
+        gb_demand_annual=resources(
+            "gb-model/{fes_scenario}/regional_{demand_type}_demand_annual.csv"
+        ),
+        eur_demand_annual=resources("gb-model/{fes_scenario}/eur_demand_annual.csv"),
         demand_shape=resources("gb-model/{demand_type}_demand_shape.csv"),
-        gb_demand_peak=resources("gb-model/regional_{demand_type}_peak_demand.csv"),
+        gb_demand_peak=resources(
+            "gb-model/{fes_scenario}/regional_{demand_type}_peak_demand.csv"
+        ),
     params:
         scaling_params=config["ev"]["ev_demand_profile_transformation"],
     wildcard_constraints:
