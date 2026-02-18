@@ -9,6 +9,11 @@
 Release Notes
 ##########################################
 
+Unreleased
+==========
+
+* Allow for boundary capabilities to increase in line with outputs from an ETYS report (configurable, defaults to True) (#219).
+
 v0.2.0 (2026-02-13)
 ===================
 
