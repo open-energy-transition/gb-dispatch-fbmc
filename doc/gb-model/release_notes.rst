@@ -25,7 +25,7 @@ Instead, development for <= FES2022 should branch off from v0.1.0.
 This version was synchronised with the upstream PyPSA-Eur repository on 2026-02-10.
 
 * Publish documentation on readthedocs.org.
-* Calculate Elexon API to calculate up-to-date Bid/Offer multipliers (#161).
+* Calculate bid/offer multipliers using data from Elexon (#161, #209).
 * Add BritNed as an existing interconnector in default config (#210).
 * Use correct currency (GBP, not EUR) in docs.
 * Clean SPDX copyright text where an outdated repository name was being used.
