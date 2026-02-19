@@ -93,7 +93,7 @@ async def get_historical_bod(
 
     current = start
 
-    async with aiohttp.ClientSession() as session:
+    async with aiohttp.ClientSession(trust_env=True) as session:
         while current <= end:
             # There are 48 settlement periods per day - every 30 mins
             for settlement_period in np.arange(1, 49):
@@ -166,7 +166,7 @@ async def fetch_BM_units(
         url = f"{base_url}/reference/bmunits/all"
 
         # Fetch BM unit data
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(trust_env=True) as session:
             df_bmu = await fetch_api_request_data(
                 url, retrieval_message="BMU Unit Data", session=session
             )
