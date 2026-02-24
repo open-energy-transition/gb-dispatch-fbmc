@@ -233,10 +233,11 @@ def calculate_marginal_costs(
     df = df.join(fes_carbon_costs, on="year")
 
     # Calculate marginal cost if possible
+    df["VOM_carbon"] = df["CO2 intensity"] * df["carbon_cost"] / df["efficiency"]
     df["marginal_cost"] = (
         df["VOM"]
         + df["fuel"] / df["efficiency"]
-        + df["CO2 intensity"] * df["carbon_cost"] / df["efficiency"]
+        + df["VOM_carbon"]
     )
     # Fill gaps in all remaining columns
     for col in costs_config["relevant_cost_columns"]:
@@ -321,7 +322,7 @@ def assign_technical_and_costs_defaults(
         + "-"
         + df["idx_counter"].astype(str)
     )
-    df = df.drop(columns=["idx_counter", "carbon_cost"])
+    df = df.drop(columns=["idx_counter"])
 
     # PyPSA-Eur expects 'capital_cost' column name even though source technology data uses 'investment'
     df = df.rename(columns={"investment": "capital_cost"})
@@ -357,6 +358,6 @@ if __name__ == "__main__":
         data_file=snakemake.wildcards.data_file,
     )
     logger.info("Enriched powerplants with cost and technical parameters")
-
+    
     # Save with index (contains unique generator IDs)
     df_powerplants.to_csv(snakemake.output.enriched_powerplants, index=False)
