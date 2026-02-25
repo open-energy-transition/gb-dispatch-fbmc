@@ -49,7 +49,7 @@ rule prepare_future_etys_caps:
         year_range=config_provider("redispatch", "year_range_incl"),
     input:
         current_caps=resources("gb-model/etys_boundary_capabilities.csv"),
-        future_caps="data/gb-model/downloaded/etys_chart_data.xlsx",
+        future_caps="data/gb-model/downloaded/etys-chart-data.xlsx",
     output:
         csv=resources("gb-model/{fes_scenario}/future_etys_boundary_capabilities.csv"),
     log:
@@ -84,7 +84,7 @@ rule calculate_bid_offer_multipliers:
     message:
         "Calculate bid / offer multipliers for conventional generators"
     params:
-        costs_config=config["costs"],
+        costs_config=config["fes_costs"],
         technology_mapping=config_provider("redispatch", "elexon", "technology_mapping"),
     input:
         fes_power_costs=resources("gb-model/fes-costing/AS.1 (Power Gen).csv"),
@@ -123,6 +123,8 @@ rule calc_interconnector_bid_offer_profile:
 rule prepare_constrained_network:
     message:
         "Prepare network for constrained optimization"
+    params:
+        unconstrain_lines_and_links=config["redispatch"]["unconstrain_lines_and_links"],
     input:
         network=resources("networks/{fes_scenario}/composed_clustered/{year}.nc"),
         unconstrained_result=RESULTS
@@ -151,6 +153,11 @@ rule solve_constrained:
         / scripts("gb_model/redispatch/custom_constraints.py"),
         etys_boundaries_to_lines=config_provider("etys", "boundaries_lines"),
         etys_boundaries_to_links=config_provider("etys", "boundaries_links"),
+        manual_future_etys_caps=(
+            config_provider("etys", "manual_future_capacities")
+            if config["etys"]["use_future_capacities"]
+            else {}
+        ),
     input:
         network=resources("networks/{fes_scenario}/constrained_clustered/{year}.nc"),
         current_etys_caps=resources("gb-model/etys_boundary_capabilities.csv"),
