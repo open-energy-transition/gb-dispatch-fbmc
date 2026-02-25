@@ -9,6 +9,20 @@
 Release Notes
 ##########################################
 
+Unreleased
+==========
+
+* Update config filenames. `config/config.gb.2024.yaml` defines the FES2024 configuration; `config/config.default.gb.yaml` is automatically generated and should not be edited directly (#235).
+* Add config validation and associated documentation for the additional configuration required for the gb-dispatch-model (#235).
+* Switch regions `GB 30` and `GB 31` and rename new `GB 31` to `GB NI` to more explicitly represent the Northern Ireland region.
+* Set line capacities to large number for constrained network to make sure only boundary capabilities are limiting (#241).
+* New config option to enable aggregating the PyPSA network time dimensions, to reduce solve times (#229).
+* Created new OSM pre-built network, available at https://zenodo.org/records/18712831, to include updates made in upstream PyPSA-Eur (incl. ignoring unbuilt lines) (#237).
+* Fix reaching Elexon API request limit when running snakemake with multiple cores by forcing all cores to be used for the data fetching rule.
+* Adding `async` for API request that fetches the mapping of Elexon BMU units to a fueltype (#225).
+* Allow for boundary capabilities to increase in line with outputs from an ETYS report + from manual additions (configurable, defaults to True) (#219, #239).
+* Account for time aggregation in the nuclear annual operation custom constraints (#233)
+
 v0.2.0 (2026-02-13)
 ===================
 
@@ -19,7 +33,7 @@ Instead, development for <= FES2022 should branch off from v0.1.0.
 This version was synchronised with the upstream PyPSA-Eur repository on 2026-02-10.
 
 * Publish documentation on readthedocs.org.
-* Calculate Elexon API to calculate up-to-date Bid/Offer multipliers (#161).
+* Calculate bid/offer multipliers using data from Elexon (#161, #209).
 * Add BritNed as an existing interconnector in default config (#210).
 * Use correct currency (GBP, not EUR) in docs.
 * Clean SPDX copyright text where an outdated repository name was being used.

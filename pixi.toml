@@ -102,6 +102,7 @@ snakemake-storage-plugin-cached-http = ">=0.2.1"
 pandera = ">=0.28.1"
 natsort = ">=8.4.0"
 snakemake-logger-plugin-pypsa = ">=0.1.0"
+pydeflate = ">=2.3.4"
 
 [target.unix.dependencies]
 snakemake-executor-plugin-slurm = ">=1.9.2"
@@ -169,13 +170,25 @@ gb-test = """
 	snakemake gb_all -n --configfile config/config.gb.etys-subset.yaml &&
 	echo "All GB tests completed successfully."
     """
+[feature.gb-model.tasks.model]
+args = [
+    {"arg" = "snakemake_options", "default" = ""},
+    ]
+cmd = "snakemake gb_all {{ snakemake_options }}"
+
+[feature.gb-model.tasks.compose_networks]
+args = [
+    {"arg" = "snakemake_options", "default" = ""},
+    ]
+cmd = "snakemake gb_compose_all {{ snakemake_options }}"
 
 [feature.gb-model.dependencies]
 curl = ">=8.17.0"
 python-dotenv = ">=1.2.1"
 gurobi = "<13.0"
 shapely = ">=2.1"
-pypsa = ">=1.0.7"
+pypsa = ">=1.1.0"
+libabseil = "<20260107" # revert once https://github.com/grpc/grpc/issues/41672 is closed
 
 [feature.gb-model.pypi-dependencies]
 pdfplumber = "==0.9.0"

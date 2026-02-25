@@ -26,10 +26,12 @@ rule compose_network:
         electricity=config["electricity"],
         clustering=config["clustering"],
         renewable=config["renewable"],
+        voll=config["fes_costs"]["voll"],
         enable_chp=config["chp"]["enable"],
         dsr_hours_dict=config["fes"]["gb"]["flexibility"]["dsr_hours"],
         load_bus_suffixes=config["fes"]["gb"]["demand"]["bus_suffix"],
         flex_carrier_suffixes=config["fes"]["gb"]["flexibility"]["carrier_suffix"],
+        time_aggregation=config["time_aggregation"],
     input:
         unpack(input_profile_tech),
         demands=expand(
@@ -97,4 +99,16 @@ rule gb_all:
         expand(
             RESULTS + "constraint_costs/{fes_scenario}.csv",
             fes_scenario=config["fes"]["scenario_mapping"].keys(),
+        ),
+
+
+rule gb_compose_all:
+    input:
+        expand(
+            resources("networks/{fes_scenario}/composed_clustered/{year}.nc"),
+            fes_scenario=config["fes"]["scenario_mapping"].keys(),
+            year=range(
+                config["redispatch"]["year_range_incl"][0],
+                config["redispatch"]["year_range_incl"][1] + 1,
+            ),
         ),

@@ -15,6 +15,7 @@ import pypsa
 from snakemake.script import Snakemake
 
 from scripts.gb_model._helpers import get_lines
+from scripts.gb_model.dispatch.custom_constraints import remove_KVL_constraints
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +34,29 @@ def set_boundary_constraints(
         snakemake (snakemake.Snakemake): The snakemake object for parameters and config.
     """
     # Load ETYS capacities
-    etys_capacities = pd.read_csv(snakemake.input.etys_caps, index_col="boundary_name")
+    etys_capacities = pd.read_csv(
+        snakemake.input.current_etys_caps, index_col="boundary_name"
+    ).capability_mw
+
+    # If future ETYS caps are provided, use them instead of initial levels,
+    # gap filling with initial levels where future caps are missing.
+    if snakemake.input.future_etys_caps:
+        year = int(snakemake.wildcards.year)
+        future_caps = pd.read_csv(
+            snakemake.input.future_etys_caps, index_col=["boundary_name", "year"]
+        ).capability_mw.xs(year, level="year")
+        manual_caps = pd.DataFrame(snakemake.params.manual_future_etys_caps).loc[year]
+        etys_capacities_all_boundaries = pd.concat([future_caps, manual_caps]).reindex(
+            etys_capacities.index
+        )
+        if (isna := etys_capacities_all_boundaries.isna()).any():
+            logger.warning(
+                f"Future ETYS capacities are missing for some boundaries: "
+                f"{etys_capacities_all_boundaries[isna].index.tolist()}. \n"
+                "Filling missing values with current capacities."
+            )
+        etys_capacities = etys_capacities_all_boundaries.fillna(etys_capacities)
+
     etys_boundaries_lines = snakemake.params.etys_boundaries_to_lines
     etys_boundaries_links = snakemake.params.etys_boundaries_to_links
 
@@ -43,7 +66,7 @@ def set_boundary_constraints(
 
     for boundary in etys_capacities.index:
         # Get boundary capability
-        capacity_mw = etys_capacities.loc[boundary, "capability_mw"]
+        capacity_mw = etys_capacities.loc[boundary]
 
         # Get all lines crossing the given boundary
         boundary_lines_mask = pd.Series(False, index=n.lines.index)
@@ -165,5 +188,6 @@ def custom_constraints(
     """
     # Apply boundary constraints
     set_boundary_constraints(n, snapshots, snakemake)
+    remove_KVL_constraints(n, snapshots, snakemake)
     update_storage_p_bounds(n)
     update_storage_balance(n)
