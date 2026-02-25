@@ -49,7 +49,7 @@ rule prepare_future_etys_caps:
         year_range=config_provider("redispatch", "year_range_incl"),
     input:
         current_caps=resources("gb-model/etys_boundary_capabilities.csv"),
-        future_caps="data/gb-model/downloaded/etys_chart_data.xlsx",
+        future_caps="data/gb-model/downloaded/etys-chart-data.xlsx",
     output:
         csv=resources("gb-model/{fes_scenario}/future_etys_boundary_capabilities.csv"),
     log:
@@ -84,7 +84,7 @@ rule calculate_bid_offer_multipliers:
     message:
         "Calculate bid / offer multipliers for conventional generators"
     params:
-        costs_config=config["costs"],
+        costs_config=config["fes_costs"],
         technology_mapping=config_provider("redispatch", "elexon", "technology_mapping"),
     input:
         fes_power_costs=resources("gb-model/fes-costing/AS.1 (Power Gen).csv"),
