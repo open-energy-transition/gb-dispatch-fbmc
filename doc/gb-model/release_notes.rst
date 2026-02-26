@@ -12,6 +12,7 @@ Release Notes
 Unreleased
 ==========
 
+* Fix interconnector capacity plan to align with FES2024 results (with high degree of subjectivity on project choice) (#232).
 * Automate ETYS boundary line/link crossings.
 * Update config filenames. `config/config.gb.2024.yaml` defines the FES2024 configuration; `config/config.default.gb.yaml` is automatically generated and should not be edited directly (#235).
 * Add config validation and associated documentation for the additional configuration required for the gb-dispatch-model (#235).
