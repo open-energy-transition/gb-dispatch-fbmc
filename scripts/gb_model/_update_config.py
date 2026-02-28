@@ -223,15 +223,6 @@ class ETYSConfig(GBBaseConfig):
         default_factory=dict,
     )
 
-    boundaries_lines: dict[str, list[ETYSBoundaryLineConfig]] = Field(
-        default_factory=dict,
-        description="ETYS boundary lines configuration. Key is the name of the boundary ETYS boundary.",
-    )
-    boundaries_links: dict[str, list[ETYSBoundaryLineConfig]] = Field(
-        default_factory=dict,
-        description="ETYS boundary links configuration. Key is the name of the boundary ETYS boundary.",
-    )
-
 
 class EntsoeUnavailabilityConfig(GBBaseConfig):
     """ENTSO-E unavailability data configuration."""
@@ -592,8 +583,9 @@ class InterconnectorsConfig(GBBaseConfig):
     options: list[InterconnectorConfig] = Field(
         description="List of interconnector configurations", default_factory=list
     )
-    plan: dict[int, list[str]] = Field(
-        description="Interconnector deployment plan by year", default_factory=dict
+    plan: dict[str, dict[int, list[str]]] = Field(
+        description="Interconnector deployment plan by FES scenario/pathway and year",
+        default_factory=dict,
     )
 
     @model_validator(mode="after")
@@ -601,7 +593,8 @@ class InterconnectorsConfig(GBBaseConfig):
         """Validate that all names in plan exist in options."""
         option_names = {opt.name for opt in self.options}
         planned_options: set = set()
-        planned_options.update(*self.plan.values())
+        for sub_plan in self.plan.values():
+            planned_options.update(*sub_plan.values())
         unknown_options = planned_options.difference(option_names)
         if unknown_options:
             raise ValueError(
