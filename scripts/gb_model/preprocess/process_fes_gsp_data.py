@@ -153,7 +153,7 @@ def parse_inputs(
         [df_bb1_bb2_scenario.query("GSP in @missing_gsps"), df_bb1_bb2_with_lat_lon]
     )
 
-    return df_final, df_bb1_scenario_no_dups
+    return df_final, df_bb1_scenario_no_dups, df_gsp_coordinates
 
 
 def _merge_gsps(df: pd.DataFrame, gsps: str, key: str) -> pd.DataFrame:
@@ -215,7 +215,7 @@ def _merge_gsps(df: pd.DataFrame, gsps: str, key: str) -> pd.DataFrame:
 
 
 def create_gsp_shapefile(
-    gsp_coordinates_path: str,
+    df_gsp_coordinates: pd.DataFrame,
     gsp_shapes_path: str,
     df_bb1: pd.DataFrame,
     gsp_mapping: dict,
@@ -227,8 +227,8 @@ def create_gsp_shapefile(
 
     Parameters
     ----------
-    gsp_coordinates_path: str
-        Path to the GSP coordinate data file
+    df_gsp_coordinates: pd.DataFrame
+        The GSP coordinate data dataframe
     gsp_shapes_path: str
         Path to the GSP shape data file
     df_bb1: pd.DataFrame
@@ -241,7 +241,7 @@ def create_gsp_shapefile(
         Groups of GSPs to combine
     """
 
-    df_gsp_coordinates = pd.read_csv(gsp_coordinates_path)
+    # Convert the GSP coordinate data to a GeoDataFrame
     gdf_gsps = gpd.GeoDataFrame(
         df_gsp_coordinates,
         geometry=gpd.points_from_xy(
@@ -254,19 +254,6 @@ def create_gsp_shapefile(
 
     df_bb1_gsp = pd.DataFrame(data=df_bb1.GSP.unique(), columns=["GSP"])
     df_bb1_gsp["GSP"] = df_bb1_gsp["GSP"].replace(gsp_mapping)
-    extra_gsp_coordinates_df = (
-        pd.DataFrame.from_dict(extra_gsp_coordinates, orient="index")
-        .rename_axis(index="Name")
-        .reset_index()
-    )
-    df_gsp_coordinates = (
-        # There are cases of duplicate GSPs where the lat and lon information is the same but the GSP ID and GSP group are slightly different
-        pd.concat([df_gsp_coordinates, extra_gsp_coordinates_df])
-        .drop_duplicates(subset=["Name", "Latitude", "Longitude"])
-        .dropna(subset=["Latitude", "Longitude"])
-        .set_index("Name")
-        .reset_index()
-    )
 
     # Join GSP shape data with GSP coordinate data
     gsp_joined = df_gsp_shapes.set_index("GSPs").join(
@@ -358,7 +345,7 @@ if __name__ == "__main__":
     manual_gsp_mapping = snakemake.params.manual_gsp_mapping
     combine_busbars = snakemake.params.combine_busbars
 
-    df, df_bb1 = parse_inputs(
+    df, df_bb1, df_gsp_coordinates = parse_inputs(
         bb1_path,
         bb2_path,
         gsp_coordinates_path,
@@ -369,7 +356,7 @@ if __name__ == "__main__":
     )
 
     shape = create_gsp_shapefile(
-        gsp_coordinates_path,
+        df_gsp_coordinates,
         snakemake.input.gsp_shapes,
         df_bb1,
         manual_gsp_mapping,
