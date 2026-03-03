@@ -156,7 +156,7 @@ def parse_inputs(
     return df_final, df_bb1_scenario_no_dups
 
 
-def _merge_gsps(df: pd.DataFrame, all_occurences: pd.DataFrame, gsps: str):
+def _merge_gsps(df: pd.DataFrame, gsps: str):
     """
     Merge multiple GSPs into a single GSP, by dissolving the geometries
 
@@ -164,34 +164,36 @@ def _merge_gsps(df: pd.DataFrame, all_occurences: pd.DataFrame, gsps: str):
     ----------
     df: pd.DataFrame
         The dataframe containing the GSPs to merge
-    all_occurences: pd.DataFrame
-        All occurences of the GSPs to merge (i.e. all rows where the GSPs to merge are mentioned in the "GSPs" column)
     gsps: str
         The GSPs to merge, as a single string with "|" separating the different GSPs (e.g. "GSP1|GSP2|GSP3")s
     """
 
-    # Dissolve the rows of GSPs into a single row 
-    df.loc[df["GSPs"] == gsps, "geometrycoord"] = (
-        df.loc[all_occurences.index]
-        .set_geometry("geometrycoord")
-        .dissolve()
-        .geometrycoord.values[0]
-    )
-    
-    # Assign the GSP name as the concantenation of the GSP names of the merged GSPs, separated by "|"
-    df.loc[df["GSPs"] == gsps, "GSP"] = all_occurences[
-        all_occurences.GSPs != gsps
-    ].GSP.str.cat(sep="|")
+    # All occurrences of the GSPs to merge, i.e. all rows where any of the GSPs to merge are mentioned in the "GSPs" column (there may be multiple rows for each GSP if there are multiple GSPs to merge)
+    all_occurrences = df.loc[(df["GSPs"].str.contains(gsps)) & (df.GSPs.notna())]
 
-    # Drop the other rows of the merged GSPs, keeping only the dissolved row
-    indices = all_occurences.index.tolist()
-    indices = [
-        x
-        for x in all_occurences.index
-        if x not in df.loc[df["GSPs"] == gsps].index.tolist()
-    ]
+    if len(all_occurrences) > 1:
+        # Dissolve the rows of GSPs into a single row
+        df.loc[df["GSPs"] == gsps, "geometrycoord"] = (
+            df.loc[all_occurrences.index]
+            .set_geometry("geometrycoord")
+            .dissolve()
+            .geometrycoord.values[0]
+        )
 
-    df.drop(index=indices, inplace=True)
+        # Assign the GSP name as the concatenation of the GSP names of the merged GSPs, separated by "|"
+        df.loc[df["GSPs"] == gsps, "GSP"] = all_occurrences[
+            all_occurrences.GSPs != gsps
+        ].GSP.str.cat(sep="|")
+
+        # Drop the other rows of the merged GSPs, keeping only the dissolved row
+        indices = all_occurrences.index.tolist()
+        indices = [
+            x
+            for x in all_occurrences.index
+            if x not in df.loc[df["GSPs"] == gsps].index.tolist()
+        ]
+
+        df.drop(index=indices, inplace=True)
 
     return df
 
@@ -200,11 +202,28 @@ def create_gsp_shapefile(
     gsp_coordinates_path: str,
     gsp_shapes_path: str,
     df_bb1: pd.DataFrame,
-    regions: gpd.GeoDataFrame,
     gsp_mapping: dict,
     extra_gsp_coordinates: dict,
     combine_busbars: dict,
 ):
+    """
+    Create a GSP shapefile by combining FES BB1 sheet data, GSP coordinate data and GSP shape data
+
+    Parameters
+    ----------
+    gsp_coordinates_path: str
+        Path to the GSP coordinate data file
+    gsp_shapes_path: str
+        Path to the GSP shape data file
+    df_bb1: pd.DataFrame
+        FES BB1 sheet dataframe
+    gsp_mapping: dict
+        Manual mapping of GSP names between the FES workbook and the GSP coordinate/shape data
+    extra_gsp_coordinates: dict
+        Manual GSP coordinate assignments, to add latitudes and longitudes for GSPs missing from the GIS data
+    combine_busbars: dict
+        Groups of GSPs to combine
+    """
     df_gsp_coordinates = pd.read_csv(gsp_coordinates_path)
     gdf_gsps = gpd.GeoDataFrame(
         df_gsp_coordinates,
@@ -253,36 +272,50 @@ def create_gsp_shapefile(
         how="outer",
     )
 
+    # Drop duplicate GSPs where the geometry information is same
+    cols = ["Name", "Latitude", "Longitude"]
+    mask = fes_merged.duplicated(subset=cols, keep=False) & fes_merged[
+        cols
+    ].notna().all(axis=1)
+    duplicates = fes_merged[mask].drop_duplicates(subset=cols)
+    fes_merged = pd.concat([fes_merged[~mask], duplicates]).sort_values(by="GSP")
+
     # Drop unrequired columns
     fes_merged.drop(
         columns=["GSP Group", "Minor FLOP", "Latitude", "Longitude"], inplace=True
     )
 
-    # Some GSPs have missing lat/lon information in the GSP coordinate file 
-    unmatched = fes_merged.loc[
+    # Some GSPs have not been matched with shape data as they are part of a geometry shape containing multiple GSPs
+    unmatched_gsps = fes_merged.loc[
         (fes_merged.geometrycoord.isna()) & (fes_merged.GSPs.notna())
     ]
-    for gsps in unmatched["GSPs"].tolist():
-        all_occurences = fes_merged.loc[
-            (fes_merged["GSPs"].str.contains(gsps)) & (fes_merged.GSPs.notna())
-        ]
-        if len(all_occurences) > 1:
-            fes_merged = _merge_gsps(fes_merged, all_occurences, gsps)
+    for gsps in unmatched_gsps["GSPs"].tolist():
+        fes_merged = _merge_gsps(fes_merged, gsps)
 
-    # Some busbars are split into multiple GSPs in the FES workbook but respresented as a single GSP in shape data
+    # Some busbars are split into multiple GSPs in the FES workbook but represented as a single GSP in shape data
     for key in combine_busbars.keys():
         combine_busbars[key].append(key)
         gsps = "|".join(combine_busbars[key])
-        all_occurences = fes_merged.loc[
-            (fes_merged["GSPs"].str.contains(gsps)) & (fes_merged.GSPs.notna())
-        ]
-        if len(all_occurences) > 1:
-            fes_merged = _merge_gsps(fes_merged, all_occurences, gsps)
+        fes_merged = _merge_gsps(fes_merged, gsps)
+
+    # Some GSPs where coordinate data is available but shape data was not matched
+    unmatched_gsps = fes_merged.loc[
+        (fes_merged.geometryshape.isna()) & (fes_merged.GSPs.notna())
+    ]
+    for gsps in unmatched_gsps["GSPs"].tolist():
+        fes_merged = _merge_gsps(fes_merged, gsps)
 
     fes_merged = gpd.GeoDataFrame(fes_merged, geometry="geometryshape", crs="EPSG:4326")
     fes_merged[["representative_point", "centroid", "geometrycoord"]] = fes_merged[
         ["representative_point", "centroid", "geometrycoord"]
     ].to_wkt()
+
+    if (missing_shapes := fes_merged.geometryshape.isna()).any():
+        logger.warning(
+            f"There are {missing_shapes.sum()} GSPs with missing shape information after merging the GSP shape and coordinate data. These GSPs will be kept in the output but with null geometry.\n"
+            f"{fes_merged[missing_shapes][['GSP', 'GSPs']]}"
+        )
+
     return fes_merged
 
 
@@ -321,7 +354,6 @@ if __name__ == "__main__":
         gsp_coordinates_path,
         snakemake.input.gsp_shapes,
         df_bb1,
-        gdf_regions,
         manual_gsp_mapping,
         extra_gsp_coordinates,
         combine_busbars,
