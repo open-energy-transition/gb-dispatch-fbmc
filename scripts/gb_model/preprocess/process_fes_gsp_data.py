@@ -219,7 +219,6 @@ def create_gsp_shapefile(
     gsp_shapes_path: str,
     df_bb1: pd.DataFrame,
     gsp_mapping: dict,
-    extra_gsp_coordinates: dict,
     combine_busbars: dict,
 ):
     """
@@ -235,8 +234,6 @@ def create_gsp_shapefile(
         FES BB1 sheet dataframe
     gsp_mapping: dict
         Manual mapping of GSP names between the FES workbook and the GSP coordinate/shape data
-    extra_gsp_coordinates: dict
-        Manual GSP coordinate assignments, to add latitudes and longitudes for GSPs missing from the GIS data
     combine_busbars: dict
         Groups of GSPs to combine
     """
