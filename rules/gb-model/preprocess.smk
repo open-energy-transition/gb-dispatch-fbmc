@@ -163,17 +163,35 @@ rule process_fes_gsp_data:
         target_crs=config["target_crs"],
         fill_gsp_lat_lons=config["grid_supply_points"]["fill-lat-lons"],
         manual_gsp_mapping=config["grid_supply_points"]["manual_mapping"],
-        combine_busbars=config["grid_supply_points"]["combine_gsps"],
     input:
         bb1_sheet=resources(f"gb-model/fes/BB1.csv"),
         bb2_sheet=resources(f"gb-model/fes/BB2.csv"),
         gsp_coordinates="data/gb-model/downloaded/gsp-coordinates.csv",
         regions=resources("gb-model/merged_shapes.geojson"),
-        gsp_shapes="data/gb-model/downloaded/gsp-shapes.geojson",
     output:
         csv=resources("gb-model/{fes_scenario}/regional_gb_data.csv"),
-        shapefile=resources("gb-model/{fes_scenario}/gsp-shapes.geojson"),
     log:
         logs("process_fes_gsp_data_{fes_scenario}.log"),
     script:
         scripts("gb_model/preprocess/process_fes_gsp_data.py")
+
+
+rule create_gsp_shapefile:
+    message:
+        "Create GSP shapefile"
+    params:
+        year_range=config["redispatch"]["year_range_incl"],
+        fill_gsp_lat_lons=config["grid_supply_points"]["fill-lat-lons"],
+        manual_gsp_mapping=config["grid_supply_points"]["manual_mapping"],
+        combine_busbars=config["grid_supply_points"]["combine_gsps"],
+    input:
+        bb1_sheet=resources(f"gb-model/fes/BB1.csv"),
+        gsp_coordinates="data/gb-model/downloaded/gsp-coordinates.csv",
+        regions=resources("gb-model/merged_shapes.geojson"),
+        gsp_shapes="data/gb-model/downloaded/gsp-shapes.geojson",
+    output:
+        shapefile=resources("gb-model/{fes_scenario}/gsp-shapes.geojson"),
+    log:
+        logs("create_gsp_shapefile_{fes_scenario}.log"),
+    script:
+        scripts("gb_model/preprocess/create_gsp_shapefile.py")
