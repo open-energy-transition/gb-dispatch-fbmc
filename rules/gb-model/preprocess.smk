@@ -183,7 +183,7 @@ rule create_gsp_shapefile:
         year_range=config["redispatch"]["year_range_incl"],
         fill_gsp_lat_lons=config["grid_supply_points"]["fill-lat-lons"],
         manual_gsp_mapping=config["grid_supply_points"]["manual_mapping"],
-        combine_busbars=config["grid_supply_points"]["combine_gsps"],
+        combine_gsps=config["grid_supply_points"]["combine_gsps"],
     input:
         bb1_sheet=resources(f"gb-model/fes/BB1.csv"),
         gsp_coordinates="data/gb-model/downloaded/gsp-coordinates.csv",

@@ -20,8 +20,8 @@ from scripts.gb_model._helpers import (
     get_scenario_name,
 )
 from scripts.gb_model.preprocess.process_fes_gsp_data import (
+    process_bb1_data,
     process_gsp_coordinates,
-    process_bb1_data
 )
 
 logger = logging.getLogger(__name__)
@@ -90,7 +90,7 @@ def create_gsp_shapefile(
     gsp_shapes_path: str,
     df_bb1: pd.DataFrame,
     gsp_mapping: dict,
-    combine_busbars: dict,
+    combine_gsps: dict,
 ):
     """
     Create a GSP shapefile by combining FES BB1 sheet data, GSP coordinate data and GSP shape data
@@ -105,7 +105,7 @@ def create_gsp_shapefile(
         FES BB1 sheet dataframe
     gsp_mapping: dict
         Manual mapping of GSP names between the FES workbook and the GSP coordinate/shape data
-    combine_busbars: dict
+    combine_gsps: dict
         Groups of GSPs to combine
     """
 
@@ -127,14 +127,6 @@ def create_gsp_shapefile(
     gsp_joined = df_gsp_shapes.set_index("GSPs").join(
         gdf_gsps.set_index("GSP ID"), lsuffix="shape", rsuffix="coord", how="outer"
     )
-
-    # Calculate representative point and centroid for each GSP shape
-    gsp_joined.loc[:, "representative_point"] = gsp_joined.geometryshape.to_crs(
-        gdf_gsps.estimate_utm_crs()
-    ).representative_point()
-    gsp_joined.loc[:, "centroid"] = gsp_joined.geometryshape.to_crs(
-        gdf_gsps.estimate_utm_crs()
-    ).centroid
 
     fes_merged = pd.merge(
         df_bb1_gsp,
@@ -160,9 +152,9 @@ def create_gsp_shapefile(
     )
 
     # Some busbars are split into multiple GSPs in the FES workbook but represented as a single GSP in shape data
-    for key in combine_busbars.keys():
-        combine_busbars[key].append(key)
-        gsps = "|".join(combine_busbars[key])
+    for key in combine_gsps.keys():
+        combine_gsps[key].append(key)
+        gsps = "|".join(combine_gsps[key])
         fes_merged = _merge_gsps(fes_merged, gsps, "GSPs")
     logger.info(
         "Merged GSP shape and coordinate data for busbars that are split into multiple GSPs in the FES workbook but represented as a single GSP in shape data"
@@ -179,9 +171,7 @@ def create_gsp_shapefile(
     )
 
     fes_merged = gpd.GeoDataFrame(fes_merged, geometry="geometryshape", crs="EPSG:4326")
-    fes_merged[["representative_point", "centroid", "geometrycoord"]] = fes_merged[
-        ["representative_point", "centroid", "geometrycoord"]
-    ].to_wkt()
+    fes_merged["geometrycoord"] = fes_merged["geometrycoord"].to_wkt()
 
     if (missing_shapes := fes_merged.geometryshape.isna()).any():
         logger.warning(
@@ -203,14 +193,14 @@ if __name__ == "__main__":
     fes_scenario = get_scenario_name(snakemake)
 
     df_gsp_coordinates = process_gsp_coordinates(
-        gsp_coordinates_path = snakemake.input.gsp_coordinates, 
-        extra_gsp_coordinates = snakemake.params.fill_gsp_lat_lons
+        gsp_coordinates_path=snakemake.input.gsp_coordinates,
+        extra_gsp_coordinates=snakemake.params.fill_gsp_lat_lons,
     )
-    
+
     df_bb1 = process_bb1_data(
-        bb1_path = snakemake.input.bb1_sheet,
-        fes_scenario = fes_scenario,
-        year_range = snakemake.params.year_range,
+        bb1_path=snakemake.input.bb1_sheet,
+        fes_scenario=fes_scenario,
+        year_range=snakemake.params.year_range,
     )
 
     shape = create_gsp_shapefile(
@@ -218,7 +208,7 @@ if __name__ == "__main__":
         snakemake.input.gsp_shapes,
         df_bb1,
         gsp_mapping=snakemake.params.manual_gsp_mapping,
-        combine_busbars=snakemake.params.combine_busbars,
+        combine_gsps=snakemake.params.combine_gsps,
     )
 
     logger.info(f"Exported the GSP shapefile to {snakemake.output.shapefile}")
