@@ -14,6 +14,8 @@ from pathlib import Path
 
 import geopandas as gpd
 import pandas as pd
+import zipfile
+import re
 
 from scripts._helpers import configure_logging, set_scenario_config
 from scripts.gb_model._helpers import (
@@ -87,7 +89,7 @@ def _merge_gsps(df: pd.DataFrame, gsps: str, key: str) -> pd.DataFrame:
 
 def create_gsp_shapefile(
     df_gsp_coordinates: pd.DataFrame,
-    gsp_shapes_path: str,
+    df_gsp_shapes: gpd.GeoDataFrame,
     df_bb1: pd.DataFrame,
     gsp_mapping: dict,
     combine_gsps: dict,
@@ -99,8 +101,8 @@ def create_gsp_shapefile(
     ----------
     df_gsp_coordinates: pd.DataFrame
         The GSP coordinate data dataframe
-    gsp_shapes_path: str
-        Path to the GSP shape data file
+    df_gsp_shape: gpd.GeoDataFrame
+        GSP polygon shape data
     df_bb1: pd.DataFrame
         FES BB1 sheet dataframe
     gsp_mapping: dict
@@ -117,8 +119,6 @@ def create_gsp_shapefile(
         ),
         crs="EPSG:4326",
     )
-
-    df_gsp_shapes = gpd.read_file(gsp_shapes_path)
 
     df_bb1_gsp = pd.DataFrame(data=df_bb1.GSP.unique(), columns=["GSP"])
     df_bb1_gsp["GSP"] = df_bb1_gsp["GSP"].replace(gsp_mapping)
@@ -203,9 +203,15 @@ if __name__ == "__main__":
         year_range=snakemake.params.year_range,
     )
 
+    # Read the GSP shapefile
+    CRS = 4326
+    zip_path = Path(snakemake.input.gsp_shapes)
+    shp_filename = [x for x in zipfile.ZipFile(zip_path).namelist() if bool(re.search(rf"Proj_{CRS}/.*_{CRS}_.*\.geojson$",x))][0]
+    df_gsp_shapes=gpd.read_file(f"{zip_path}!{shp_filename}")
+
     shape = create_gsp_shapefile(
         df_gsp_coordinates,
-        snakemake.input.gsp_shapes,
+        df_gsp_shapes,
         df_bb1,
         gsp_mapping=snakemake.params.manual_gsp_mapping,
         combine_gsps=snakemake.params.combine_gsps,

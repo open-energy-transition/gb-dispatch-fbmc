@@ -141,20 +141,6 @@ rule process_dukes_current_capacities:
         scripts("gb_model/preprocess/process_dukes_current_capacities.py")
 
 
-rule retrieve_gsp_shape:
-    input:
-        zip_file="data/gb-model/downloaded/gsp-shapes.zip",
-    output:
-        geojson="data/gb-model/downloaded/gsp-shapes.geojson",
-    run:
-        zip_path = Path(input.zip_file)
-        unpack_archive(zip_path, zip_path.parent)
-        copy2(
-            zip_path.parent.joinpath("Proj_4326", "GSP_regions_4326_20251204.geojson"),
-            output.geojson,
-        )
-
-
 rule process_fes_gsp_data:
     message:
         "Process FES workbook sheet BB1 together with metadata from sheet BB2."
@@ -188,7 +174,7 @@ rule create_gsp_shapefile:
         bb1_sheet=resources(f"gb-model/fes/BB1.csv"),
         gsp_coordinates="data/gb-model/downloaded/gsp-coordinates.csv",
         regions=resources("gb-model/merged_shapes.geojson"),
-        gsp_shapes="data/gb-model/downloaded/gsp-shapes.geojson",
+        gsp_shapes="data/gb-model/downloaded/gsp-shapes.zip",
     output:
         shapefile=resources("gb-model/{fes_scenario}/gsp-shapes.geojson"),
     log:
