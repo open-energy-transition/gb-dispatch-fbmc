@@ -44,7 +44,9 @@ def _merge_gsps(df: pd.DataFrame, gsps: str, key: str) -> pd.DataFrame:
     """
 
     # All occurrences of the GSPs to merge, i.e. all rows where any of the GSPs to merge are mentioned in the "GSPs" column (there may be multiple rows for each GSP if there are multiple GSPs to merge)
-    all_occurrences = df.loc[(df[key].str.contains(gsps)) & (df[key].notna())]
+    all_occurrences = df.loc[
+        (df[key].str.contains(rf"({gsps})\b", regex=True)) & (df[key].notna())
+    ]
 
     if len(all_occurrences) > 1:
         # Dissolve the rows of geometries matching the GSPs to merge into a single row
@@ -81,7 +83,6 @@ def _merge_gsps(df: pd.DataFrame, gsps: str, key: str) -> pd.DataFrame:
                     all_occurrences["GSPs"] != retain_row
                 ].index.tolist()
             ]
-
         df.drop(index=indices_filter, inplace=True)
 
     return df
@@ -172,12 +173,13 @@ def create_gsp_shapefile(
 
     fes_merged = gpd.GeoDataFrame(fes_merged, geometry="geometryshape", crs="EPSG:4326")
 
-    # Merging GSPs with same GSP ID but different GSP groups. 
+    # Merging GSPs with same GSP ID but different GSP groups.
     # Dissolving the shapes into a single GSP as the rows still have distinct geometries though adjoining each other
-    fes_merged = fes_merged.dissolve(by='GSPs')
-    logger.info(
-        "Merged GSP duplicates due to different GSP groups"
-    )
+    fes_merged_notnan = fes_merged[fes_merged["geometryshape"].notna()]
+    fes_merged_nan = fes_merged[fes_merged["geometryshape"].isna()]
+    fes_merged_notnan = fes_merged_notnan.dissolve(by="GSPs", as_index=False)
+    fes_merged = pd.concat([fes_merged_notnan, fes_merged_nan], ignore_index=True)
+    logger.info("Merged GSP duplicates due to different GSP groups")
 
     fes_merged["geometrycoord"] = fes_merged["geometrycoord"].to_wkt()
 
