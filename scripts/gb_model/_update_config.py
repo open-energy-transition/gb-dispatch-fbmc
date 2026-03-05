@@ -651,6 +651,10 @@ class RedispatchConfig(GBBaseConfig):
     elexon: ElexonConfig = Field(
         description="Elexon API configuration", default_factory=ElexonConfig
     )
+    no_redispatch_carriers: list[str] = Field(
+        default_factory=list,
+        description="List of carriers to exclude from being redispatched.",
+    )
 
     @field_validator("year_range_incl")
     @classmethod
@@ -675,6 +679,7 @@ class TimeAggregationConfig(GBBaseConfig):
 
 class GBConfigUpdater(ConfigUpdater):
     name: str = "gb"
+    docs_url: str = "https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#{field_name}"
 
     def _update_clustering(self) -> type[ConfigSchema]:
         """Updates the clustering configuration to include the 'gb_shapes' mode."""
