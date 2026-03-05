@@ -171,6 +171,14 @@ def create_gsp_shapefile(
     )
 
     fes_merged = gpd.GeoDataFrame(fes_merged, geometry="geometryshape", crs="EPSG:4326")
+
+    # Merging GSPs with same GSP ID but different GSP groups. 
+    # Dissolving the shapes into a single GSP as the rows still have distinct geometries though adjoining each other
+    fes_merged = fes_merged.dissolve(by='GSPs')
+    logger.info(
+        "Merged GSP duplicates due to different GSP groups"
+    )
+
     fes_merged["geometrycoord"] = fes_merged["geometrycoord"].to_wkt()
 
     if (missing_shapes := fes_merged.geometryshape.isna()).any():
