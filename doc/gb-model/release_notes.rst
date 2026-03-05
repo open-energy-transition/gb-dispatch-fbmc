@@ -12,6 +12,7 @@ Release Notes
 Unreleased
 ==========
 
+* Create GSP shapefile using GSP polygon, coordinate and FES workbook data (#251).
 * Disallow nuclear from being redispatched (#201).
 * Add missing carrier for non-networked electrolysis demand (#242).
 * Capitalise all EV carriers (#243).

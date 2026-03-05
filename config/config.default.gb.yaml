@@ -1496,6 +1496,7 @@ urls:
   "fes-costing-workbook": ""
   "dukes-5.11": ""
   "gsp-coordinates": ""
+  "gsp-shapes": ""
   etys: ""
   "etys-chart-data": ""
   "low-carbon-contracts": ""
@@ -1555,6 +1556,7 @@ transmission_availability:
 grid_supply_points:
   manual_mapping: {}
   "fill-lat-lons": {}
+  combine_gsps: {}
 
 # docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#fes
 fes:

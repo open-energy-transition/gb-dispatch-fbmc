@@ -315,6 +315,7 @@ urls:
   fes-costing-workbook: https://www.neso.energy/document/181961/download
   dukes-5.11: https://assets.publishing.service.gov.uk/media/688cb64ee8ba9507fc1b0953/DUKES_5.11.xlsx
   gsp-coordinates: https://api.neso.energy/dataset/963525d6-5d83-4448-a99c-663f1c76330a/resource/21c2b09c-24ff-4837-a3b1-b6aea88f8124/download/fes2024_regional_breakdown_gsp_info.csv
+  gsp-shapes: https://api.neso.energy/dataset/2810092e-d4b2-472f-b955-d8bea01f9ec0/resource/c5647312-afab-4a58-8158-2f1efed1d7fc/download/gsp_regions_20251204.zip
   etys: https://www.neso.energy/document/286591/download # ETYS November 2023
   etys-chart-data: https://www.neso.energy/document/280936/download # ETYS November 2022 (uses the NOA 2022 recommendations)
   low-carbon-contracts: https://dp.lowcarboncontracts.uk/dataset/8e8ca0d5-c774-4dc8-a079-347f1c180c0f/resource/5279a55d-4996-4b1e-ba07-f411d8fd31f0/download/actual_cfd_generation_and_avoided_ghg_emissions.csv
@@ -604,6 +605,13 @@ grid_supply_points:
     Port Ham: # Substation lat/lon from openinframap
       Latitude: 51.87165
       Longitude: -2.26621
+  combine_gsps:
+    DUMF: ["G_EXTRA_1", "G_EXTRA_2", "G_EXTRA_3"]
+    DUNB: ["DUNB_A", "DUNB_B"]
+    CROO: ["G_EXTRA_10", "G_EXTRA_11"]
+    SACO: ["G_EXTRA_8", "G_EXTRA_9"]
+    KILB: ["G_EXTRA_6", "G_EXTRA_7"]
+    GRMO: ["G_EXTRA_4", "G_EXTRA_5"]
 fes:
   fes_year: 2024
   scenario_mapping:

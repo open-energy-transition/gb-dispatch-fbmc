@@ -3753,6 +3753,16 @@
           },
           "description": "Manual GSP coordinate assignments, to add latitudes and longitudes for GSPs missing from the GIS data. Keys are FES workbook GSP names.",
           "type": "object"
+        },
+        "combine_gsps": {
+          "additionalProperties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "description": "Groups of GSPs to combine. Key is the name of the resulting combined GSP, value is a list of FES workbook GSP names to combine . This is used to combine GSPs which are split in the FES workbook but represented as a single GSP in the GIS data.",
+          "type": "object"
         }
       }
     },
@@ -7599,6 +7609,11 @@
         "gsp-coordinates": {
           "default": "",
           "description": "URL for GSP coordinates",
+          "type": "string"
+        },
+        "gsp-shapes": {
+          "default": "",
+          "description": "URL for GSP shapes",
           "type": "string"
         },
         "etys": {
@@ -15908,6 +15923,11 @@
           "description": "URL for GSP coordinates",
           "type": "string"
         },
+        "gsp-shapes": {
+          "default": "",
+          "description": "URL for GSP shapes",
+          "type": "string"
+        },
         "etys": {
           "default": "",
           "description": "URL for ETYS report",
@@ -16272,6 +16292,16 @@
             "type": "object"
           },
           "description": "Manual GSP coordinate assignments, to add latitudes and longitudes for GSPs missing from the GIS data. Keys are FES workbook GSP names.",
+          "type": "object"
+        },
+        "combine_gsps": {
+          "additionalProperties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "description": "Groups of GSPs to combine. Key is the name of the resulting combined GSP, value is a list of FES workbook GSP names to combine . This is used to combine GSPs which are split in the FES workbook but represented as a single GSP in the GIS data.",
           "type": "object"
         }
       }
