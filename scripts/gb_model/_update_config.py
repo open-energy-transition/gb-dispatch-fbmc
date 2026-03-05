@@ -672,6 +672,7 @@ class TimeAggregationConfig(GBBaseConfig):
 
 class GBConfigUpdater(ConfigUpdater):
     name: str = "gb"
+    docs_url: str = "https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#{field_name}"
 
     def _update_clustering(self) -> type[ConfigSchema]:
         """Updates the clustering configuration to include the 'gb_shapes' mode."""

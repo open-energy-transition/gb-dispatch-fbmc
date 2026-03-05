@@ -2,23 +2,23 @@
 ---
 # yaml-language-server: $schema=./schema.default.gb.json
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#version
-version: v2025.07.0
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#version
+version: v2026.02.0
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#tutorial
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#tutorial
 tutorial: false
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#logging
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#logging
 logging:
   level: INFO
   format: "%(levelname)s:%(name)s:%(message)s"
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#remote
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#remote
 remote:
   ssh: ""
   path: ""
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#run
 run:
   prefix: ""
   name: ""
@@ -31,10 +31,10 @@ run:
     exclude: []
   use_shadow_directory: false
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#foresight
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#foresight
 foresight: overnight
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#scenario
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#scenario
 scenario:
   clusters:
   - 50
@@ -45,7 +45,7 @@ scenario:
   planning_horizons:
   - 2050
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#countries
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#countries
 countries:
 - AL
 - AT
@@ -82,17 +82,17 @@ countries:
 - SK
 - XK
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#snapshots
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#snapshots
 snapshots:
   start: "2013-01-01"
   end: "2014-01-01"
   inclusive: left
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#enable
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#enable
 enable:
   drop_leap_day: true
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#co2_budget
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#co2_budget
 co2_budget:
   2020: 0.72
   2025: 0.648
@@ -102,7 +102,7 @@ co2_budget:
   2045: 0.05
   2050: 0.0
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#electricity
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#electricity
 electricity:
   voltages:
   - 220.0
@@ -178,16 +178,18 @@ electricity:
       Offshore: "offwind-ac"
       Onshore: onwind
       PV: solar
+  estimate_battery_capacities: false
   autarky:
     enable: false
     by_country: false
   transmission_limit: vopt
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#atlite
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#atlite
 atlite:
   default_cutout: "europe-2013-sarah3-era5"
   nprocesses: 16
   show_progress: false
+  plot_availability_matrix: false
   cutouts:
     "europe-1940-2024-era5":
       module: era5
@@ -213,7 +215,7 @@ atlite:
         monthly_requests: true
         tmpdir: ./cutouts_tmp/
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#renewable
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#renewable
 renewable:
   onwind:
     cutout: default
@@ -269,9 +271,7 @@ renewable:
     resource_classes: 1
     capacity_per_sqkm: 2
     correction_factor: 0.8855
-    corine:
-    - 44
-    - 255
+    corine: false
     luisa: false
     natura: true
     ship_threshold: 400
@@ -292,9 +292,7 @@ renewable:
     resource_classes: 1
     capacity_per_sqkm: 2
     correction_factor: 0.8855
-    corine:
-    - 44
-    - 255
+    corine: false
     luisa: false
     natura: true
     ship_threshold: 400
@@ -315,9 +313,7 @@ renewable:
     resource_classes: 1
     capacity_per_sqkm: 2
     correction_factor: 0.8855
-    corine:
-    - 44
-    - 255
+    corine: false
     luisa: false
     natura: true
     ship_threshold: 400
@@ -423,7 +419,7 @@ renewable:
     eia_correct_by_capacity: false
     eia_approximate_missing: false
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#conventional
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#conventional
 conventional:
   unit_commitment: false
   dynamic_fuel_price: false
@@ -431,7 +427,7 @@ conventional:
   nuclear:
     p_max_pu: data/nuclear_p_max_pu.csv
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#lines
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#lines
 lines:
   types:
     63.0: "94-AL1/15-ST1A 20.0"
@@ -460,7 +456,7 @@ lines:
     max_voltage_difference: false
     max_line_rating: false
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#links
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#links
 links:
   p_max_pu: 1.0
   p_min_pu: -1.0
@@ -469,7 +465,7 @@ links:
   length_factor: 1.25
   under_construction: keep
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#transmission_projects
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#transmission_projects
 transmission_projects:
   enable: true
   include:
@@ -485,13 +481,13 @@ transmission_projects:
   - confirmed
   new_link_capacity: zero
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#transformers
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#transformers
 transformers:
   x: 0.1
   s_nom: 2000.0
   type: ""
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#load
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#load
 load:
   fill_gaps:
     enable: true
@@ -501,11 +497,12 @@ load:
   scaling_factor: 1.0
   fixed_year: false
   supplement_synthetic: true
+  substation_only: true
   distribution_key:
     gdp: 0.6
     population: 0.4
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#pypsa_eur
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#pypsa_eur
 pypsa_eur:
   Bus:
   - AC
@@ -525,13 +522,13 @@ pypsa_eur:
   - hydro
   Store: []
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#energy
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#energy
 energy:
   energy_totals_year: 2023
   base_emissions_year: 1990
   emissions: CO2
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#biomass
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#biomass
 biomass:
   year: 2030
   scenario: ENS_Med
@@ -574,7 +571,7 @@ biomass:
     2045: 1
     2050: 1
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#solar_thermal
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#solar_thermal
 solar_thermal:
   clearsky_model: simple
   orientation:
@@ -582,7 +579,7 @@ solar_thermal:
     azimuth: 180.0
   cutout: default
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#existing_capacities
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#existing_capacities
 existing_capacities:
   grouping_years_power:
   - 1920
@@ -621,7 +618,7 @@ existing_capacities:
   - oil
   - uranium
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#sector
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#sector
 sector:
   transport: true
   heating: true
@@ -982,7 +979,7 @@ sector:
       gas: 122
       oil: 125
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#industry
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#industry
 industry:
   St_primary_fraction:
     2020: 0.6
@@ -1068,7 +1065,7 @@ industry:
   reference_year: 2019
   oil_refining_emissions: 0.013
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#costs
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#costs
 costs:
   year: 2050
   social_discountrate: 0.02
@@ -1092,7 +1089,7 @@ costs:
     dynamic: false
     rolling_window: 90
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#clustering
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#clustering
 clustering:
   mode: busmap
   administrative:
@@ -1105,7 +1102,6 @@ clustering:
     aggregate_to_tyndp: false
   simplify_network:
     to_substations: false
-    exclude_carriers: []
     remove_stubs: true
     remove_stubs_across_borders: false
   cluster_network:
@@ -1125,7 +1121,7 @@ clustering:
     resolution_elec: false
     resolution_sector: false
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#adjustments
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#adjustments
 adjustments:
   electricity: false
   sector:
@@ -1135,7 +1131,7 @@ adjustments:
           capital_cost: 1.0
     absolute: false
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#solving
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#solving
 solving:
   options:
     clip_p_max_pu: 0.01
@@ -1153,6 +1149,7 @@ solving:
     transmission_losses: 2
     linearized_unit_commitment: true
     horizon: 365
+    overlap: 0
     post_discretization:
       enable: false
       line_unit_size: 1700
@@ -1271,7 +1268,7 @@ solving:
   memory_logging_frequency: 5
   runtime: 48h
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#data
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#data
 data:
   hotmaps_industrial_sites:
     source: archive
@@ -1435,6 +1432,15 @@ data:
   jrc_ardeco:
     source: archive
     version: latest
+  jrc_energy_atlas:
+    source: archive
+    version: latest
+  desnz_electricity_consumption:
+    source: archive
+    version: latest
+  ons_lad:
+    source: archive
+    version: latest
   bidding_zones_electricitymaps:
     source: archive
     version: latest
@@ -1442,7 +1448,7 @@ data:
     source: archive
     version: latest
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#overpass_api
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#overpass_api
 overpass_api:
   url: "https://overpass-api.de/api/interpreter"
   max_tries: 5
@@ -1452,7 +1458,7 @@ overpass_api:
     email: "contact@pypsa.org"
     website: "https://github.com/PyPSA/pypsa-eur"
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#fes_costs
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#fes_costs
 fes_costs:
   "sheet-config": {}
   GBP_to_EUR: 1
@@ -1466,18 +1472,18 @@ fes_costs:
   fes_fuel_carrier_mapping: {}
   voll: 0
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#low_carbon_register
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#low_carbon_register
 low_carbon_register:
   carrier_mapping: {}
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#chp
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#chp
 chp:
   enable: true
   heat_to_power_ratio: 1
   min_operation_level: 0
   shutdown_threshold: 0
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#urls
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#urls
 urls:
   "gb-etys-boundaries": ""
   "transmission-availability-2020":
@@ -1495,10 +1501,10 @@ urls:
   "low-carbon-contracts": ""
   eur_H2_demand_today: ""
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#target_crs
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#target_crs
 target_crs: "EPSG:27700"
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#region_operations
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#region_operations
 region_operations:
   area_loss_tolerance_percent: 0.01
   min_region_area: 100000.0
@@ -1507,13 +1513,13 @@ region_operations:
   merge_groups: []
   add_group_to_neighbour: {}
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#etys
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#etys
 etys:
   future_capacities_sheet_name: ETYS 2022 Chart Data
   use_future_capacities: true
   manual_future_capacities: {}
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#entsoe_unavailability
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#entsoe_unavailability
 entsoe_unavailability:
   start_date: "2020-01-01"
   end_date: "2025-12-31"
@@ -1523,7 +1529,7 @@ entsoe_unavailability:
   max_unavailable_days: 365
   carrier_mapping: {}
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#transmission_availability
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#transmission_availability
 transmission_availability:
   years: []
   intra_gb:
@@ -1534,7 +1540,7 @@ transmission_availability:
     sample_hourly: true
   random_seeds: {}
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#dukes_5.11
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#dukes_5.11
 "dukes-5.11":
   "sheet-config":
     sheet_name: ""
@@ -1545,12 +1551,12 @@ transmission_availability:
   carrier_mapping: {}
   set_mapping: {}
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#grid_supply_points
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#grid_supply_points
 grid_supply_points:
   manual_mapping: {}
   "fill-lat-lons": {}
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#fes
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#fes
 fes:
   fes_year: 2024
   scenario_mapping: {}
@@ -1583,7 +1589,7 @@ fes:
       storage: {}
     electrolysis_efficiency: 0.7
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#ev
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#ev
 ev:
   plug_in_offset: 0
   charging_duration: 1
@@ -1593,12 +1599,12 @@ ev:
     relative_peak_tolerance: 0.0
     relative_energy_tolerance: 0.0
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#interconnectors
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#interconnectors
 interconnectors:
   options: []
   plan: {}
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#redispatch
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#redispatch
 redispatch:
   year_range_incl: []
   constraint_cost_extra_years: 20
@@ -1610,5 +1616,5 @@ redispatch:
     max_concurrent_requests: 4
   no_redispatch_carriers: []
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#time_aggregation
+# docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#time_aggregation
 time_aggregation: []
