@@ -9,8 +9,12 @@
 Release Notes
 ##########################################
 
-Unreleased
-==========
+v0.2.1 (2026-03-05)
+===================
+
+This is a minor release that mostly includes workflow fixes and improved configuration validation.
+
+This version was synchronised with the upstream PyPSA-Eur repository on 2026-02-26.
 
 * Create GSP shapefile using GSP polygon, coordinate and FES workbook data (#251).
 * Disallow nuclear from being redispatched (#201).
