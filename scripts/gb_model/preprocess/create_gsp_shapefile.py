@@ -10,12 +10,12 @@ This is a script to combine the BB1 sheet with the BB2 (metadata) sheet of the F
 """
 
 import logging
+import re
+import zipfile
 from pathlib import Path
 
 import geopandas as gpd
 import pandas as pd
-import zipfile
-import re
 
 from scripts._helpers import configure_logging, set_scenario_config
 from scripts.gb_model._helpers import (
@@ -214,8 +214,12 @@ if __name__ == "__main__":
     # Read the GSP shapefile
     CRS = 4326
     zip_path = Path(snakemake.input.gsp_shapes)
-    shp_filename = [x for x in zipfile.ZipFile(zip_path).namelist() if bool(re.search(rf"Proj_{CRS}/.*_{CRS}_.*\.geojson$",x))][0]
-    df_gsp_shapes=gpd.read_file(f"{zip_path}!{shp_filename}")
+    shp_filename = [
+        x
+        for x in zipfile.ZipFile(zip_path).namelist()
+        if bool(re.search(rf"Proj_{CRS}/.*_{CRS}_.*\.geojson$", x))
+    ][0]
+    df_gsp_shapes = gpd.read_file(f"{zip_path}!{shp_filename}")
 
     shape = create_gsp_shapefile(
         df_gsp_coordinates,
