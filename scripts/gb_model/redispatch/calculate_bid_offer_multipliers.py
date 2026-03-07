@@ -33,6 +33,7 @@ def calculate_costs(
     technology_mapping: dict[str, str],
     start_year: int,
     end_year: int,
+    historical_gas_cost: pd.DataFrame
 ) -> pd.DataFrame:
     """
     Calculate marginal costs for each technology
@@ -89,6 +90,9 @@ def calculate_costs(
         .join(costs[["efficiency", "CO2 intensity"]])
     ).reset_index()
 
+    gas_fuel_keys = [k for k,v in costs_config['carrier_gap_filling']['fuel'].items() if v == 'gas']
+    df_tech.loc[df_tech.carrier.isin(gas_fuel_keys),'fuel'] = df_tech.loc[df_tech.carrier.isin(gas_fuel_keys)]['year'].map(historical_gas_cost.to_dict())
+
     df_tech = calculate_marginal_costs(
         df_tech,
         costs,
@@ -138,6 +142,14 @@ def calc_bid_offer_multipliers(
 
     return df_multipliers[["bid_multiplier", "offer_multiplier"]]
 
+def get_historical_gas_prices(historical_gas_path, years):
+    df = pd.read_excel(historical_gas_path, sheet_name="3.2.1 (Annual)",skiprows=10)
+    df = df.query('Year in @y', local_dict={'y':years})
+    df.set_index('Year',inplace=True)
+    df = df['Major power producers: Natural gas (pence per kWh)\n[Note 4]'] 
+    df *= 10 # Convert pence per kWh to GBP per MWh
+
+    return df
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
@@ -151,6 +163,13 @@ if __name__ == "__main__":
     start_year = int(Path(snakemake.input.bid_offer_data[0]).stem)
     end_year = int(Path(snakemake.input.bid_offer_data[-1]).stem)
 
+    bid_offer_years = [int(Path(x).stem) for x in snakemake.input.bid_offer_data]
+    historical_gas_cost = get_historical_gas_prices(
+        historical_gas_path = snakemake.input.gas_historical_price,
+        years = bid_offer_years
+
+    )
+
     df_cost = calculate_costs(
         fes_power_costs_path=snakemake.input.fes_power_costs,
         fes_carbon_costs_path=snakemake.input.fes_carbon_costs,
@@ -160,6 +179,7 @@ if __name__ == "__main__":
         technology_mapping=snakemake.params.technology_mapping,
         start_year=start_year,
         end_year=end_year,
+        historical_gas_cost=historical_gas_cost
     )
 
     df_multipliers = calc_bid_offer_multipliers(
