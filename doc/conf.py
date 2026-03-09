@@ -114,7 +114,7 @@ author = "gb-dispatch-model contributors"
 # built documents.
 #
 # The short X.Y version.
-version = "v2025.07.0"
+version = "v2026.02.0"
 # The full version, including alpha/beta/rc tags.
 release = version + ""
 

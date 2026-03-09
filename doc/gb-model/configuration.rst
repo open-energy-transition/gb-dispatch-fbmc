@@ -11,7 +11,7 @@ Configuration
 ##########################################
 
 gb-dispatch-model has several additional configuration options above and beyond those set by PyPSA-Eur, which are documented in this section.
-For base PyPSA-Eur configuration, see :ref:`config`.
+For base PyPSA-Eur configuration, see references :ref:`below <base_config>`.
 
 Configuration Files
 ===================
@@ -52,7 +52,7 @@ To use your custom configuration file, you need to pass it to the ``snakemake`` 
 
 .. literalinclude:: ../../config/config.default.gb.yaml
    :language: yaml
-   :start-after: # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#fes_costs
+   :start-after: # docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#fes_costs
    :end-before: # docs
 
 .. _low_carbon_register_cf:
@@ -68,7 +68,7 @@ To use your custom configuration file, you need to pass it to the ``snakemake`` 
 
 .. literalinclude:: ../../config/config.default.gb.yaml
    :language: yaml
-   :start-after: # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#low_carbon_register
+   :start-after: # docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#low_carbon_register
    :end-before: # docs
 
 .. _chp_cf:
@@ -84,7 +84,7 @@ To use your custom configuration file, you need to pass it to the ``snakemake`` 
 
 .. literalinclude:: ../../config/config.default.gb.yaml
    :language: yaml
-   :start-after: # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#chp
+   :start-after: # docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#chp
    :end-before: # docs
 
 .. _urls_cf:
@@ -100,7 +100,7 @@ To use your custom configuration file, you need to pass it to the ``snakemake`` 
 
 .. literalinclude:: ../../config/config.default.gb.yaml
    :language: yaml
-   :start-after: # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#urls
+   :start-after: # docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#urls
    :end-before: # docs
 
 .. _target_crs_cf:
@@ -116,7 +116,7 @@ To use your custom configuration file, you need to pass it to the ``snakemake`` 
 
 .. literalinclude:: ../../config/config.default.gb.yaml
    :language: yaml
-   :start-after: # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#target_crs
+   :start-after: # docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#target_crs
    :end-before: # docs
 
 .. _region_operations_cf:
@@ -132,7 +132,7 @@ To use your custom configuration file, you need to pass it to the ``snakemake`` 
 
 .. literalinclude:: ../../config/config.default.gb.yaml
    :language: yaml
-   :start-after: # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#region_operations
+   :start-after: # docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#region_operations
    :end-before: # docs
 
 .. _etys_cf:
@@ -148,7 +148,7 @@ To use your custom configuration file, you need to pass it to the ``snakemake`` 
 
 .. literalinclude:: ../../config/config.default.gb.yaml
    :language: yaml
-   :start-after: # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#etys
+   :start-after: # docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#etys
    :end-before: # docs
 
 .. _entsoe_unavailability_cf:
@@ -164,7 +164,7 @@ To use your custom configuration file, you need to pass it to the ``snakemake`` 
 
 .. literalinclude:: ../../config/config.default.gb.yaml
    :language: yaml
-   :start-after: # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#entsoe_unavailability
+   :start-after: # docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#entsoe_unavailability
    :end-before: # docs
 
 .. _transmission_availability_cf:
@@ -180,7 +180,7 @@ To use your custom configuration file, you need to pass it to the ``snakemake`` 
 
 .. literalinclude:: ../../config/config.default.gb.yaml
    :language: yaml
-   :start-after: # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#transmission_availability
+   :start-after: # docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#transmission_availability
    :end-before: # docs
 
 .. _dukes_5_11_cf:
@@ -196,7 +196,7 @@ To use your custom configuration file, you need to pass it to the ``snakemake`` 
 
 .. literalinclude:: ../../config/config.default.gb.yaml
    :language: yaml
-   :start-after: # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#dukes-5-11
+   :start-after: # docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#dukes-5-11
    :end-before: # docs
 
 .. _grid_supply_points_cf:
@@ -212,7 +212,7 @@ To use your custom configuration file, you need to pass it to the ``snakemake`` 
 
 .. literalinclude:: ../../config/config.default.gb.yaml
    :language: yaml
-   :start-after: # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#grid_supply_points
+   :start-after: # docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#grid_supply_points
    :end-before: # docs
 
 .. _fes_cf:
@@ -228,7 +228,7 @@ To use your custom configuration file, you need to pass it to the ``snakemake`` 
 
 .. literalinclude:: ../../config/config.default.gb.yaml
    :language: yaml
-   :start-after: # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#fes
+   :start-after: # docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#fes
    :end-before: # docs
 
 .. _ev_cf:
@@ -244,7 +244,7 @@ To use your custom configuration file, you need to pass it to the ``snakemake`` 
 
 .. literalinclude:: ../../config/config.default.gb.yaml
    :language: yaml
-   :start-after: # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#ev
+   :start-after: # docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#ev
    :end-before: # docs
 
 .. _interconnectors_cf:
@@ -260,7 +260,7 @@ To use your custom configuration file, you need to pass it to the ``snakemake`` 
 
 .. literalinclude:: ../../config/config.default.gb.yaml
    :language: yaml
-   :start-after: # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#interconnectors
+   :start-after: # docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#interconnectors
    :end-before: # docs
 
 .. _redispatch_cf:
@@ -276,7 +276,7 @@ To use your custom configuration file, you need to pass it to the ``snakemake`` 
 
 .. literalinclude:: ../../config/config.default.gb.yaml
    :language: yaml
-   :start-after: # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#redispatch
+   :start-after: # docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#redispatch
    :end-before: # docs
 
 
@@ -291,6 +291,108 @@ To use your custom configuration file, you need to pass it to the ``snakemake`` 
 
 .. literalinclude:: ../../config/config.default.gb.yaml
    :language: yaml
-   :start-after: # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#time_aggregation
+   :start-after: # docs in https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#time_aggregation
    :end-before: # docs
 
+.. _base_config:
+
+Base PyPSA-Eur config
+=====================
+
+Follow the links below to get more information about the base PyPSA-Eur configuration.
+
+:ref:`version <version_cf>`
+--------------------------------------------------------
+
+:ref:`tutorial <tutorial_cf>`
+--------------------------------------------------------
+
+:ref:`logging <logging_cf>`
+--------------------------------------------------------
+
+:ref:`remote <remote_cf>`
+--------------------------------------------------------
+
+:ref:`run <run_cf>`
+--------------------------------------------------------
+
+:ref:`foresight <foresight_cf>`
+--------------------------------------------------------
+
+:ref:`snapshots <snapshots_cf>`
+--------------------------------------------------------
+
+:ref:`enable <enable_cf>`
+--------------------------------------------------------
+
+:ref:`CO2_budget <CO2_budget_cf>`
+--------------------------------------------------------
+
+:ref:`electricity <electricity_cf>`
+--------------------------------------------------------
+
+:ref:`atlite <atlite_cf>`
+--------------------------------------------------------
+
+:ref:`renewable <renewable_cf>`
+--------------------------------------------------------
+
+:ref:`conventional <conventional_cf>`
+--------------------------------------------------------
+
+:ref:`lines <lines_cf>`
+--------------------------------------------------------
+
+:ref:`links <links_cf>`
+--------------------------------------------------------
+
+:ref:`transmission_projects <transmission_projects_cf>`
+--------------------------------------------------------
+
+:ref:`transformers <transformers_cf>`
+--------------------------------------------------------
+
+:ref:`load <load_cf>`
+--------------------------------------------------------
+
+:ref:`energy <energy_cf>`
+--------------------------------------------------------
+
+:ref:`biomass <biomass_cf>`
+--------------------------------------------------------
+
+:ref:`solar_thermal <solar_thermal_cf>`
+--------------------------------------------------------
+
+:ref:`existing_capacities <existing_capacities_cf>`
+--------------------------------------------------------
+
+:ref:`sector <sector_cf>`
+--------------------------------------------------------
+
+:ref:`industry <industry_cf>`
+--------------------------------------------------------
+
+:ref:`costs <costs_cf>`
+--------------------------------------------------------
+
+:ref:`clustering <clustering_cf>`
+--------------------------------------------------------
+
+:ref:`adjustments <adjustments_cf>`
+--------------------------------------------------------
+
+:ref:`solving <solving_cf>`
+--------------------------------------------------------
+
+:ref:`data <data_cf>`
+--------------------------------------------------------
+
+:ref:`overpass_api <overpass_api_cf>`
+--------------------------------------------------------
+
+:ref:`secrets <secrets_cf>`
+--------------------------------------------------------
+
+:ref:`plotting <plotting_cf>`
+--------------------------------------------------------

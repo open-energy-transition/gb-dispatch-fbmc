@@ -184,6 +184,11 @@
           "description": "Whether progressbar for atlite conversion processes should be shown. False saves time.",
           "type": "boolean"
         },
+        "plot_availability_matrix": {
+          "default": false,
+          "description": "Whether to plot the landuse availability matrix.",
+          "type": "boolean"
+        },
         "cutouts": {
           "additionalProperties": {
             "description": "Configuration for a single cutout in `atlite.cutouts`.",
@@ -568,13 +573,6 @@
               "description": "Aggregates all nodes without power injection (positive or negative, i.e. demand or generation) to electrically closest ones.",
               "type": "boolean"
             },
-            "exclude_carriers": {
-              "description": "List of carriers which will not be aggregated. If empty, all carriers will be aggregated.",
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
-            },
             "remove_stubs": {
               "default": true,
               "description": "Controls whether radial parts of the network should be recursively aggregated. Defaults to true.",
@@ -616,9 +614,19 @@
           "type": "array"
         },
         "consider_efficiency_classes": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            }
+          ],
           "default": false,
-          "description": "Aggregated each carriers into the top 10-quantile (high), the bottom 90-quantile (low), and everything in between (medium).",
-          "type": "boolean"
+          "description": "Aggregate each carrier into efficiency classes defined by quantile boundaries. If True, uses [0.1, 0.9] as default quantiles (labels: Q0, Q10, Q90). If a list of floats, defines custom quantile boundaries, e.g. [0.1, 0.5, 0.9]."
         },
         "aggregation_strategies": {
           "description": "Configuration for `clustering.aggregation_strategies` settings.",
@@ -2081,6 +2089,66 @@
             }
           }
         },
+        "jrc_energy_atlas": {
+          "description": "Configuration for a single data source.",
+          "properties": {
+            "source": {
+              "default": "archive",
+              "description": "Source of the data. 'archive' retrieves pre-built data, 'primary' retrieves from primary source.",
+              "enum": [
+                "archive",
+                "primary",
+                "build"
+              ],
+              "type": "string"
+            },
+            "version": {
+              "default": "latest",
+              "description": "Version of the data to use. Uses the specific 'version' for the selected 'source' or the dataset tagged 'latest' for this source.",
+              "type": "string"
+            }
+          }
+        },
+        "desnz_electricity_consumption": {
+          "description": "Configuration for a single data source.",
+          "properties": {
+            "source": {
+              "default": "archive",
+              "description": "Source of the data. 'archive' retrieves pre-built data, 'primary' retrieves from primary source.",
+              "enum": [
+                "archive",
+                "primary",
+                "build"
+              ],
+              "type": "string"
+            },
+            "version": {
+              "default": "latest",
+              "description": "Version of the data to use. Uses the specific 'version' for the selected 'source' or the dataset tagged 'latest' for this source.",
+              "type": "string"
+            }
+          }
+        },
+        "ons_lad": {
+          "description": "Configuration for a single data source.",
+          "properties": {
+            "source": {
+              "default": "archive",
+              "description": "Source of the data. 'archive' retrieves pre-built data, 'primary' retrieves from primary source.",
+              "enum": [
+                "archive",
+                "primary",
+                "build"
+              ],
+              "type": "string"
+            },
+            "version": {
+              "default": "latest",
+              "description": "Version of the data to use. Uses the specific 'version' for the selected 'source' or the dataset tagged 'latest' for this source.",
+              "type": "string"
+            }
+          }
+        },
         "bidding_zones_electricitymaps": {
           "description": "Configuration for a single data source.",
           "properties": {
@@ -2591,6 +2659,11 @@
               }
             }
           }
+        },
+        "estimate_battery_capacities": {
+          "default": false,
+          "description": "Enable estimation of existing battery storage capacities.",
+          "type": "boolean"
         },
         "autarky": {
           "description": "Configuration for `electricity.autarky` settings.",
@@ -3680,6 +3753,16 @@
           },
           "description": "Manual GSP coordinate assignments, to add latitudes and longitudes for GSPs missing from the GIS data. Keys are FES workbook GSP names.",
           "type": "object"
+        },
+        "combine_gsps": {
+          "additionalProperties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "description": "Groups of GSPs to combine. Key is the name of the resulting combined GSP, value is a list of FES workbook GSP names to combine . This is used to combine GSPs which are split in the FES workbook but represented as a single GSP in the GIS data.",
+          "type": "object"
         }
       }
     },
@@ -4231,6 +4314,11 @@
           "markdownDescription": "Whether to supplement missing data for selected time period should be supplemented by synthetic data from [Zenodo ](https://zenodo.org/records/10820928).",
           "type": "boolean"
         },
+        "substation_only": {
+          "default": true,
+          "description": "Whether to only consider substations for the spatial disaggregation of the per-country electricity demand data.",
+          "type": "boolean"
+        },
         "distribution_key": {
           "description": "Configuration for `load.distribution_key` settings.",
           "properties": {
@@ -4418,6 +4506,13 @@
               "type": "integer"
             }
           }
+        },
+        "no_redispatch_carriers": {
+          "description": "List of carriers to exclude from being redispatched.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         }
       }
     },
@@ -4848,6 +4943,7 @@
                   "type": "array"
                 }
               ],
+              "default": false,
               "description": "Specifies areas according to CORINE Land Cover codes which are generally eligible for AC-connected offshore wind turbine placement."
             },
             "luisa": {
@@ -5030,6 +5126,7 @@
                   "type": "array"
                 }
               ],
+              "default": false,
               "description": "Specifies areas according to CORINE Land Cover codes which are generally eligible for AC-connected offshore wind turbine placement."
             },
             "luisa": {
@@ -5212,6 +5309,7 @@
                   "type": "array"
                 }
               ],
+              "default": false,
               "description": "Specifies areas according to CORINE Land Cover codes which are generally eligible for AC-connected offshore wind turbine placement."
             },
             "luisa": {
@@ -6967,6 +7065,11 @@
               "description": "Number of snapshots to consider in each iteration. Defaults to 100.",
               "type": "integer"
             },
+            "overlap": {
+              "default": 0,
+              "description": "Number of overlapping snapshots between consecutive iterations in rolling horizon optimization. Defaults to 0, which means no overlap.",
+              "type": "integer"
+            },
             "post_discretization": {
               "description": "Configuration for `solving.options.post_discretization` settings.",
               "properties": {
@@ -7506,6 +7609,11 @@
         "gsp-coordinates": {
           "default": "",
           "description": "URL for GSP coordinates",
+          "type": "string"
+        },
+        "gsp-shapes": {
+          "default": "",
+          "description": "URL for GSP shapes",
           "type": "string"
         },
         "etys": {
@@ -8853,6 +8961,7 @@
               "type": "array"
             }
           ],
+          "default": false,
           "description": "Specifies areas according to CORINE Land Cover codes which are generally eligible for AC-connected offshore wind turbine placement."
         },
         "luisa": {
@@ -9384,13 +9493,6 @@
           "description": "Aggregates all nodes without power injection (positive or negative, i.e. demand or generation) to electrically closest ones.",
           "type": "boolean"
         },
-        "exclude_carriers": {
-          "description": "List of carriers which will not be aggregated. If empty, all carriers will be aggregated.",
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
         "remove_stubs": {
           "default": true,
           "description": "Controls whether radial parts of the network should be recursively aggregated. Defaults to true.",
@@ -9710,6 +9812,11 @@
           "description": "Number of snapshots to consider in each iteration. Defaults to 100.",
           "type": "integer"
         },
+        "overlap": {
+          "default": 0,
+          "description": "Number of overlapping snapshots between consecutive iterations in rolling horizon optimization. Defaults to 0, which means no overlap.",
+          "type": "integer"
+        },
         "post_discretization": {
           "description": "Configuration for `solving.options.post_discretization` settings.",
           "properties": {
@@ -9923,7 +10030,7 @@
   "markdownDescription": "Combined configuration schema for PyPSA-EUR.\n\n\nIncludes additional GB-specific configuration sections:\n- `fes_costs`: GB-specific cost configuration.\n- `low_carbon_register`: Low carbon register configuration.\n- `chp`: Simplified CHP configuration for GB model.\n- `urls`: URLs for GB data sources.\n- `target_crs`: Target coordinate reference system (e.g., EPSG:27700)\n- `region_operations`: Manual region merging and splitting configuration.\n- `etys`: Configuration for ETYS boundaries.\n- `entsoe_unavailability`: ENTSO-E unavailability data configuration.\n- `transmission_availability`: Transmission availability configuration.\n- `dukes_5_11`: DUKES 5.11 data configuration\n- `grid_supply_points`: Grid supply points configuration.\n- `fes`: Future Energy Scenarios (FES) configuration.\n- `ev`: Electric vehicle configuration.\n- `interconnectors`: Interconnectors configuration.\n- `redispatch`: Redispatch config.\n- `time_aggregation`: List of time aggregation configurations to apply sequentially. If multiple configurations are provided, they will be applied in the order they appear in the list. See [PyPSA documentation ](https://docs.pypsa.org/latest/api/networks/cluster/#pypsa.Network.cluster.temporal) for details on the available time aggregation methods and their parameters.",
   "properties": {
     "version": {
-      "default": "v2025.07.0",
+      "default": "v2026.02.0",
       "description": "Version of PyPSA-Eur. Descriptive only.",
       "type": "string"
     },
@@ -10500,6 +10607,11 @@
             }
           }
         },
+        "estimate_battery_capacities": {
+          "default": false,
+          "description": "Enable estimation of existing battery storage capacities.",
+          "type": "boolean"
+        },
         "autarky": {
           "description": "Configuration for `electricity.autarky` settings.",
           "properties": {
@@ -10548,6 +10660,11 @@
         "show_progress": {
           "default": false,
           "description": "Whether progressbar for atlite conversion processes should be shown. False saves time.",
+          "type": "boolean"
+        },
+        "plot_availability_matrix": {
+          "default": false,
+          "description": "Whether to plot the landuse availability matrix.",
           "type": "boolean"
         },
         "cutouts": {
@@ -10967,6 +11084,7 @@
                   "type": "array"
                 }
               ],
+              "default": false,
               "description": "Specifies areas according to CORINE Land Cover codes which are generally eligible for AC-connected offshore wind turbine placement."
             },
             "luisa": {
@@ -11149,6 +11267,7 @@
                   "type": "array"
                 }
               ],
+              "default": false,
               "description": "Specifies areas according to CORINE Land Cover codes which are generally eligible for AC-connected offshore wind turbine placement."
             },
             "luisa": {
@@ -11331,6 +11450,7 @@
                   "type": "array"
                 }
               ],
+              "default": false,
               "description": "Specifies areas according to CORINE Land Cover codes which are generally eligible for AC-connected offshore wind turbine placement."
             },
             "luisa": {
@@ -12078,6 +12198,11 @@
           "default": true,
           "description": "Whether to supplement missing data for selected time period should be supplemented by synthetic data from `Zenodo <https://zenodo.org/records/10820928>`_.",
           "markdownDescription": "Whether to supplement missing data for selected time period should be supplemented by synthetic data from [Zenodo ](https://zenodo.org/records/10820928).",
+          "type": "boolean"
+        },
+        "substation_only": {
+          "default": true,
+          "description": "Whether to only consider substations for the spatial disaggregation of the per-country electricity demand data.",
           "type": "boolean"
         },
         "distribution_key": {
@@ -13725,13 +13850,6 @@
               "description": "Aggregates all nodes without power injection (positive or negative, i.e. demand or generation) to electrically closest ones.",
               "type": "boolean"
             },
-            "exclude_carriers": {
-              "description": "List of carriers which will not be aggregated. If empty, all carriers will be aggregated.",
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
-            },
             "remove_stubs": {
               "default": true,
               "description": "Controls whether radial parts of the network should be recursively aggregated. Defaults to true.",
@@ -13773,9 +13891,19 @@
           "type": "array"
         },
         "consider_efficiency_classes": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            }
+          ],
           "default": false,
-          "description": "Aggregated each carriers into the top 10-quantile (high), the bottom 90-quantile (low), and everything in between (medium).",
-          "type": "boolean"
+          "description": "Aggregate each carrier into efficiency classes defined by quantile boundaries. If True, uses [0.1, 0.9] as default quantiles (labels: Q0, Q10, Q90). If a list of floats, defines custom quantile boundaries, e.g. [0.1, 0.5, 0.9]."
         },
         "aggregation_strategies": {
           "description": "Configuration for `clustering.aggregation_strategies` settings.",
@@ -14083,6 +14211,11 @@
             "horizon": {
               "default": 365,
               "description": "Number of snapshots to consider in each iteration. Defaults to 100.",
+              "type": "integer"
+            },
+            "overlap": {
+              "default": 0,
+              "description": "Number of overlapping snapshots between consecutive iterations in rolling horizon optimization. Defaults to 0, which means no overlap.",
               "type": "integer"
             },
             "post_discretization": {
@@ -15402,6 +15535,66 @@
             }
           }
         },
+        "jrc_energy_atlas": {
+          "description": "Configuration for a single data source.",
+          "properties": {
+            "source": {
+              "default": "archive",
+              "description": "Source of the data. 'archive' retrieves pre-built data, 'primary' retrieves from primary source.",
+              "enum": [
+                "archive",
+                "primary",
+                "build"
+              ],
+              "type": "string"
+            },
+            "version": {
+              "default": "latest",
+              "description": "Version of the data to use. Uses the specific 'version' for the selected 'source' or the dataset tagged 'latest' for this source.",
+              "type": "string"
+            }
+          }
+        },
+        "desnz_electricity_consumption": {
+          "description": "Configuration for a single data source.",
+          "properties": {
+            "source": {
+              "default": "archive",
+              "description": "Source of the data. 'archive' retrieves pre-built data, 'primary' retrieves from primary source.",
+              "enum": [
+                "archive",
+                "primary",
+                "build"
+              ],
+              "type": "string"
+            },
+            "version": {
+              "default": "latest",
+              "description": "Version of the data to use. Uses the specific 'version' for the selected 'source' or the dataset tagged 'latest' for this source.",
+              "type": "string"
+            }
+          }
+        },
+        "ons_lad": {
+          "description": "Configuration for a single data source.",
+          "properties": {
+            "source": {
+              "default": "archive",
+              "description": "Source of the data. 'archive' retrieves pre-built data, 'primary' retrieves from primary source.",
+              "enum": [
+                "archive",
+                "primary",
+                "build"
+              ],
+              "type": "string"
+            },
+            "version": {
+              "default": "latest",
+              "description": "Version of the data to use. Uses the specific 'version' for the selected 'source' or the dataset tagged 'latest' for this source.",
+              "type": "string"
+            }
+          }
+        },
         "bidding_zones_electricitymaps": {
           "description": "Configuration for a single data source.",
           "properties": {
@@ -15728,6 +15921,11 @@
         "gsp-coordinates": {
           "default": "",
           "description": "URL for GSP coordinates",
+          "type": "string"
+        },
+        "gsp-shapes": {
+          "default": "",
+          "description": "URL for GSP shapes",
           "type": "string"
         },
         "etys": {
@@ -16094,6 +16292,16 @@
             "type": "object"
           },
           "description": "Manual GSP coordinate assignments, to add latitudes and longitudes for GSPs missing from the GIS data. Keys are FES workbook GSP names.",
+          "type": "object"
+        },
+        "combine_gsps": {
+          "additionalProperties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "description": "Groups of GSPs to combine. Key is the name of the resulting combined GSP, value is a list of FES workbook GSP names to combine . This is used to combine GSPs which are split in the FES workbook but represented as a single GSP in the GIS data.",
           "type": "object"
         }
       }
@@ -16643,6 +16851,13 @@
               "type": "integer"
             }
           }
+        },
+        "no_redispatch_carriers": {
+          "description": "List of carriers to exclude from being redispatched.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         }
       }
     },
