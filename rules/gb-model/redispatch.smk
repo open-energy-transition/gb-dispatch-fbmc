@@ -95,7 +95,7 @@ rule calculate_bid_offer_multipliers:
             resources("gb-model/bids_and_offers/Elexon/{bod_year}.csv"),
             bod_year=config["redispatch"]["elexon"]["years"],
         ),
-        gas_historical_price="data/gb-model/downloaded/dukes_fuel.excel"
+        gas_historical_price="data/gb-model/downloaded/dukes_fuel.excel",
     output:
         csv=resources("gb-model/{fes_scenario}/bid_offer_multipliers.csv"),
     log:
@@ -135,6 +135,7 @@ rule identify_boundary_crossings:
         logs("identify_boundary_crossings.log"),
     script:
         scripts("gb_model/redispatch/identify_boundary_crossings.py")
+
 
 rule prepare_constrained_network:
     message:

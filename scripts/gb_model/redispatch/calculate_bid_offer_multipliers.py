@@ -31,9 +31,8 @@ def calculate_costs(
     tech_costs_path: str,
     costs_config: dict,
     technology_mapping: dict[str, str],
-    start_year: int,
-    end_year: int,
-    historical_gas_cost: pd.DataFrame
+    years: list[int],
+    historical_gas_cost: pd.DataFrame,
 ) -> pd.DataFrame:
     """
     Calculate marginal costs for each technology
@@ -52,6 +51,10 @@ def calculate_costs(
         Configuration dictionary for costs
     technology_mapping: dict[str, str]
         Mapping of technology names
+    years: list[int]
+        List of years to consider
+    historical_gas_cost: pd.DataFrame
+        Historical gas prices index by carrier, year and quarter
     """
 
     # Load FES power and carbon costs
@@ -75,8 +78,8 @@ def calculate_costs(
 
     # Create a multi-index dataframe for technologies and years and merge the FES costs data
     multi_index = pd.MultiIndex.from_product(
-        [technology_mapping.values(), np.arange(start_year, end_year + 1)],
-        names=["carrier", "year"],
+        [technology_mapping.values(), years, np.arange(1, 5)],
+        names=["carrier", "year", "quarter"],
     )
     df_tech = pd.DataFrame(index=multi_index)
 
@@ -90,8 +93,16 @@ def calculate_costs(
         .join(costs[["efficiency", "CO2 intensity"]])
     ).reset_index()
 
-    gas_fuel_keys = [k for k,v in costs_config['carrier_gap_filling']['fuel'].items() if v == 'gas']
-    df_tech.loc[df_tech.carrier.isin(gas_fuel_keys),'fuel'] = df_tech.loc[df_tech.carrier.isin(gas_fuel_keys)]['year'].map(historical_gas_cost.to_dict())
+    # Replace existing gas costs from FES with DUKES historical gas prices
+    gas_fuel_keys = [
+        k for k, v in costs_config["carrier_gap_filling"]["fuel"].items() if v == "gas"
+    ]
+    gas_rows = df_tech.carrier.isin(gas_fuel_keys)
+    df_tech.loc[gas_rows, "fuel"] = (
+        df_tech[gas_rows][["year", "quarter"]]
+        .apply(tuple, axis=1)
+        .map(historical_gas_cost.to_dict())
+    )
 
     df_tech = calculate_marginal_costs(
         df_tech,
@@ -100,11 +111,8 @@ def calculate_costs(
         fes_carbon_costs,
     )
 
-    # Calculate average marginal cost across the years
-    df_cost = df_tech.groupby("carrier")["marginal_cost"].mean()
-
-    logger.info("Calculated average marginal costs for each technology.")
-    return df_cost
+    logger.info(f"Calculated marginal costs for each technology for the years {years}.")
+    return df_tech
 
 
 def calc_bid_offer_multipliers(
@@ -121,35 +129,70 @@ def calc_bid_offer_multipliers(
     df_costs: pd.DataFrame
         DataFrame containing the average marginal cost for each technology across years
     """
-
+    # Read bid offer data
     df_bid_offer = pd.concat(
         [pd.read_csv(path, index_col="carrier") for path in bid_offer_costs_path]
     )
+    df_bid_offer["year"] = df_bid_offer["settlementDate"].apply(pd.to_datetime).dt.year
+    df_bid_offer["quarter"] = (
+        df_bid_offer["settlementDate"]
+        .apply(pd.to_datetime)
+        .dt.month.replace({3: 1, 6: 2, 9: 3, 12: 4})
+    )
+    df_bid_offer = df_bid_offer.reset_index().set_index(["carrier", "year", "quarter"])
 
-    df_bid_offer_avg = df_bid_offer.groupby(df_bid_offer.index).mean()
+    df_cost.set_index(["carrier", "year", "quarter"], inplace=True)
 
-    df_multipliers = df_bid_offer_avg.join(df_cost)
+    # Join bid offer quarterly dataframe with cost dataframe
+    df_multipliers = df_bid_offer.join(df_cost)
 
+    # Compute bid and offer multipliers for each quarter across the years
     df_multipliers["bid_multiplier"] = (
-        df_multipliers["bid"].abs() / df_multipliers["marginal_cost"]
+        df_multipliers["bidPrice"].abs() / df_multipliers["marginal_cost"]
     )
 
     df_multipliers["offer_multiplier"] = (
-        df_multipliers["offer"] / df_multipliers["marginal_cost"]
+        df_multipliers["offerPrice"] / df_multipliers["marginal_cost"]
     )
 
-    logger.info("Calculated bid and offer multipliers for each technology.")
+    # Calculate average multiplier for each carrier
+    df_multipliers = (
+        df_multipliers.reset_index()
+        .groupby("carrier")[["bid_multiplier", "offer_multiplier"]]
+        .mean()
+    )
 
-    return df_multipliers[["bid_multiplier", "offer_multiplier"]]
+    logger.info("Calculated bid and offer multipliers for each carrier.")
 
-def get_historical_gas_prices(historical_gas_path, years):
-    df = pd.read_excel(historical_gas_path, sheet_name="3.2.1 (Annual)",skiprows=10)
-    df = df.query('Year in @y', local_dict={'y':years})
-    df.set_index('Year',inplace=True)
-    df = df['Major power producers: Natural gas (pence per kWh)\n[Note 4]'] 
-    df *= 10 # Convert pence per kWh to GBP per MWh
+    return df_multipliers
+
+
+def get_historical_gas_prices(historical_gas_path: str, years: list[int]):
+    """
+    Get historical gas prices
+
+    Parameters
+    ----------
+    historical_gas_path: str
+        Path to historical gas prices CSV file
+    years: list[int]
+        List of years to consider
+    """
+
+    # Get quarterly historical gas prices
+    df = pd.read_excel(historical_gas_path, sheet_name="3.2.1 (Real)", skiprows=14)
+
+    # Filter the required years of data
+    df = df.query("Year in @y", local_dict={"y": years})
+    df["Quarter"] = df["Quarter"].replace(
+        {"Jan to Mar": 1, "Apr to Jun": 2, "Jul to Sep": 3, "Oct to Dec": 4}
+    )
+    df.set_index(["Year", "Quarter"], inplace=True)
+    df = df["Major power producers: Natural gas (pence per kWh)\n[Note 4]"]
+    df *= 10  # Convert pence per kWh to GBP per MWh
 
     return df
+
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
@@ -160,14 +203,9 @@ if __name__ == "__main__":
     configure_logging(snakemake)
     set_scenario_config(snakemake)
 
-    start_year = int(Path(snakemake.input.bid_offer_data[0]).stem)
-    end_year = int(Path(snakemake.input.bid_offer_data[-1]).stem)
-
     bid_offer_years = [int(Path(x).stem) for x in snakemake.input.bid_offer_data]
     historical_gas_cost = get_historical_gas_prices(
-        historical_gas_path = snakemake.input.gas_historical_price,
-        years = bid_offer_years
-
+        historical_gas_path=snakemake.input.gas_historical_price, years=bid_offer_years
     )
 
     df_cost = calculate_costs(
@@ -177,9 +215,8 @@ if __name__ == "__main__":
         tech_costs_path=snakemake.input.tech_costs,
         costs_config=snakemake.params.costs_config,
         technology_mapping=snakemake.params.technology_mapping,
-        start_year=start_year,
-        end_year=end_year,
-        historical_gas_cost=historical_gas_cost
+        years=bid_offer_years,
+        historical_gas_cost=historical_gas_cost,
     )
 
     df_multipliers = calc_bid_offer_multipliers(
