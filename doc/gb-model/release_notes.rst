@@ -16,6 +16,7 @@ This is a minor release that mostly includes workflow fixes and improved configu
 
 This version was synchronised with the upstream PyPSA-Eur repository on 2026-02-26.
 
+* Use historical gas prices to compute bid/offer multipliers (#257).
 * Create GSP shapefile using GSP polygon, coordinate and FES workbook data (#251).
 * Disallow nuclear from being redispatched (#201).
 * Add missing carrier for non-networked electrolysis demand (#242).
