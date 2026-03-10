@@ -206,6 +206,7 @@ rule solve_constrained:
     resources:
         mem_mb=config_provider("solving", "mem_mb"),
         runtime=config_provider("solving", "runtime", default="6h"),
+        parallel_solving=1,
     shadow:
         shadow_config
     script:
