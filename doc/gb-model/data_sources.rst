@@ -153,3 +153,10 @@ Elexon BMU Fuel Map
 -------------------
 The `Elexon BMU Fuel Map <https://www.elexon.co.uk/documents/data/operational-data/bmu-fuel-type/>` provides a mapping of the balancing mechanism units (BMU) to their respective fuel types.
 This information is required to calculate bid / offer multiplier carrier-wise for redispatch. This is a static copy in the repo and can be updated by navigating to `<https://bmrs.elexon.co.uk/generation-by-fuel-type?>`
+
+-----------
+GSP shapes
+-----------
+The `GSP shapes < https://www.neso.energy/data-portal/gis-boundaries-gb-grid-supply-points>` provide a shapefile of the GSP regions. 
+The FES workbook on one hand contains GSP names and the shapefile itself contains GSP ID. The GSP coordinates data is used as a bridge to map the GSP shape data to FES workbook data.
+The shape data will be useful to disaggregate renewable capacity factors by GSP regions rather than by GB regions.
