@@ -137,6 +137,9 @@ class URLsConfig(GBBaseConfig):
     gsp_coordinates: str = Field(
         alias="gsp-coordinates", description="URL for GSP coordinates", default=""
     )
+    gsp_shapes: str = Field(
+        alias="gsp-shapes", description="URL for GSP shapes", default=""
+    )
     etys: str = Field(description="URL for ETYS report", default="")
     etys_chart_data: str = Field(
         alias="etys-chart-data",
@@ -337,6 +340,10 @@ class GridSupplyPointsConfig(GBBaseConfig):
         alias="fill-lat-lons",
         default_factory=dict,
         description="Manual GSP coordinate assignments, to add latitudes and longitudes for GSPs missing from the GIS data. Keys are FES workbook GSP names.",
+    )
+    combine_gsps: dict[str, list[str]] = Field(
+        default_factory=dict,
+        description="Groups of GSPs to combine. Key is the name of the resulting combined GSP, value is a list of FES workbook GSP names to combine . This is used to combine GSPs which are split in the FES workbook but represented as a single GSP in the GIS data.",
     )
 
 
@@ -644,6 +651,10 @@ class RedispatchConfig(GBBaseConfig):
     elexon: ElexonConfig = Field(
         description="Elexon API configuration", default_factory=ElexonConfig
     )
+    no_redispatch_carriers: list[str] = Field(
+        default_factory=list,
+        description="List of carriers to exclude from being redispatched.",
+    )
 
     @field_validator("year_range_incl")
     @classmethod
@@ -668,6 +679,7 @@ class TimeAggregationConfig(GBBaseConfig):
 
 class GBConfigUpdater(ConfigUpdater):
     name: str = "gb"
+    docs_url: str = "https://gb-dispatch-model.readthedocs.io/en/latest/configuration.html#{field_name}"
 
     def _update_clustering(self) -> type[ConfigSchema]:
         """Updates the clustering configuration to include the 'gb_shapes' mode."""

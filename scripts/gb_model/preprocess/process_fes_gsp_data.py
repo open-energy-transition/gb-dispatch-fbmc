@@ -25,14 +25,88 @@ from scripts.gb_model._helpers import (
 logger = logging.getLogger(__name__)
 
 
+def process_gsp_coordinates(
+    gsp_coordinates_path: str, extra_gsp_coordinates: dict
+) -> pd.DataFrame:
+    """
+    Process GSP coordinates data, including filling in extra coordinates and removing duplicates
+
+    Parameters
+    ----------
+    gsp_coordinates_path: str
+        Path to the GSP coordinates file, which contains the latitude and longitude of each GSP
+    extra_gsp_coordinates: dict
+        A dictionary of extra GSP coordinates to add
+    """
+
+    df_gsp_coordinates = pd.read_csv(gsp_coordinates_path)
+    df_gsp_coordinates = df_gsp_coordinates.apply(strip_str)
+    extra_gsp_coordinates_df = (
+        pd.DataFrame.from_dict(extra_gsp_coordinates, orient="index")
+        .rename_axis(index="Name")
+        .reset_index()
+    )
+    df_gsp_coordinates = (
+        # There are cases of duplicate GSPs where the lat and lon information is the same but the GSP ID and GSP group are slightly different
+        pd.concat([df_gsp_coordinates, extra_gsp_coordinates_df])
+        .drop_duplicates(subset=["Name", "Latitude", "Longitude"])
+        .dropna(subset=["Latitude", "Longitude"])
+        .set_index("Name")
+        .reset_index()
+    )
+    if (dups := df_gsp_coordinates.Name.duplicated()).any():
+        logger.error(
+            f"There are duplicate GSP names with different lat/lons in the GSP coordinates file:\n{df_gsp_coordinates[dups]}"
+        )
+
+    logger.info(
+        f"Loaded GSP coordinates data with {len(df_gsp_coordinates)} unique GSPs"
+    )
+
+    return df_gsp_coordinates
+
+
+def process_bb1_data(
+    bb1_path: str, fes_scenario: str, year_range: list
+) -> pd.DataFrame:
+    """
+    Process FES workbook BB1 data, filtering by scenario and year, and summing duplicates
+
+    Parameters
+    ----------
+    bb1_path: str
+        Path to the extracted BB1 sheet of the FES workbook
+    fes_scenario: str
+        FES scenario
+    year_range: list
+        Year range to filter the data by
+    """
+    df_bb1 = pd.read_csv(bb1_path)
+    df_bb1 = df_bb1.apply(strip_str)
+    df_bb1_scenario = df_bb1[
+        (df_bb1["FES Pathway"].str.lower() == fes_scenario.lower())
+        & (df_bb1["year"].between(year_range[0], year_range[1], inclusive="both"))
+    ]
+    non_data_cols = df_bb1_scenario.columns.drop("data")
+    if (duplicates := df_bb1_scenario[non_data_cols].duplicated()).any():
+        # Manual inspection suggests these are true duplicates that should be summed
+        logger.warning(
+            f"There are {duplicates.sum()} duplicate rows in BB1. These will be summed."
+        )
+    df_bb1_scenario_no_dups = df_bb1_scenario.groupby(
+        non_data_cols.tolist(), as_index=False
+    )["data"].sum()
+
+    return df_bb1_scenario_no_dups
+
+
 def parse_inputs(
     bb1_path: str,
     bb2_path: str,
-    gsp_coordinates_path: str,
-    extra_gsp_coordinates: dict,
     manual_gsp_mapping: dict,
     fes_scenario: str,
     year_range: list,
+    df_gsp_coordinates: pd.DataFrame,
 ) -> pd.DataFrame:
     """
     Parse the input data to the required format.
@@ -40,7 +114,7 @@ def parse_inputs(
     Args:
         bb1_path (str): path of extracted sheet BB1 of the FES workbook
         bb2_path (str): path of extracted sheet BB2 of the FES workbook
-        gsp_coordinates_path (str): path of the GSP supply point coordinates file
+        df_gsp_coordinates (pd.DataFrame): DataFrame of GSP supply point coordinates
         fes_scenario (str): FES scenario
     """
 
@@ -64,21 +138,7 @@ def parse_inputs(
         .apply(strip_str)
     )
 
-    df_bb1 = pd.read_csv(bb1_path)
-    df_bb1 = df_bb1.apply(strip_str)
-    df_bb1_scenario = df_bb1[
-        (df_bb1["FES Pathway"].str.lower() == fes_scenario.lower())
-        & (df_bb1["year"].between(year_range[0], year_range[1], inclusive="both"))
-    ]
-    non_data_cols = df_bb1_scenario.columns.drop("data")
-    if (duplicates := df_bb1_scenario[non_data_cols].duplicated()).any():
-        # Manual inspection suggests these are true duplicates that should be summed
-        logger.warning(
-            f"There are {duplicates.sum()} duplicate rows in BB1. These will be summed."
-        )
-    df_bb1_scenario_no_dups = df_bb1_scenario.groupby(
-        non_data_cols.tolist(), as_index=False
-    )["data"].sum()
+    df_bb1_scenario_no_dups = process_bb1_data(bb1_path, fes_scenario, year_range)
 
     df_bb1_bb2_scenario = pd.merge(
         df_bb1_scenario_no_dups,
@@ -102,26 +162,6 @@ def parse_inputs(
     df_bb1_bb2_scenario = df_bb1_bb2_scenario.drop(
         columns=["Units", "Building Block ID Number"]
     )
-
-    df_gsp_coordinates = pd.read_csv(gsp_coordinates_path)
-    df_gsp_coordinates = df_gsp_coordinates.apply(strip_str)
-    extra_gsp_coordinates_df = (
-        pd.DataFrame.from_dict(extra_gsp_coordinates, orient="index")
-        .rename_axis(index="Name")
-        .reset_index()
-    )
-    df_gsp_coordinates = (
-        # There are cases of duplicate GSPs where the lat and lon information is the same but the GSP ID and GSP group are slightly different
-        pd.concat([df_gsp_coordinates, extra_gsp_coordinates_df])
-        .drop_duplicates(subset=["Name", "Latitude", "Longitude"])
-        .dropna(subset=["Latitude", "Longitude"])
-        .set_index("Name")
-        .reset_index()
-    )
-    if (dups := df_gsp_coordinates.Name.duplicated()).any():
-        logger.error(
-            f"There are duplicate GSP names with different lat/lons in the GSP coordinates file:\n{df_gsp_coordinates[dups]}"
-        )
 
     df_bb1_bb2_scenario["GSP"] = df_bb1_bb2_scenario["GSP"].replace(manual_gsp_mapping)
 
@@ -164,25 +204,21 @@ if __name__ == "__main__":
     configure_logging(snakemake)
     set_scenario_config(snakemake)
 
-    # Load the file paths
-    bb1_path = snakemake.input.bb1_sheet
-    bb2_path = snakemake.input.bb2_sheet
-    gsp_coordinates_path = snakemake.input.gsp_coordinates
+    fes_scenario = get_scenario_name(snakemake)
     gdf_regions = gpd.read_file(snakemake.input.regions)
 
-    # Load all the params
-    fes_scenario = get_scenario_name(snakemake)
-    year_range = snakemake.params.year_range
-    extra_gsp_coordinates = snakemake.params.fill_gsp_lat_lons
-    manual_gsp_mapping = snakemake.params.manual_gsp_mapping
+    df_gsp_coordinates = process_gsp_coordinates(
+        gsp_coordinates_path=snakemake.input.gsp_coordinates,
+        extra_gsp_coordinates=snakemake.params.fill_gsp_lat_lons,
+    )
+
     df = parse_inputs(
-        bb1_path,
-        bb2_path,
-        gsp_coordinates_path,
-        extra_gsp_coordinates,
-        manual_gsp_mapping,
-        fes_scenario,
-        year_range,
+        bb1_path=snakemake.input.bb1_sheet,
+        bb2_path=snakemake.input.bb2_sheet,
+        df_gsp_coordinates=df_gsp_coordinates,
+        manual_gsp_mapping=snakemake.params.manual_gsp_mapping,
+        fes_scenario=fes_scenario,
+        year_range=snakemake.params.year_range,
     )
 
     region_data = map_points_to_regions(
