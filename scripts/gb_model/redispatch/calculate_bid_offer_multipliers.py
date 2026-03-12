@@ -199,7 +199,7 @@ def get_historical_fuel_prices(
     df.set_index(["Year", "Quarter"], inplace=True)
     df.rename(columns=dukes_config["column_mapping"], inplace=True)
     df = df[["gas", "coal", "oil"]]
-    df["coal"] = df["coal"].replace("..", np.nan)
+    df[df.columns] = df[df.columns].replace("..", np.nan)
     df *= 10  # Convert pence per kWh to GBP per MWh
     return df
 
