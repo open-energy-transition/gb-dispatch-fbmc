@@ -165,4 +165,4 @@ The shape data will be useful to disaggregate renewable capacity factors by GSP 
 DUKES fuel prices
 ----------------
 The `DUKES fuel prices <https://www.gov.uk/government/statistical-data-sets/prices-of-fuels-purchased-by-major-power-producers>` provide a dataset for tracking historical fuel prices in the UK.
-This is required to calculate gas bid/offer multipliers for redispatch to account for the high variations in the gas fuel prices quarterly.
+This is required to account for historical variations in quarterly fossil fuel prices when calculating bid/offer multipliers for redispatch.
