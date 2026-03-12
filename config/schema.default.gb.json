@@ -7636,7 +7636,7 @@
           "description": "URL for European hydrogen demand data from the Clean Hydrogen Observatory",
           "type": "string"
         },
-        "dukes_fuel": {
+        "dukes_fuel_prices": {
           "default": "",
           "description": "URL for historical gas prices in the UK from Dukes",
           "type": "string"
@@ -15953,7 +15953,7 @@
           "description": "URL for European hydrogen demand data from the Clean Hydrogen Observatory",
           "type": "string"
         },
-        "dukes_fuel": {
+        "dukes_fuel_prices": {
           "default": "",
           "description": "URL for historical gas prices in the UK from Dukes",
           "type": "string"

@@ -32,7 +32,7 @@ def calculate_costs(
     costs_config: dict,
     technology_mapping: dict[str, str],
     years: list[int],
-    historical_gas_cost: pd.DataFrame,
+    historical_fuel_cost: pd.DataFrame,
 ) -> pd.DataFrame:
     """
     Calculate marginal costs for each technology
@@ -53,8 +53,8 @@ def calculate_costs(
         Mapping of technology names
     years: list[int]
         List of years to consider
-    historical_gas_cost: pd.DataFrame
-        Historical gas prices index by carrier, year and quarter
+    historical_fuel_cost: pd.DataFrame
+        Historical fuel prices index by carrier, year and quarter
     """
 
     # Load FES power and carbon costs
@@ -93,16 +93,19 @@ def calculate_costs(
         .join(costs[["efficiency", "CO2 intensity"]])
     ).reset_index()
 
-    # Replace existing gas costs from FES with DUKES historical gas prices
-    gas_fuel_keys = [
-        k for k, v in costs_config["carrier_gap_filling"]["fuel"].items() if v == "gas"
-    ]
-    gas_rows = df_tech.carrier.isin(gas_fuel_keys)
-    df_tech.loc[gas_rows, "fuel"] = (
-        df_tech[gas_rows][["year", "quarter"]]
-        .apply(tuple, axis=1)
-        .map(historical_gas_cost.to_dict())
-    )
+    for fuel in historical_fuel_cost.columns:
+        # Replace existing fuel costs from FES with DUKES historical fuel prices
+        fuel_fuel_keys = [
+            k
+            for k, v in costs_config["carrier_gap_filling"]["fuel"].items()
+            if v == fuel
+        ]
+        fuel_rows = df_tech.carrier.isin(fuel_fuel_keys)
+        df_tech.loc[fuel_rows, "fuel"] = (
+            df_tech[fuel_rows][["year", "quarter"]]
+            .apply(tuple, axis=1)
+            .map(historical_fuel_cost[fuel].to_dict())
+        )
 
     df_tech = calculate_marginal_costs(
         df_tech,
@@ -131,13 +134,14 @@ def calc_bid_offer_multipliers(
     """
     # Read bid offer data
     df_bid_offer = pd.concat(
-        [pd.read_csv(path, index_col="carrier") for path in bid_offer_costs_path]
+        [
+            pd.read_csv(path, index_col="carrier", parse_dates=["settlementDate"])
+            for path in bid_offer_costs_path
+        ]
     )
-    df_bid_offer["year"] = df_bid_offer["settlementDate"].apply(pd.to_datetime).dt.year
-    df_bid_offer["quarter"] = (
-        df_bid_offer["settlementDate"]
-        .apply(pd.to_datetime)
-        .dt.month.replace({3: 1, 6: 2, 9: 3, 12: 4})
+    df_bid_offer["year"] = df_bid_offer["settlementDate"].dt.year
+    df_bid_offer["quarter"] = df_bid_offer["settlementDate"].dt.month.replace(
+        {3: 1, 6: 2, 9: 3, 12: 4}
     )
     df_bid_offer = df_bid_offer.reset_index().set_index(["carrier", "year", "quarter"])
 
@@ -167,30 +171,36 @@ def calc_bid_offer_multipliers(
     return df_multipliers
 
 
-def get_historical_gas_prices(historical_gas_path: str, years: list[int]):
+def get_historical_fuel_prices(
+    historical_fuel_path: str, years: list[int], dukes_config: dict
+):
     """
-    Get historical gas prices
+    Get historical fuel prices
 
     Parameters
     ----------
-    historical_gas_path: str
-        Path to historical gas prices CSV file
+    historical_fuel_path: str
+        Path to historical fuel prices CSV file
     years: list[int]
         List of years to consider
+    dukes_config: dict
+        Configuration parameters when reading the historical fuel price data
     """
 
-    # Get quarterly historical gas prices
-    df = pd.read_excel(historical_gas_path, sheet_name="3.2.1 (Real)", skiprows=14)
+    sheet_config = dukes_config["sheet-config"]
+    sheet_name = sheet_config.pop("sheet_name")
+
+    # Get quarterly historical fuel prices
+    df = pd.read_excel(historical_fuel_path, sheet_name=sheet_name, **sheet_config)
 
     # Filter the required years of data
     df = df.query("Year in @y", local_dict={"y": years})
-    df["Quarter"] = df["Quarter"].replace(
-        {"Jan to Mar": 1, "Apr to Jun": 2, "Jul to Sep": 3, "Oct to Dec": 4}
-    )
+    df["Quarter"] = df["Quarter"].replace(dukes_config["quarter_mapping"])
     df.set_index(["Year", "Quarter"], inplace=True)
-    df = df["Major power producers: Natural gas (pence per kWh)\n[Note 4]"]
+    df.rename(columns=dukes_config["column_mapping"], inplace=True)
+    df = df[["gas", "coal", "oil"]]
+    df["coal"] = df["coal"].replace("..", np.nan)
     df *= 10  # Convert pence per kWh to GBP per MWh
-
     return df
 
 
@@ -204,8 +214,10 @@ if __name__ == "__main__":
     set_scenario_config(snakemake)
 
     bid_offer_years = [int(Path(x).stem) for x in snakemake.input.bid_offer_data]
-    historical_gas_cost = get_historical_gas_prices(
-        historical_gas_path=snakemake.input.gas_historical_price, years=bid_offer_years
+    historical_fuel_cost = get_historical_fuel_prices(
+        historical_fuel_path=snakemake.input.historical_fuel_price,
+        years=bid_offer_years,
+        dukes_config=snakemake.params.dukes_config,
     )
 
     df_cost = calculate_costs(
@@ -216,7 +228,7 @@ if __name__ == "__main__":
         costs_config=snakemake.params.costs_config,
         technology_mapping=snakemake.params.technology_mapping,
         years=bid_offer_years,
-        historical_gas_cost=historical_gas_cost,
+        historical_fuel_cost=historical_fuel_cost,
     )
 
     df_multipliers = calc_bid_offer_multipliers(
