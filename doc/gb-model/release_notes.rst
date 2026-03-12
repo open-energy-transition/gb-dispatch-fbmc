@@ -9,6 +9,11 @@
 Release Notes
 ##########################################
 
+Unreleased
+==========
+
+* Fix unexpected connection between two GB regions caused by a new offshore virtual bus that was not accounted for in `data/gb-model/custom_busmap/*.csv`.
+
 v0.2.1 (2026-03-05)
 ===================
 
