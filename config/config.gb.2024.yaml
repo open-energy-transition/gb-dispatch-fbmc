@@ -565,9 +565,12 @@ dukes-fuel-prices:
     "Jul to Sep": 3
     "Oct to Dec": 4
   column_mapping:
-    "Major power producers: Natural gas (pence per kWh)\n[Note 4]": "gas"
-    "Major power producers: Oil (pence per kWh)\n[Note 2, 3]": "oil"
-    "Major power producers: Coal (pence per kWh)\n[Note 1]": "coal"
+    ? "Major power producers: Natural gas (pence per kWh)\n[Note 4]"
+    : "gas"
+    ? "Major power producers: Oil (pence per kWh)\n[Note 2, 3]"
+    : "oil"
+    ? "Major power producers: Coal (pence per kWh)\n[Note 1]"
+    : "coal"
 
 grid_supply_points:
   manual_mapping:
