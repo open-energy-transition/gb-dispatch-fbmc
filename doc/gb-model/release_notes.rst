@@ -11,6 +11,7 @@ Release Notes
 
 Unreleased
 ==========
+* Use historical gas prices to compute bid/offer multipliers (#257).
 
 * Fix unexpected connection between two GB regions caused by a new offshore virtual bus that was not accounted for in `data/gb-model/custom_busmap/*.csv`.
 
