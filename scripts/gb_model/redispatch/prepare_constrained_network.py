@@ -176,15 +176,13 @@ def create_up_down_plants(
             unconstrained_result.get_switchable_as_dense(comp.name, "p_max_pu")
             * result_component.static.p_nom
             - dynamic_p
-        ).clip(0) / result_component.static.p_nom
-        if comp.name == "Generator":
-            down_limit = -dynamic_p / result_component.static.p_nom
-        else:
-            down_limit = (
-                unconstrained_result.get_switchable_as_dense(comp.name, "p_min_pu")
-                * result_component.static.p_nom
-                - dynamic_p
-            ) / result_component.static.p_nom
+        ).clip(lower=0) / result_component.static.p_nom
+
+        down_limit = (
+            unconstrained_result.get_switchable_as_dense(comp.name, "p_min_pu")
+            * result_component.static.p_nom
+            - dynamic_p
+        ).clip(upper=0) / result_component.static.p_nom
 
         prices = {}
         for direction, df in [("offer", g_up), ("bid", g_down)]:
