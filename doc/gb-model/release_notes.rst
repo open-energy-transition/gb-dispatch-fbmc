@@ -12,6 +12,8 @@ Release Notes
 Cherry-picked from gb-dispatch-model
 ====================================
 * Fix technology efficiencies being erroneously set to 100% in network composition. (PR #297)
+* Fix demand profile scaling to correctly match annual FES demands.
+* Move resistive heating demand to the heat demand bus, rather than having it rolled in with baseline electricity demand.
 
 Unreleased
 ==========
