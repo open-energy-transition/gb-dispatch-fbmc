@@ -2961,6 +2961,20 @@
                   },
                   "description": "Bus suffixes to apply in the PyPSA network for different demand types",
                   "type": "object"
+                },
+                "expected_total_data_item": {
+                  "description": "FES ED1 worksheet data item name(s) to use for total demand",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "losses_data_item": {
+                  "description": "FES ED1 worksheet data item name(s) to use for transmisison & distribution losses",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
                 }
               }
             },
@@ -3115,7 +3129,7 @@
               "additionalProperties": false,
               "description": "FES hydrogen data selection filter.",
               "properties": {
-                "all_supply": {
+                "networked_h2_supply": {
                   "additionalProperties": {
                     "anyOf": [
                       {
@@ -3129,10 +3143,10 @@
                       }
                     ]
                   },
-                  "description": "Filter to get all hydrogen supply data from the FES workbook. Keys are column names, values are column value(s) to select.",
+                  "description": "Filter to get all relevant sources of hydrogen supply data from the FES workbook. Keys are column names, values are column value(s) to select.",
                   "type": "object"
                 },
-                "all_demand": {
+                "networked_electricity_demand": {
                   "additionalProperties": {
                     "anyOf": [
                       {
@@ -3146,10 +3160,10 @@
                       }
                     ]
                   },
-                  "description": "Filter to get all hydrogen demand data. Keys are column names, values are column value(s) to select.",
+                  "description": "Filter to get all input electricity required to generate the hydrogen defined by `networked_h2_supply` . Keys are column names, values are column value(s) to select.",
                   "type": "object"
                 },
-                "non_networked_supply": {
+                "non_networked_electricity_demand": {
                   "additionalProperties": {
                     "anyOf": [
                       {
@@ -3163,7 +3177,7 @@
                       }
                     ]
                   },
-                  "description": "Filter to get all hydrogen non-networked supply data from the FES workbook. Keys are column names, values are column value(s) to select.",
+                  "description": "Filter to get all input electricity required for non-networked hydrogen supply. Keys are column names, values are column value(s) to select.",
                   "type": "object"
                 },
                 "storage": {
@@ -3184,12 +3198,6 @@
                   "type": "object"
                 }
               }
-            },
-            "electrolysis_efficiency": {
-              "default": 0.7,
-              "description": "Non-networked electrolysis efficiency (MWh[H2]/MWh[electricity])",
-              "exclusiveMinimum": 0,
-              "type": "number"
             }
           }
         }
@@ -3245,6 +3253,20 @@
           },
           "description": "Bus suffixes to apply in the PyPSA network for different demand types",
           "type": "object"
+        },
+        "expected_total_data_item": {
+          "description": "FES ED1 worksheet data item name(s) to use for total demand",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "losses_data_item": {
+          "description": "FES ED1 worksheet data item name(s) to use for transmisison & distribution losses",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         }
       }
     },
@@ -3438,6 +3460,20 @@
               },
               "description": "Bus suffixes to apply in the PyPSA network for different demand types",
               "type": "object"
+            },
+            "expected_total_data_item": {
+              "description": "FES ED1 worksheet data item name(s) to use for total demand",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "losses_data_item": {
+              "description": "FES ED1 worksheet data item name(s) to use for transmisison & distribution losses",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
             }
           }
         },
@@ -3532,7 +3568,7 @@
           "additionalProperties": false,
           "description": "FES hydrogen data selection filter.",
           "properties": {
-            "all_supply": {
+            "networked_h2_supply": {
               "additionalProperties": {
                 "anyOf": [
                   {
@@ -3546,10 +3582,10 @@
                   }
                 ]
               },
-              "description": "Filter to get all hydrogen supply data from the FES workbook. Keys are column names, values are column value(s) to select.",
+              "description": "Filter to get all relevant sources of hydrogen supply data from the FES workbook. Keys are column names, values are column value(s) to select.",
               "type": "object"
             },
-            "all_demand": {
+            "networked_electricity_demand": {
               "additionalProperties": {
                 "anyOf": [
                   {
@@ -3563,10 +3599,10 @@
                   }
                 ]
               },
-              "description": "Filter to get all hydrogen demand data. Keys are column names, values are column value(s) to select.",
+              "description": "Filter to get all input electricity required to generate the hydrogen defined by `networked_h2_supply` . Keys are column names, values are column value(s) to select.",
               "type": "object"
             },
-            "non_networked_supply": {
+            "non_networked_electricity_demand": {
               "additionalProperties": {
                 "anyOf": [
                   {
@@ -3580,7 +3616,7 @@
                   }
                 ]
               },
-              "description": "Filter to get all hydrogen non-networked supply data from the FES workbook. Keys are column names, values are column value(s) to select.",
+              "description": "Filter to get all input electricity required for non-networked hydrogen supply. Keys are column names, values are column value(s) to select.",
               "type": "object"
             },
             "storage": {
@@ -3601,12 +3637,6 @@
               "type": "object"
             }
           }
-        },
-        "electrolysis_efficiency": {
-          "default": 0.7,
-          "description": "Non-networked electrolysis efficiency (MWh[H2]/MWh[electricity])",
-          "exclusiveMinimum": 0,
-          "type": "number"
         }
       }
     },
@@ -3614,7 +3644,7 @@
       "additionalProperties": false,
       "description": "FES hydrogen data selection filter.",
       "properties": {
-        "all_supply": {
+        "networked_h2_supply": {
           "additionalProperties": {
             "anyOf": [
               {
@@ -3628,10 +3658,10 @@
               }
             ]
           },
-          "description": "Filter to get all hydrogen supply data from the FES workbook. Keys are column names, values are column value(s) to select.",
+          "description": "Filter to get all relevant sources of hydrogen supply data from the FES workbook. Keys are column names, values are column value(s) to select.",
           "type": "object"
         },
-        "all_demand": {
+        "networked_electricity_demand": {
           "additionalProperties": {
             "anyOf": [
               {
@@ -3645,10 +3675,10 @@
               }
             ]
           },
-          "description": "Filter to get all hydrogen demand data. Keys are column names, values are column value(s) to select.",
+          "description": "Filter to get all input electricity required to generate the hydrogen defined by `networked_h2_supply` . Keys are column names, values are column value(s) to select.",
           "type": "object"
         },
-        "non_networked_supply": {
+        "non_networked_electricity_demand": {
           "additionalProperties": {
             "anyOf": [
               {
@@ -3662,7 +3692,7 @@
               }
             ]
           },
-          "description": "Filter to get all hydrogen non-networked supply data from the FES workbook. Keys are column names, values are column value(s) to select.",
+          "description": "Filter to get all input electricity required for non-networked hydrogen supply. Keys are column names, values are column value(s) to select.",
           "type": "object"
         },
         "storage": {
@@ -16438,6 +16468,20 @@
                   },
                   "description": "Bus suffixes to apply in the PyPSA network for different demand types",
                   "type": "object"
+                },
+                "expected_total_data_item": {
+                  "description": "FES ED1 worksheet data item name(s) to use for total demand",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "losses_data_item": {
+                  "description": "FES ED1 worksheet data item name(s) to use for transmisison & distribution losses",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
                 }
               }
             },
@@ -16592,7 +16636,7 @@
               "additionalProperties": false,
               "description": "FES hydrogen data selection filter.",
               "properties": {
-                "all_supply": {
+                "networked_h2_supply": {
                   "additionalProperties": {
                     "anyOf": [
                       {
@@ -16606,10 +16650,10 @@
                       }
                     ]
                   },
-                  "description": "Filter to get all hydrogen supply data from the FES workbook. Keys are column names, values are column value(s) to select.",
+                  "description": "Filter to get all relevant sources of hydrogen supply data from the FES workbook. Keys are column names, values are column value(s) to select.",
                   "type": "object"
                 },
-                "all_demand": {
+                "networked_electricity_demand": {
                   "additionalProperties": {
                     "anyOf": [
                       {
@@ -16623,10 +16667,10 @@
                       }
                     ]
                   },
-                  "description": "Filter to get all hydrogen demand data. Keys are column names, values are column value(s) to select.",
+                  "description": "Filter to get all input electricity required to generate the hydrogen defined by `networked_h2_supply` . Keys are column names, values are column value(s) to select.",
                   "type": "object"
                 },
-                "non_networked_supply": {
+                "non_networked_electricity_demand": {
                   "additionalProperties": {
                     "anyOf": [
                       {
@@ -16640,7 +16684,7 @@
                       }
                     ]
                   },
-                  "description": "Filter to get all hydrogen non-networked supply data from the FES workbook. Keys are column names, values are column value(s) to select.",
+                  "description": "Filter to get all input electricity required for non-networked hydrogen supply. Keys are column names, values are column value(s) to select.",
                   "type": "object"
                 },
                 "storage": {
@@ -16661,12 +16705,6 @@
                   "type": "object"
                 }
               }
-            },
-            "electrolysis_efficiency": {
-              "default": 0.7,
-              "description": "Non-networked electrolysis efficiency (MWh[H2]/MWh[electricity])",
-              "exclusiveMinimum": 0,
-              "type": "number"
             }
           }
         }

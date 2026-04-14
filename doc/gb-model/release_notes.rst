@@ -14,6 +14,7 @@ Cherry-picked from gb-dispatch-model
 * Fix technology efficiencies being erroneously set to 100% in network composition. (PR #297)
 * Fix demand profile scaling to correctly match annual FES demands.
 * Move resistive heating demand to the heat demand bus, rather than having it rolled in with baseline electricity demand.
+* Fix total electricity demand in GB to match the total demand given in the FES by filling the difference with a constant baseload demand and a variable T&D loss profile (matching the profile shape of all other demands combined).
 
 Unreleased
 ==========
