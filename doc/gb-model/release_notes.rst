@@ -9,8 +9,13 @@
 Release Notes
 ##########################################
 
+Cherry-picked from gb-dispatch-model
+====================================
+* Fix technology efficiencies being erroneously set to 100% in network composition. (PR #297)
+
 Unreleased
 ==========
+
 * Use historical gas prices to compute bid/offer multipliers (#257).
 
 * Fix unexpected connection between two GB regions caused by a new offshore virtual bus that was not accounted for in `data/gb-model/custom_busmap/*.csv`.
